@@ -63,7 +63,7 @@ audioUpload.addEventListener("change",async function(){
   audioCtx=new(window.AudioContext||window.webkitAudioContext)();
   analyser=audioCtx.createAnalyser();
   analyser.fftSize=512;
-  analyser.smoothingTimeConstant=.28;
+  analyser.smoothingTimeConstant=.22;
   source=audioCtx.createMediaElementSource(audioElement);
   source.connect(analyser);analyser.connect(audioCtx.destination);
   dataArray=new Uint8Array(analyser.frequencyBinCount);
@@ -94,7 +94,7 @@ function analyze(){
  let sum=0;
  for(let i=0;i<dataArray.length;i++){
   const raw=dataArray[i];
-  const k=raw>smooth[i]?.36:.08;
+  const k=raw>smooth[i]?.40:.06;
   smooth[i]+=(raw-smooth[i])*k;
   sum+=smooth[i];
  }
@@ -102,14 +102,15 @@ function analyze(){
 }
 function radialPoint(r,a){return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}}
 function drawSymmetricRing(r,thickness,alpha,glow,audio){
- const sensitivity=1+Math.min(1,(audio.low+audio.mid*.55)/255);
- const ringPulse=(energy*18+pulse*.22)*scale*sensitivity;
+ const sensitivity=1+(audio.low+audio.mid*.7+audio.high*.25)/255;
+ const ringPulse=(energy*42+pulse*.95)*scale*sensitivity;
  const rr=Math.max(1,r+ringPulse);
  ctx.save();
  ctx.beginPath();ctx.arc(cx,cy,rr,0,Math.PI*2);
- ctx.strokeStyle=`rgba(255,255,255,${Math.min(.65,alpha+sensitivity*.08)})`;
- ctx.lineWidth=thickness+energy*1.2;
- ctx.shadowBlur=glow+energy*8*scale;ctx.shadowColor=`rgba(255,255,255,${Math.min(.9,alpha+.2)})`;
+ ctx.strokeStyle=`rgba(255,255,255,${Math.min(.92,alpha+sensitivity*.14)})`;
+ ctx.lineWidth=thickness+energy*3.2+Math.min(3,sensitivity*.8);
+ ctx.shadowBlur=glow+energy*22*scale+ringPulse*.15;
+ ctx.shadowColor=`rgba(255,255,255,${Math.min(1,alpha+.35)})`;
  ctx.stroke();ctx.restore();
 }
 function drawWave(base,amp,alpha,line,blur,phase,high){
@@ -130,18 +131,11 @@ function drawWave(base,amp,alpha,line,blur,phase,high){
 function drawHex(radius,rot,audio){
  ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
  const n=smooth.length;
- const bands=[
-  Math.pow((smooth[Math.floor(n*.03)]||0)/255,.58),
-  Math.pow((smooth[Math.floor(n*.12)]||0)/255,.58),
-  Math.pow((smooth[Math.floor(n*.28)]||0)/255,.58)
- ];
+ const bands=[Math.pow((smooth[Math.floor(n*.03)]||0)/255,.58),Math.pow((smooth[Math.floor(n*.12)]||0)/255,.58),Math.pow((smooth[Math.floor(n*.28)]||0)/255,.58)];
  const strength=(16+energy*18)*(0.75+audio.low/255*.9)*scale;
  const def=[bands[0],bands[1],bands[2],bands[0],bands[1],bands[2]].map(v=>v*strength);
  ctx.beginPath();
- for(let i=0;i<6;i++){
-  const a=i*Math.PI/3-Math.PI/2,r=radius+def[i],x=r*Math.cos(a),y=r*Math.sin(a);
-  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
- }
+ for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=radius+def[i],x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
  ctx.closePath();
  const bright=Math.min(1,.24+energy*.76);
  ctx.shadowBlur=(18+energy*24)*scale;ctx.shadowColor=`rgba(255,255,255,${bright})`;ctx.fillStyle=`rgba(255,255,255,${bright})`;ctx.fill();ctx.shadowBlur=0;
@@ -154,7 +148,7 @@ function drawHex(radius,rot,audio){
  ctx.restore();
 }
 function drawParticles(audio){
- const maxR=Math.min(w,h)*.46;
+ const maxR=Math.min(w,h)*.48;
  for(const p of particles){
   p.a+=p.s*16;
   const r=Math.min(maxR,p.r+energy*20*scale+audio.high/255*8*scale);
@@ -167,16 +161,16 @@ function draw(){
  const now=performance.now(),dt=Math.min(40,now-lastTime||16);lastTime=now;
  ctx.clearRect(0,0,w,h);ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
  if(!analyser||!smooth)return;
- const a=analyze(),target=Math.min(1,a.avg/72);
- energy+=(target-energy)*.13;
- const beat=Math.max(0,target-energy);pulse+=(beat*42+energy*18-pulse)*.18;
+ const a=analyze(),target=Math.min(1,a.avg/64);
+ energy+=(target-energy)*.16;
+ const beat=Math.max(0,target-energy);pulse+=(beat*65+energy*28-pulse)*.22;
  rotation=(rotation+(a.low/255*.0025)*dt)%(Math.PI*2);
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
- const ringR=Math.min(w,h)*.31+energy*7*scale;
+ const ringR=Math.min(w,h)*.31;
  drawParticles(a);
- drawSymmetricRing(ringR,1+energy*1.5,.08+energy*.13,energy*7*scale,a);
- drawSymmetricRing(ringR+7*scale,1,.025+energy*.055,energy*4*scale,a);
+ drawSymmetricRing(ringR,1.2+energy*2.2,.08+energy*.13,energy*8*scale,a);
+ drawSymmetricRing(ringR+7*scale,1.1,.025+energy*.055,energy*5*scale,a);
  drawWave(waveBase+10*scale,26,0.08,5,18,now*.0004,a.high);
  drawWave(waveBase,24,0.25,3,10,now*.0007,a.high);
  drawWave(waveBase-4*scale,22,0.68,1.5,5,now*.001,a.high);
