@@ -190,6 +190,17 @@ function updateHexRotation(now){
  }
 }
 
+function drawHexPath(radius,def,rot){
+ ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
+ ctx.beginPath();
+ for(let i=0;i<6;i++){
+  const a=i*Math.PI/3-Math.PI/2,r=radius+def[i];
+  const x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+ }
+ ctx.closePath();
+ ctx.restore();
+}
+
 function drawHex(radius,rot,audio){
  ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
  const n=smooth.length,def=[];
@@ -219,6 +230,28 @@ function drawHex(radius,rot,audio){
  ctx.beginPath();ctx.arc(0,0,core,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${.35+energy*.65})`;ctx.shadowBlur=10*scale;ctx.shadowColor="rgba(255,255,255,.8)";ctx.fill();
  ctx.restore();
 }
+
+function drawOuterHex(radius,rot,audio){
+ const outerScale=1.52+Math.pow(Math.min(1,energy),2)*.48;
+ const outerRadius=radius*outerScale;
+ const outerDef=(audio.low/255)**2*8*scale;
+ ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
+ ctx.beginPath();
+ for(let i=0;i<6;i++){
+  const a=i*Math.PI/3-Math.PI/2;
+  const r=outerRadius+outerDef;
+  const x=r*Math.cos(a),y=r*Math.sin(a);
+  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+ }
+ ctx.closePath();
+ ctx.strokeStyle=`rgba(255,255,255,${.16+energy*.30})`;
+ ctx.lineWidth=(1.1+energy*3.2)*scale;
+ ctx.shadowBlur=(7+energy*12)*scale;
+ ctx.shadowColor="rgba(255,255,255,.65)";
+ ctx.stroke();
+ ctx.restore();
+}
+
 function drawParticles(audio){
  for(const p of particles){
   p.a+=p.s*16;
@@ -249,6 +282,7 @@ function draw(){
  drawSymmetricRing(ringR+8*scale,1,.025+energy*.065,energy*5*scale);
  drawBassArcs(ringR+3*scale,a,now*.00065);
  drawCoilGlow(waveBase,now*.00045);
+ drawOuterHex(hexR,rotation,a);
  drawHex(hexR,rotation,a);
 }
 </script>
