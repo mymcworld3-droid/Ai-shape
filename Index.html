@@ -109,13 +109,11 @@ function drawCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd,shape){
  const points=300,arr=[];
  for(let i=0;i<points;i++){
   const t=i/points;
-  // Mirror t and 1-t onto the same frequency position: identical left/right waveform.
   const u=t<.5?t*2:(1-t)*2;
   const idx=Math.min(smooth.length-1,Math.floor((bandStart+(bandEnd-bandStart)*u)*smooth.length));
   const idx2=Math.min(smooth.length-1,Math.floor((bandStart+(bandEnd-bandStart)*Math.min(1,u+.018))*smooth.length));
   const v=Math.max(0,Math.min(1,(smooth[idx]||0)/255));
   const v2=Math.max(0,Math.min(1,(smooth[idx2]||0)/255));
-  // Squared volume, then multiply waveform amplitude by 100.
   const volumeSquared=v*v;
   const volumeSquared2=v2*v2;
   const harmonic=volumeSquared*.72+volumeSquared2*.28;
@@ -186,7 +184,12 @@ function drawHex(radius,rot,audio){
  ctx.beginPath();
  for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=radius*.76+def[i]*.45,x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
  ctx.closePath();ctx.fillStyle="rgba(5,5,5,.9)";ctx.fill();
- ctx.strokeStyle=`rgba(255,255,255,${.2+energy*.55})`;ctx.lineWidth=1.5;ctx.stroke();
+ // Hexagon edge thickness now reacts to overall volume.
+ const hexVolume=Math.max(0,Math.min(1,energy));
+ const edgeWidth=(1.2+hexVolume*6.8)*scale;
+ ctx.strokeStyle=`rgba(255,255,255,${.2+hexVolume*.55})`;
+ ctx.lineWidth=edgeWidth;
+ ctx.stroke();
  const core=(3+energy*7+audio.high/255*2)*scale;
  ctx.beginPath();ctx.arc(0,0,core,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${.35+energy*.65})`;ctx.shadowBlur=10*scale;ctx.shadowColor="rgba(255,255,255,.8)";ctx.fill();
  ctx.restore();
