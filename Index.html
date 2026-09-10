@@ -3,229 +3,408 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>語音助理風格視覺化</title>
+    <title>AI Voice Assistant Visualizer</title>
     <style>
-        body {
+        * { box-sizing: border-box; }
+        html, body {
             margin: 0;
-            padding: 0;
-            background-color: #050505;
-            color: #ffffff;
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
+            background: #050505;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        }
+        #visualizer {
+            position: fixed;
+            inset: 0;
             width: 100vw;
             height: 100vh;
+            display: block;
         }
         #controls {
-            margin-top: 20px;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 10;
             display: flex;
-            gap: 15px;
             align-items: center;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px 20px;
-            border-radius: 10px;
-            backdrop-filter: blur(5px);
+            gap: 12px;
+            padding: 10px 14px;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 12px;
+            background: rgba(15,15,15,.72);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
         }
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
+        #audioUpload { max-width: 220px; color: #fff; font-size: 13px; }
+        #audioUpload::file-selector-button {
+            margin-right: 8px;
+            padding: 7px 11px;
+            border: 0;
+            border-radius: 7px;
+            background: #fff;
+            color: #000;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #audioElement { width: 260px; height: 34px; }
+        #status {
+            position: fixed;
+            left: 50%;
+            bottom: 28px;
+            transform: translateX(-50%);
+            z-index: 10;
+            padding: 7px 14px;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 999px;
+            background: rgba(0,0,0,.35);
+            color: rgba(255,255,255,.55);
+            font-size: 11px;
+            letter-spacing: 2px;
+            pointer-events: none;
+        }
+        @media (max-width: 700px) {
+            #controls { width: calc(100% - 24px); flex-direction: column; gap: 8px; }
+            #audioUpload, #audioElement { width: 100%; max-width: none; }
         }
     </style>
 </head>
 <body>
     <div id="controls">
-        <input type="file" id="audioUpload" accept=".mp3, .wav, .ogg, audio/*">
+        <input type="file" id="audioUpload" accept=".mp3,.wav,.ogg,audio/*">
         <audio id="audioElement" controls></audio>
     </div>
     <canvas id="visualizer"></canvas>
+    <div id="status">WAITING FOR AUDIO</div>
 
     <script>
-        const audioUpload = document.getElementById('audioUpload');
-        const audioElement = document.getElementById('audioElement');
-        const canvas = document.getElementById('visualizer');
-        const ctx = canvas.getContext('2d');
+        "use strict";
 
-        let audioCtx;
-        let analyser;
-        let source;
-        let dataArray;
-        let smoothedDataArray;
-        let dpr = window.devicePixelRatio || 1;
-        
+        const audioUpload = document.getElementById("audioUpload");
+        const audioElement = document.getElementById("audioElement");
+        const canvas = document.getElementById("visualizer");
+        const ctx = canvas.getContext("2d");
+        const status = document.getElementById("status");
+
+        let audioCtx = null;
+        let analyser = null;
+        let source = null;
+        let dataArray = null;
+        let smoothedDataArray = null;
+        let animationStarted = false;
+        let objectURL = null;
+
+        let dpr = 1;
         let currentHexAngle = 0;
         let targetHexAngle = 0;
-        let lastRotateTime = 0; 
+        let lastRotateTime = 0;
+        let currentPulse = 0;
+        let targetPulse = 0;
+        let currentEnergy = 0;
+        let previousEnergy = 0;
+
+        const particles = [];
+        const PARTICLE_COUNT = 90;
 
         function resizeCanvas() {
-            dpr = window.devicePixelRatio || 1;
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-            canvas.style.width = window.innerWidth + 'px';
-            canvas.style.height = window.innerHeight + 'px';
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.floor(window.innerWidth * dpr);
+            canvas.height = Math.floor(window.innerHeight * dpr);
+            canvas.style.width = window.innerWidth + "px";
+            canvas.style.height = window.innerHeight + "px";
+            initializeParticles();
         }
 
-        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener("resize", resizeCanvas);
+
+        function initializeParticles() {
+            particles.length = 0;
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push({
+                    angle: Math.random() * Math.PI * 2,
+                    radius: 360 + Math.random() * 420,
+                    speed: 0.00015 + Math.random() * 0.00065,
+                    size: 0.4 + Math.random() * 1.8,
+                    alpha: 0.03 + Math.random() * 0.3
+                });
+            }
+        }
+
         resizeCanvas();
 
-        audioUpload.addEventListener('change', function(e) {
+        audioUpload.addEventListener("change", async function () {
             const file = this.files[0];
             if (!file) return;
 
-            const url = URL.createObjectURL(file);
-            audioElement.src = url;
+            if (objectURL) URL.revokeObjectURL(objectURL);
+            objectURL = URL.createObjectURL(file);
+            audioElement.src = objectURL;
 
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.42;
+
                 source = audioCtx.createMediaElementSource(audioElement);
-                
                 source.connect(analyser);
                 analyser.connect(audioCtx.destination);
-                
-                analyser.fftSize = 256;
+
                 const bufferLength = analyser.frequencyBinCount;
                 dataArray = new Uint8Array(bufferLength);
                 smoothedDataArray = new Float32Array(bufferLength);
             }
 
-            audioElement.play();
-            draw();
+            if (audioCtx.state === "suspended") await audioCtx.resume();
+
+            try { await audioElement.play(); } catch (e) {}
+
+            status.textContent = "LISTENING";
+
+            if (!animationStarted) {
+                animationStarted = true;
+                requestAnimationFrame(draw);
+            }
         });
 
-        function drawCenterHexagon(x, y, baseRadius, pulse, angleOffset) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(angleOffset);
+        audioElement.addEventListener("play", () => status.textContent = "LISTENING");
+        audioElement.addEventListener("pause", () => status.textContent = "PAUSED");
+        audioElement.addEventListener("ended", () => status.textContent = "AUDIO COMPLETE");
 
-            // 根據音量變化 (pulse) 計算亮度 (alpha 值介於 0.2 到 1 之間)
-            const brightness = Math.min(1, 0.2 + (pulse / (40 * dpr)));
+        function analyzeAudio() {
+            if (!analyser) return { average: 0, low: 0, mid: 0, high: 0 };
 
-            // 發光範圍也隨音量放大
-            ctx.shadowBlur = (15 + pulse * 0.5) * dpr;
-            ctx.shadowColor = `rgba(255, 255, 255, ${brightness})`;
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
 
-            // 繪製實心六邊形
+            for (let i = 0; i < dataArray.length; i++) {
+                const raw = dataArray[i];
+                const attack = raw > smoothedDataArray[i] ? 0.30 : 0.075;
+                smoothedDataArray[i] += (raw - smoothedDataArray[i]) * attack;
+                sum += smoothedDataArray[i];
+            }
+
+            const average = sum / dataArray.length;
+            const n = dataArray.length;
+            let low = 0, mid = 0, high = 0;
+
+            for (let i = 0; i < n; i++) {
+                const v = smoothedDataArray[i];
+                if (i < n * 0.10) low += v;
+                else if (i < n * 0.42) mid += v;
+                else high += v;
+            }
+
+            return {
+                average,
+                low: low / (n * 0.10),
+                mid: mid / (n * 0.32),
+                high: high / (n * 0.58)
+            };
+        }
+
+        function hexPath(radius, deformation, phase) {
             ctx.beginPath();
-            // 大小隨音量 (pulse) 進行動態縮放
-            const hexRadius = baseRadius * 0.6 + pulse * 0.8;
             for (let i = 0; i < 6; i++) {
-                const angle = (Math.PI / 3) * i - Math.PI / 2;
-                const pX = hexRadius * Math.cos(angle);
-                const pY = hexRadius * Math.sin(angle);
-                if (i === 0) ctx.moveTo(pX, pY);
-                else ctx.lineTo(pX, pY);
+                const angle = Math.PI / 3 * i - Math.PI / 2;
+                const vertexEnergy = deformation[i] || 0;
+                const r = radius + vertexEnergy;
+                const x = r * Math.cos(angle);
+                const y = r * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
             }
             ctx.closePath();
-            
-            ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+        }
+
+        function drawCenterHexagon(x, y, baseRadius, pulse, rotation, energy, high) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+
+            const n = smoothedDataArray.length;
+            const deformation = [];
+
+            for (let i = 0; i < 6; i++) {
+                const index = Math.floor((i / 6) * n * 0.32);
+                const v = Math.pow((smoothedDataArray[index] || 0) / 255, 0.62);
+                deformation.push(v * (24 + pulse * 0.42) * dpr);
+            }
+
+            const radius = baseRadius * 0.90 + pulse * 1.18;
+            const brightness = Math.min(1, 0.22 + energy * 0.82);
+
+            ctx.shadowBlur = (30 + pulse * 0.85) * dpr;
+            ctx.shadowColor = `rgba(255,255,255,${brightness})`;
+            hexPath(radius, deformation);
+            ctx.fillStyle = `rgba(255,255,255,${brightness})`;
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+
+            hexPath(radius * 0.79, deformation.map(v => v * 0.55));
+            ctx.fillStyle = "rgba(5,5,5,0.86)";
+            ctx.fill();
+
+            hexPath(radius * 0.91, deformation.map(v => v * 0.55));
+            ctx.strokeStyle = `rgba(255,255,255,${0.16 + energy * 0.5})`;
+            ctx.lineWidth = 2 * dpr;
+            ctx.stroke();
+
+            const core = (4 + energy * 11 + high / 255 * 3) * dpr;
+            ctx.shadowBlur = (10 + energy * 22) * dpr;
+            ctx.shadowColor = "rgba(255,255,255,.75)";
+            ctx.beginPath();
+            ctx.arc(0, 0, core, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,255,255,${0.35 + energy * 0.65})`;
             ctx.fill();
 
             ctx.restore();
         }
 
-        function drawWaveLayer(centerX, centerY, baseRadius, totalPoints, halfPoints, ampMultiplier, alpha, lineWidth, blur) {
-            let points = [];
+        function drawWaveLayer(centerX, centerY, baseRadius, totalPoints, amp, alpha, lineWidth, blur, sensitivity, phase, highWeight) {
+            const points = [];
 
-            for (let i = 0; i <= halfPoints; i++) {
-                const dataIndex = Math.floor((i / halfPoints) * (smoothedDataArray.length * 0.4)); 
-                const barValue = smoothedDataArray[dataIndex];
-                
-                const ripple = (barValue / 255) * 40 * dpr * ampMultiplier; 
-                const r = baseRadius + ripple;
-                const angle = (Math.PI * 2 / totalPoints) * i - Math.PI / 2;
+            for (let i = 0; i < totalPoints; i++) {
+                const normalized = i / totalPoints;
+                let dataIndex = Math.floor(normalized * smoothedDataArray.length * 0.78);
+                dataIndex = Math.min(dataIndex, smoothedDataArray.length - 1);
 
-                points.push({
-                    x: centerX + r * Math.cos(angle),
-                    y: centerY + r * Math.sin(angle)
-                });
-            }
+                let value = smoothedDataArray[dataIndex] || 0;
+                value = Math.pow(value / 255, 0.64) * 255;
 
-            for (let i = halfPoints - 1; i > 0; i--) {
-                const dataIndex = Math.floor((i / halfPoints) * (smoothedDataArray.length * 0.4)); 
-                const barValue = smoothedDataArray[dataIndex];
-                
-                const ripple = (barValue / 255) * 40 * dpr * ampMultiplier;
-                const r = baseRadius + ripple;
-                const angle = (Math.PI * 2 / totalPoints) * (totalPoints - i) - Math.PI / 2;
+                const detail = 0.88 + (Math.sin(normalized * Math.PI * 18 + phase) * 0.5 + 0.5) * 0.18;
+                value *= detail;
+
+                const ripple = (value / 255) * 78 * dpr * amp * sensitivity;
+                const highDetail = (highWeight * 0.12) * Math.sin(normalized * Math.PI * 34 + phase * 1.7) * dpr;
+                const radius = baseRadius + ripple + highDetail;
+                const angle = normalized * Math.PI * 2 - Math.PI / 2;
 
                 points.push({
-                    x: centerX + r * Math.cos(angle),
-                    y: centerY + r * Math.sin(angle)
+                    x: centerX + radius * Math.cos(angle),
+                    y: centerY + radius * Math.sin(angle)
                 });
             }
 
             ctx.beginPath();
             ctx.moveTo(points[0].x, points[0].y);
 
-            for (let i = 1; i < points.length - 1; i++) {
-                const xc = (points[i].x + points[i + 1].x) / 2;
-                const yc = (points[i].y + points[i + 1].y) / 2;
-                ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+            for (let i = 0; i < points.length; i++) {
+                const a = points[i];
+                const b = points[(i + 1) % points.length];
+                const mx = (a.x + b.x) / 2;
+                const my = (a.y + b.y) / 2;
+                ctx.quadraticCurveTo(a.x, a.y, mx, my);
             }
 
-            ctx.quadraticCurveTo(
-                points[points.length - 1].x, 
-                points[points.length - 1].y, 
-                points[0].x, 
-                points[0].y
-            );
-
-            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.closePath();
+            ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
             ctx.lineWidth = lineWidth * dpr;
             ctx.shadowBlur = blur * dpr;
-            ctx.shadowColor = `rgba(255, 255, 255, ${alpha + 0.2 > 1 ? 1 : alpha + 0.2})`;
+            ctx.shadowColor = `rgba(255,255,255,${Math.min(1, alpha + 0.25)})`;
             ctx.stroke();
-            
             ctx.shadowBlur = 0;
+        }
+
+        function drawEnergyRing(cx, cy, radius, energy) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255,255,255,${0.025 + energy * 0.11})`;
+            ctx.lineWidth = dpr;
+            ctx.shadowBlur = energy * 12 * dpr;
+            ctx.shadowColor = "rgba(255,255,255,.5)";
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawParticles(cx, cy, energy, high) {
+            for (const p of particles) {
+                p.angle += p.speed;
+                const radius = p.radius + energy * 130 * dpr + high / 255 * 35 * dpr;
+                const x = cx + Math.cos(p.angle) * radius;
+                const y = cy + Math.sin(p.angle) * radius;
+                const a = Math.min(0.75, p.alpha * (0.35 + energy * 1.6));
+
+                ctx.beginPath();
+                ctx.arc(x, y, p.size * dpr, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,255,255,${a})`;
+                ctx.fill();
+            }
         }
 
         function draw() {
             requestAnimationFrame(draw);
-
             if (!analyser) return;
 
-            analyser.getByteFrequencyData(dataArray);
+            const audio = analyzeAudio();
+            const energyTarget = Math.min(1, audio.average / 82);
+            currentEnergy += (energyTarget - currentEnergy) * 0.12;
+            const energy = currentEnergy;
+            const attack = Math.max(0, energy - previousEnergy);
+            previousEnergy = energy;
 
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                smoothedDataArray[i] += (dataArray[i] - smoothedDataArray[i]) * 0.08;
-                sum += smoothedDataArray[i];
-            }
+            targetPulse = energy * 78 * dpr + attack * 105 * dpr;
+            currentPulse += (targetPulse - currentPulse) * 0.16;
 
-            ctx.fillStyle = 'rgba(5, 5, 5, 1)';
+            ctx.fillStyle = "rgba(5,5,5,0.34)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            
-            const avgVolume = sum / dataArray.length;
-            const globalPulse = (avgVolume / 255) * 50 * dpr;
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const now = performance.now();
 
-            const now = Date.now();
-            
-            if (avgVolume > 10 && now - lastRotateTime > 2000) {
-                targetHexAngle += Math.PI / 3; 
+            if (audio.low > 18 && energy > 0.10 && now - lastRotateTime > 950) {
+                targetHexAngle += Math.PI / 3;
                 lastRotateTime = now;
             }
-            
-            currentHexAngle += (targetHexAngle - currentHexAngle) * 0.06;
 
-            const centerBaseRadius = 100 * dpr;
-            drawCenterHexagon(centerX, centerY, centerBaseRadius, globalPulse, currentHexAngle);
+            targetHexAngle += (audio.low / 255) * 0.00065;
+            currentHexAngle += (targetHexAngle - currentHexAngle) * 0.045;
 
-            const totalPoints = 120; 
-            const halfPoints = totalPoints / 2;
-            const waveBaseRadius = centerBaseRadius + 45 * dpr + globalPulse; 
+            const base = 150 * dpr;
+            const waveBase = base + 64 * dpr + currentPulse * 0.34;
+            const points = 220;
+            const phase = now * 0.001;
 
-            drawWaveLayer(centerX, centerY, waveBaseRadius, totalPoints, halfPoints, 1.5, 0.15, 6, 30);
-            drawWaveLayer(centerX, centerY, waveBaseRadius, totalPoints, halfPoints, 1.0, 0.4, 4, 15);
-            drawWaveLayer(centerX, centerY, waveBaseRadius, totalPoints, halfPoints, 0.6, 0.8, 2, 5);
+            drawEnergyRing(cx, cy, base + 112 * dpr + currentPulse * 0.22, energy);
+            drawParticles(cx, cy, energy, audio.high);
+
+            drawWaveLayer(cx, cy, waveBase + 10 * dpr, points, 1.55, 0.09, 7, 40, 1.35, phase * .25, audio.high);
+            drawWaveLayer(cx, cy, waveBase, points, 1.25, 0.30, 4, 21, 1.70, phase * .5, audio.high);
+            drawWaveLayer(cx, cy, waveBase - 5 * dpr, points, 0.92, 0.72, 2, 8, 2.15, phase, audio.high);
+            drawWaveLayer(cx, cy, waveBase + 16 * dpr, points, 0.66, 0.25 + audio.high / 255 * 0.38, 1, 4, 2.90, phase * 1.5, audio.high * 1.4);
+
+            drawCenterHexagon(cx, cy, base, currentPulse, currentHexAngle, energy, audio.high);
+
+            if (audioElement.paused) status.textContent = "PAUSED";
+            else if (energy > 0.14) status.textContent = "VOICE DETECTED";
+            else status.textContent = "LISTENING";
         }
+
+        function idleFrame() {
+            if (animationStarted) return;
+            ctx.fillStyle = "#050505";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const pulse = Math.sin(performance.now() * 0.0015) * 0.5 + 0.5;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.globalAlpha = 0.10 + pulse * 0.035;
+            hexPath(150 * dpr, [0,0,0,0,0,0]);
+            ctx.fillStyle = "#fff";
+            ctx.fill();
+            ctx.restore();
+
+            requestAnimationFrame(idleFrame);
+        }
+
+        idleFrame();
     </script>
 </body>
 </html>
