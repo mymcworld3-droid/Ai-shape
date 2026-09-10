@@ -101,18 +101,34 @@ function analyze(){
  return{avg:sum/dataArray.length,low:averageBand(20,250),mid:averageBand(250,2000),high:averageBand(2000,8000)};
 }
 function radialPoint(r,a){return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}}
-function drawSymmetricRing(r,thickness,alpha,glow,audio){
- const sensitivity=1+(audio.low+audio.mid*.7+audio.high*.25)/255;
- const ringPulse=(energy*42+pulse*.95)*scale*sensitivity;
- const rr=Math.max(1,r+ringPulse);
+
+// 主音頻圓環：不再限制半徑，音量越激烈，向外爆發越明顯。
+function drawAudioRing(baseR,thickness,alpha,glow,audio){
+ const low=audio.low/255,mid=audio.mid/255,high=audio.high/255;
+ const sensitivity=1+low*1.8+mid*1.25+high*.65;
+ const burst=(energy*70+pulse*1.65)*scale*sensitivity;
+ const rr=Math.max(1,baseR+burst);
  ctx.save();
  ctx.beginPath();ctx.arc(cx,cy,rr,0,Math.PI*2);
- ctx.strokeStyle=`rgba(255,255,255,${Math.min(.92,alpha+sensitivity*.14)})`;
- ctx.lineWidth=thickness+energy*3.2+Math.min(3,sensitivity*.8);
- ctx.shadowBlur=glow+energy*22*scale+ringPulse*.15;
- ctx.shadowColor=`rgba(255,255,255,${Math.min(1,alpha+.35)})`;
+ ctx.strokeStyle=`rgba(255,255,255,${Math.min(.98,alpha+energy*.25)})`;
+ ctx.lineWidth=thickness+energy*4.5+burst*.018;
+ ctx.shadowBlur=glow+energy*28*scale+burst*.10;
+ ctx.shadowColor=`rgba(255,255,255,${Math.min(1,alpha+.45)})`;
  ctx.stroke();ctx.restore();
 }
+
+// 其他正圓環：保持小幅、低敏感度，只做背景層次。
+function drawQuietRing(r,thickness,alpha,glow){
+ const rr=r+energy*2.5*scale;
+ ctx.save();
+ ctx.beginPath();ctx.arc(cx,cy,rr,0,Math.PI*2);
+ ctx.strokeStyle=`rgba(255,255,255,${alpha+energy*.025})`;
+ ctx.lineWidth=thickness+energy*.18;
+ ctx.shadowBlur=glow+energy*1.5*scale;
+ ctx.shadowColor="rgba(255,255,255,.25)";
+ ctx.stroke();ctx.restore();
+}
+
 function drawWave(base,amp,alpha,line,blur,phase,high){
  const points=180,arr=[];
  for(let i=0;i<points;i++){
@@ -167,10 +183,10 @@ function draw(){
  rotation=(rotation+(a.low/255*.0025)*dt)%(Math.PI*2);
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
- const ringR=Math.min(w,h)*.31;
+ const audioRingBase=Math.min(w,h)*.30;
  drawParticles(a);
- drawSymmetricRing(ringR,1.2+energy*2.2,.08+energy*.13,energy*8*scale,a);
- drawSymmetricRing(ringR+7*scale,1.1,.025+energy*.055,energy*5*scale,a);
+ drawAudioRing(audioRingBase,1.3,.10,7,a);
+ drawQuietRing(audioRingBase+10*scale,1,.025,1.5);
  drawWave(waveBase+10*scale,26,0.08,5,18,now*.0004,a.high);
  drawWave(waveBase,24,0.25,3,10,now*.0007,a.high);
  drawWave(waveBase-4*scale,22,0.68,1.5,5,now*.001,a.high);
