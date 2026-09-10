@@ -36,7 +36,7 @@ let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=null,started=f
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1;
 let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0,lastTime=0;
 let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
-const ROTATE_INTERVAL=5000;
+const ROTATE_INTERVAL=500;
 const ROTATE_DURATION=1400;
 const ROTATE_STEP=Math.PI/3;
 const particles=[];
@@ -170,7 +170,7 @@ function drawBassArcs(radius,audio,phase){
 }
 
 function updateHexRotation(now){
- // Hold the current angle for a while, then move exactly 60 degrees and ease to a stop.
+ // Hold the current angle for 0.5 second, then move exactly 60 degrees and ease to a stop.
  if(!rotationMoving && now-rotationMoveStart>=ROTATE_INTERVAL){
   rotationMoving=true;
   rotationStart=rotation;
