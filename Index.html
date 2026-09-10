@@ -209,9 +209,9 @@ function drawHex(radius,rot,audio){
  ctx.beginPath();
  for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=radius*.76+def[i]*.45,x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
  ctx.closePath();ctx.fillStyle="rgba(5,5,5,.9)";ctx.fill();
- // Hexagon edge thickness now reacts to overall volume, with 2x stronger variation.
+ // Hexagon edge thickness now reacts to overall volume, with 20x stronger variation.
  const hexVolume=Math.max(0,Math.min(1,energy));
- const edgeWidth=(1.2+hexVolume*13.6)*scale;
+ const edgeWidth=(1.2+hexVolume*136)*scale;
  ctx.strokeStyle=`rgba(255,255,255,${.2+hexVolume*.55})`;
  ctx.lineWidth=edgeWidth;
  ctx.stroke();
