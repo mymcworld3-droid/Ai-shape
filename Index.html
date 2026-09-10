@@ -104,7 +104,7 @@ function drawSymmetricRing(r,thickness,alpha,glow){
 }
 
 // Audio coil: every point is mirrored from the left/right partner, so the entire waveform
-// stays perfectly symmetric on the vertical centerline. Amplitude is proportional to volume^2.
+// stays perfectly symmetric on the vertical centerline. Amplitude is proportional to volume^2 * 100.
 function drawCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd,shape){
  const points=300,arr=[];
  for(let i=0;i<points;i++){
@@ -115,12 +115,12 @@ function drawCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd,shape){
   const idx2=Math.min(smooth.length-1,Math.floor((bandStart+(bandEnd-bandStart)*Math.min(1,u+.018))*smooth.length));
   const v=Math.max(0,Math.min(1,(smooth[idx]||0)/255));
   const v2=Math.max(0,Math.min(1,(smooth[idx2]||0)/255));
-  // Squared volume: quiet audio stays restrained, loud audio expands dramatically.
+  // Squared volume, then multiply waveform amplitude by 100.
   const volumeSquared=v*v;
   const volumeSquared2=v2*v2;
   const harmonic=volumeSquared*.72+volumeSquared2*.28;
   const detail=.88+.12*Math.sin(u*Math.PI*22+phase);
-  const ripple=harmonic*amp*scale*detail;
+  const ripple=harmonic*amp*scale*100*detail;
   const fine=(highEnergy/255)**2*3.2*scale*Math.sin(u*Math.PI*54+phase*2.1);
   const bassBend=(bassEnergy/255)**2*amp*.16*scale*Math.sin(u*Math.PI*6+phase*.55);
   const a=t*Math.PI*2-Math.PI/2;
