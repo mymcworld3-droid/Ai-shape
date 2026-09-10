@@ -15,7 +15,7 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 #visualizerWrap{position:relative;min-height:0;overflow:hidden;background:#050505}
 #visualizer{position:absolute;inset:0;width:100%;height:100%;display:block}
 #status{position:relative;z-index:2;text-align:center;padding:7px 12px;background:rgba(10,10,10,.96);border-top:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.55);font-size:10px;letter-spacing:2px;pointer-events:none}
-@media(max-width:700px){body{grid-template-rows:auto minmax(0,1fr) auto}#controls{flex-direction:column;gap:6px;padding:7px 10px}#audioUpload,#audioElement{width:100%;max-width:none}#audioElement{height:30px}}
+@media(max-width:700px){#controls{flex-direction:column;gap:6px;padding:7px 10px}#audioUpload,#audioElement{width:100%;max-width:none}#audioElement{height:30px}}
 </style>
 </head>
 <body>
@@ -32,7 +32,7 @@ const audioElement=document.getElementById("audioElement");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
 const status=document.getElementById("status");
-let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=null,objectURL=null,started=false;
+let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=null,objectURL=null;
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1;
 let energy=0,pulse=0,rotation=0,lastTime=0;
 const particles=[];
@@ -44,16 +44,14 @@ function resizeCanvas(){
  canvas.width=Math.max(1,Math.floor(w*dpr));canvas.height=Math.max(1,Math.floor(h*dpr));
  ctx.setTransform(dpr,0,0,dpr,0,0);
  cx=w/2;cy=h/2;
- // Everything is scaled from the shortest screen dimension, so it never runs outside the canvas.
- scale=Math.min(w,h)/760;
- scale=Math.max(.48,Math.min(scale,1));
+ scale=Math.max(.42,Math.min(Math.min(w,h)/760,1));
  initParticles();
 }
 window.addEventListener("resize",resizeCanvas);
 function initParticles(){
  particles.length=0;
- const maxR=Math.min(w,h)*.46;
- for(let i=0;i<PARTICLES;i++) particles.push({a:Math.random()*Math.PI*2,r:maxR*(.58+Math.random()*.4),s:.00012+Math.random()*.0005,size:.5+Math.random()*1.3,alpha:.04+Math.random()*.18});
+ const maxR=Math.min(w,h)*.40;
+ for(let i=0;i<PARTICLES;i++) particles.push({a:Math.random()*Math.PI*2,r:maxR*(.58+Math.random()*.38),s:.00012+Math.random()*.0005,size:.5+Math.random()*1.3,alpha:.04+Math.random()*.18});
 }
 resizeCanvas();
 
@@ -63,39 +61,56 @@ audioUpload.addEventListener("change",async function(){
  objectURL=URL.createObjectURL(file);audioElement.src=objectURL;
  if(!audioCtx){
   audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  analyser=audioCtx.createAnalyser();analyser.fftSize=512;analyser.smoothingTimeConstant=.34;
-  source=audioCtx.createMediaElementSource(audioElement);source.connect(analyser);analyser.connect(audioCtx.destination);
-  dataArray=new Uint8Array(analyser.frequencyBinCount);smooth=new Float32Array(analyser.frequencyBinCount);
+  analyser=audioCtx.createAnalyser();
+  analyser.fftSize=512;
+  analyser.smoothingTimeConstant=.28;
+  source=audioCtx.createMediaElementSource(audioElement);
+  source.connect(analyser);analyser.connect(audioCtx.destination);
+  dataArray=new Uint8Array(analyser.frequencyBinCount);
+  smooth=new Float32Array(analyser.frequencyBinCount);
  }
  if(audioCtx.state==="suspended")await audioCtx.resume();
- try{await audioElement.play()}catch(e){}
+ try{await audioElement.play()}catch(e){status.textContent="PRESS PLAY TO START";return}
  status.textContent="LISTENING";
- if(!started){started=true;requestAnimationFrame(draw)}
 });
 audioElement.addEventListener("play",()=>status.textContent="LISTENING");
 audioElement.addEventListener("pause",()=>status.textContent="PAUSED");
 audioElement.addEventListener("ended",()=>status.textContent="AUDIO COMPLETE");
 
+function averageBand(minHz,maxHz){
+ if(!analyser||!smooth)return 0;
+ const nyquist=analyser.context.sampleRate/2;
+ const lo=Math.max(20,Math.min(minHz,nyquist));
+ const hi=Math.max(lo+1,Math.min(maxHz,nyquist));
+ const start=Math.max(0,Math.floor(lo/nyquist*smooth.length));
+ const end=Math.min(smooth.length,Math.max(start+1,Math.ceil(hi/nyquist*smooth.length)));
+ let sum=0;
+ for(let i=start;i<end;i++)sum+=smooth[i];
+ return sum/(end-start);
+}
 function analyze(){
  if(!analyser)return{avg:0,low:0,mid:0,high:0};
  analyser.getByteFrequencyData(dataArray);
- let sum=0,low=0,mid=0,high=0,n=dataArray.length;
- for(let i=0;i<n;i++){
+ let sum=0;
+ for(let i=0;i<dataArray.length;i++){
   const raw=dataArray[i];
-  const k=raw>smooth[i]?.32:.085;
+  const k=raw>smooth[i]?.36:.08;
   smooth[i]+=(raw-smooth[i])*k;
-  const v=smooth[i];sum+=v;
-  if(i<n*.12)low+=v;else if(i<n*.45)mid+=v;else high+=v;
+  sum+=smooth[i];
  }
- return{avg:sum/n,low:low/(n*.12),mid:mid/(n*.33),high:high/(n*.55)};
+ return{avg:sum/dataArray.length,low:averageBand(20,250),mid:averageBand(250,2000),high:averageBand(2000,8000)};
 }
-
 function radialPoint(r,a){return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}}
-function drawSymmetricRing(r,thickness,alpha,glow){
- // Perfectly circular/symmetric ring. Audio changes radius only, never individual sides.
- ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
- ctx.strokeStyle=`rgba(255,255,255,${alpha})`;ctx.lineWidth=thickness;
- ctx.shadowBlur=glow;ctx.shadowColor=`rgba(255,255,255,${Math.min(.8,alpha+.15)})`;ctx.stroke();ctx.restore();
+function drawSymmetricRing(r,thickness,alpha,glow,audio){
+ const sensitivity=1+Math.min(1,(audio.low+audio.mid*.55)/255);
+ const ringPulse=(energy*18+pulse*.22)*scale*sensitivity;
+ const rr=Math.max(1,r+ringPulse);
+ ctx.save();
+ ctx.beginPath();ctx.arc(cx,cy,rr,0,Math.PI*2);
+ ctx.strokeStyle=`rgba(255,255,255,${Math.min(.65,alpha+sensitivity*.08)})`;
+ ctx.lineWidth=thickness+energy*1.2;
+ ctx.shadowBlur=glow+energy*8*scale;ctx.shadowColor=`rgba(255,255,255,${Math.min(.9,alpha+.2)})`;
+ ctx.stroke();ctx.restore();
 }
 function drawWave(base,amp,alpha,line,blur,phase,high){
  const points=180,arr=[];
@@ -114,17 +129,18 @@ function drawWave(base,amp,alpha,line,blur,phase,high){
 }
 function drawHex(radius,rot,audio){
  ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
- const n=smooth.length,def=[];
- for(let i=0;i<6;i++){
-  // Six mirrored frequency bands keep the hexagon balanced while still reacting strongly.
-  const band=Math.floor((i/6)*n*.30);
-  const v=Math.pow((smooth[band]||0)/255,.60);
-  def[i]=v*12*scale*(.7+audio.low/255*.8);
- }
+ const n=smooth.length;
+ const bands=[
+  Math.pow((smooth[Math.floor(n*.03)]||0)/255,.58),
+  Math.pow((smooth[Math.floor(n*.12)]||0)/255,.58),
+  Math.pow((smooth[Math.floor(n*.28)]||0)/255,.58)
+ ];
+ const strength=(16+energy*18)*(0.75+audio.low/255*.9)*scale;
+ const def=[bands[0],bands[1],bands[2],bands[0],bands[1],bands[2]].map(v=>v*strength);
  ctx.beginPath();
  for(let i=0;i<6;i++){
-  const a=i*Math.PI/3-Math.PI/2,r=radius+def[i];
-  const x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  const a=i*Math.PI/3-Math.PI/2,r=radius+def[i],x=r*Math.cos(a),y=r*Math.sin(a);
+  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
  }
  ctx.closePath();
  const bright=Math.min(1,.24+energy*.76);
@@ -138,30 +154,35 @@ function drawHex(radius,rot,audio){
  ctx.restore();
 }
 function drawParticles(audio){
- for(const p of particles){p.a+=p.s*16;const r=p.r+energy*35*scale+audio.high/255*12*scale;const x=cx+Math.cos(p.a)*r,y=cy+Math.sin(p.a)*r;ctx.beginPath();ctx.arc(x,y,p.size,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${Math.min(.45,p.alpha*(.3+energy*1.8))})`;ctx.fill()}
+ const maxR=Math.min(w,h)*.46;
+ for(const p of particles){
+  p.a+=p.s*16;
+  const r=Math.min(maxR,p.r+energy*20*scale+audio.high/255*8*scale);
+  const x=cx+Math.cos(p.a)*r,y=cy+Math.sin(p.a)*r;
+  ctx.beginPath();ctx.arc(x,y,p.size,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${Math.min(.45,p.alpha*(.3+energy*1.8))})`;ctx.fill();
+ }
 }
 function draw(){
- requestAnimationFrame(draw);if(!analyser)return;
+ requestAnimationFrame(draw);
  const now=performance.now(),dt=Math.min(40,now-lastTime||16);lastTime=now;
- const a=analyze(),target=Math.min(1,a.avg/78);
+ ctx.clearRect(0,0,w,h);ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
+ if(!analyser||!smooth)return;
+ const a=analyze(),target=Math.min(1,a.avg/72);
  energy+=(target-energy)*.13;
  const beat=Math.max(0,target-energy);pulse+=(beat*42+energy*18-pulse)*.18;
- rotation+=(a.low/255*.0025)*dt;
- ctx.clearRect(0,0,w,h);
- ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
- // Compact, centered geometry: all effects remain inside the single canvas.
+ rotation=(rotation+(a.low/255*.0025)*dt)%(Math.PI*2);
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
- const ringR=waveBase+Math.min(w,h)*.075;
+ const ringR=Math.min(w,h)*.31+energy*7*scale;
  drawParticles(a);
- // Symmetric ring replaces the old uneven energy ring.
- drawSymmetricRing(ringR,1+energy*1.5,.08+energy*.13,energy*7*scale);
- drawSymmetricRing(ringR+7*scale,1,.025+energy*.055,energy*4*scale);
+ drawSymmetricRing(ringR,1+energy*1.5,.08+energy*.13,energy*7*scale,a);
+ drawSymmetricRing(ringR+7*scale,1,.025+energy*.055,energy*4*scale,a);
  drawWave(waveBase+10*scale,26,0.08,5,18,now*.0004,a.high);
  drawWave(waveBase,24,0.25,3,10,now*.0007,a.high);
  drawWave(waveBase-4*scale,22,0.68,1.5,5,now*.001,a.high);
  drawHex(hexR,rotation,a);
 }
+draw();
 </script>
 </body>
 </html>
