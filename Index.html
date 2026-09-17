@@ -358,7 +358,7 @@ function draw(){
  const a=analyze(),target=Math.min(1,a.avg/68);
  energy+=(target-energy)*.15;bassEnergy+=(a.low-bassEnergy)*.20;midEnergy+=(a.mid-midEnergy)*.16;highEnergy+=(a.high-highEnergy)*.25;
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
- if(!audioElement.paused&&!audioElement.ended)updateHexRotation(now);
+ updateHexRotation(now);
  drawBackground();
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
