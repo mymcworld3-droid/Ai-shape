@@ -45,6 +45,11 @@ const freqMinInput=document.getElementById("freqMin");
 const freqMaxInput=document.getElementById("freqMax");
 const freqMinValue=document.getElementById("freqMinValue");
 const freqMaxValue=document.getElementById("freqMaxValue");
+const backgroundImage=new Image();
+let backgroundReady=false;
+backgroundImage.src="IMG_0165.png";
+backgroundImage.addEventListener("load",()=>{backgroundReady=true;drawBackground()});
+backgroundImage.addEventListener("error",()=>{backgroundReady=false;drawBackground()});
 let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=null,started=false;
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1;
 let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0,lastTime=0;
@@ -76,6 +81,19 @@ freqMinInput.addEventListener("input",clampFreqRange);
 freqMaxInput.addEventListener("input",clampFreqRange);
 updateFreqLabels();
 
+function drawBackground(){
+ ctx.clearRect(0,0,w,h);
+ ctx.fillStyle="#050505";
+ ctx.fillRect(0,0,w,h);
+ if(!backgroundReady||!backgroundImage.naturalWidth||!backgroundImage.naturalHeight)return;
+ const imageScale=Math.max(w/backgroundImage.naturalWidth,h/backgroundImage.naturalHeight);
+ const drawW=backgroundImage.naturalWidth*imageScale;
+ const drawH=backgroundImage.naturalHeight*imageScale;
+ const drawX=(w-drawW)/2;
+ const drawY=(h-drawH)/2;
+ ctx.drawImage(backgroundImage,drawX,drawY,drawW,drawH);
+}
+
 function resizeCanvas(){
  dpr=Math.min(window.devicePixelRatio||1,2);
  w=canvas.clientWidth;h=canvas.clientHeight;
@@ -85,6 +103,7 @@ function resizeCanvas(){
  scale=Math.min(w,h)/760;
  scale=Math.max(.48,Math.min(scale,1));
  initParticles();
+ drawBackground();
 }
 window.addEventListener("resize",resizeCanvas);
 function initParticles(){
@@ -258,7 +277,7 @@ function draw(){
  energy+=(target-energy)*.15;bassEnergy+=(a.low-bassEnergy)*.20;midEnergy+=(a.mid-midEnergy)*.16;highEnergy+=(a.high-highEnergy)*.25;
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
  updateHexRotation(now);
- ctx.clearRect(0,0,w,h);ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
+ drawBackground();
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=waveBase+Math.min(w,h)*.075;
