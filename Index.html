@@ -12,14 +12,18 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 #audioUpload{max-width:220px;color:#fff;font-size:12px}
 #audioUpload::file-selector-button{margin-right:7px;padding:6px 10px;border:0;border-radius:7px;background:#fff;color:#000;cursor:pointer;font-weight:600}
 #audioElement{width:240px;height:32px}
-#freqControls{display:flex;align-items:center;gap:7px;font-size:11px;color:rgba(255,255,255,.75);white-space:nowrap}
-#freqControls label{display:flex;align-items:center;gap:5px}
-#freqControls input[type=range]{width:105px;accent-color:#fff}
-#freqMinValue,#freqMaxValue{display:inline-block;min-width:48px;text-align:right;color:#fff;font-variant-numeric:tabular-nums}
+#freqControls,#shapeControls{display:flex;align-items:center;gap:7px;font-size:11px;color:rgba(255,255,255,.75);white-space:nowrap}
+#freqControls label,#shapeControls label{display:flex;align-items:center;gap:5px}
+#freqControls input[type=range],#shapeControls input[type=range]{width:105px;accent-color:#fff}
+#freqMinValue,#freqMaxValue,#shapeXValue,#shapeYValue,#shapeSizeValue{display:inline-block;min-width:48px;text-align:right;color:#fff;font-variant-numeric:tabular-nums}
+#shapeControls{padding-left:10px;border-left:1px solid rgba(255,255,255,.12)}
+#shapeControls input:disabled{opacity:.35;cursor:not-allowed}
+#shapeControls.disabled{opacity:.48}
 #visualizerWrap{position:relative;min-height:0;overflow:hidden;background:#050505}
 #visualizer{position:absolute;inset:0;width:100%;height:100%;display:block}
 #status{position:relative;z-index:2;text-align:center;padding:7px 12px;background:rgba(10,10,10,.96);border-top:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.55);font-size:10px;letter-spacing:2px;pointer-events:none}
-@media(max-width:700px){body{grid-template-rows:auto minmax(0,1fr) auto}#controls{flex-direction:column;gap:6px;padding:7px 10px}#audioUpload,#audioElement{width:100%;max-width:none}#audioElement{height:30px}#freqControls{width:100%;justify-content:center;flex-wrap:wrap}#freqControls input[type=range]{width:120px}}
+@media(max-width:900px){#shapeControls{width:100%;justify-content:center;border-left:0;padding-left:0;flex-wrap:wrap}}
+@media(max-width:700px){body{grid-template-rows:auto minmax(0,1fr) auto}#controls{flex-direction:column;gap:6px;padding:7px 10px}#audioUpload,#audioElement{width:100%;max-width:none}#audioElement{height:30px}#freqControls,#shapeControls{width:100%;justify-content:center;flex-wrap:wrap}#freqControls input[type=range],#shapeControls input[type=range]{width:120px}}
 </style>
 </head>
 <body>
@@ -31,9 +35,15 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
  <label>低 <input id="freqMin" type="range" min="20" max="20000" step="10" value="20"><span id="freqMinValue">20 Hz</span></label>
  <label>高 <input id="freqMax" type="range" min="20" max="20000" step="10" value="20000"><span id="freqMaxValue">20 kHz</span></label>
 </div>
+<div id="shapeControls" aria-label="播放前初始圖形設定">
+ <span>初始圖形</span>
+ <label>X <input id="shapeX" type="range" min="0" max="100" step="1" value="50"><span id="shapeXValue">50%</span></label>
+ <label>Y <input id="shapeY" type="range" min="0" max="100" step="1" value="50"><span id="shapeYValue">50%</span></label>
+ <label>大小 <input id="shapeSize" type="range" min="30" max="220" step="1" value="100"><span id="shapeSizeValue">100%</span></label>
+</div>
 </div>
 <div id="visualizerWrap"><canvas id="visualizer"></canvas></div>
-<div id="status">WAITING FOR AUDIO</div>
+<div id="status">SET INITIAL SHAPE / CHOOSE AUDIO</div>
 <script>
 "use strict";
 const audioUpload=document.getElementById("audioUpload");
@@ -45,21 +55,31 @@ const freqMinInput=document.getElementById("freqMin");
 const freqMaxInput=document.getElementById("freqMax");
 const freqMinValue=document.getElementById("freqMinValue");
 const freqMaxValue=document.getElementById("freqMaxValue");
+const shapeControls=document.getElementById("shapeControls");
+const shapeXInput=document.getElementById("shapeX");
+const shapeYInput=document.getElementById("shapeY");
+const shapeSizeInput=document.getElementById("shapeSize");
+const shapeXValue=document.getElementById("shapeXValue");
+const shapeYValue=document.getElementById("shapeYValue");
+const shapeSizeValue=document.getElementById("shapeSizeValue");
 const backgroundImage=new Image();
 let backgroundReady=false;
 backgroundImage.src="IMG_0165.png";
-backgroundImage.addEventListener("load",()=>{backgroundReady=true;drawBackground()});
-backgroundImage.addEventListener("error",()=>{backgroundReady=false;drawBackground()});
-let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=null,started=false;
+backgroundImage.addEventListener("load",()=>{backgroundReady=true});
+backgroundImage.addEventListener("error",()=>{backgroundReady=false});
+let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1;
 let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0,lastTime=0;
 let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
 const ROTATE_INTERVAL=500;
 const ROTATE_DURATION=1400;
 const ROTATE_STEP=Math.PI/3;
+const SCENE_DURATION=1600;
 const particles=[];
 const PARTICLES=90;
 let freqMin=20,freqMax=20000;
+let idleXPercent=50,idleYPercent=50,idleSizePercent=100;
+let sceneProgress=0,sceneTarget=0,sceneFrom=0,sceneStart=0,sceneTransitioning=false;
 
 function formatFreq(v){return v>=1000?(v/1000).toFixed(v%1000===0?0:1)+" kHz":Math.round(v)+" Hz"}
 function updateFreqLabels(){
@@ -81,17 +101,63 @@ freqMinInput.addEventListener("input",clampFreqRange);
 freqMaxInput.addEventListener("input",clampFreqRange);
 updateFreqLabels();
 
+function updateShapeSettings(){
+ idleXPercent=Number(shapeXInput.value);
+ idleYPercent=Number(shapeYInput.value);
+ idleSizePercent=Number(shapeSizeInput.value);
+ shapeXValue.textContent=Math.round(idleXPercent)+"%";
+ shapeYValue.textContent=Math.round(idleYPercent)+"%";
+ shapeSizeValue.textContent=Math.round(idleSizePercent)+"%";
+}
+function setShapeControlsEnabled(enabled){
+ shapeXInput.disabled=!enabled;
+ shapeYInput.disabled=!enabled;
+ shapeSizeInput.disabled=!enabled;
+ shapeControls.classList.toggle("disabled",!enabled);
+}
+shapeXInput.addEventListener("input",updateShapeSettings);
+shapeYInput.addEventListener("input",updateShapeSettings);
+shapeSizeInput.addEventListener("input",updateShapeSettings);
+updateShapeSettings();
+
+function easeInOutCubic(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
+function setSceneTarget(target){
+ target=Math.max(0,Math.min(1,target));
+ if(target===sceneTarget&&!sceneTransitioning)return;
+ sceneFrom=sceneProgress;
+ sceneTarget=target;
+ sceneStart=performance.now();
+ sceneTransitioning=true;
+ setShapeControlsEnabled(false);
+}
+function updateScene(now){
+ if(!sceneTransitioning)return;
+ const p=Math.max(0,Math.min(1,(now-sceneStart)/SCENE_DURATION));
+ const eased=easeInOutCubic(p);
+ sceneProgress=sceneFrom+(sceneTarget-sceneFrom)*eased;
+ if(p>=1){
+  sceneProgress=sceneTarget;
+  sceneTransitioning=false;
+  if(sceneTarget===0)setShapeControlsEnabled(true);
+ }
+}
+
 function drawBackground(){
  ctx.clearRect(0,0,w,h);
  ctx.fillStyle="#050505";
  ctx.fillRect(0,0,w,h);
- if(!backgroundReady||!backgroundImage.naturalWidth||!backgroundImage.naturalHeight)return;
- const imageScale=Math.max(w/backgroundImage.naturalWidth,h/backgroundImage.naturalHeight);
- const drawW=backgroundImage.naturalWidth*imageScale;
- const drawH=backgroundImage.naturalHeight*imageScale;
- const drawX=(w-drawW)/2;
- const drawY=(h-drawH)/2;
- ctx.drawImage(backgroundImage,drawX,drawY,drawW,drawH);
+ if(backgroundReady&&backgroundImage.naturalWidth&&backgroundImage.naturalHeight){
+  const imageScale=Math.max(w/backgroundImage.naturalWidth,h/backgroundImage.naturalHeight);
+  const drawW=backgroundImage.naturalWidth*imageScale;
+  const drawH=backgroundImage.naturalHeight*imageScale;
+  const drawX=(w-drawW)/2;
+  const drawY=(h-drawH)/2;
+  ctx.drawImage(backgroundImage,drawX,drawY,drawW,drawH);
+ }
+ if(sceneProgress>0){
+  ctx.fillStyle=`rgba(0,0,0,${Math.min(1,sceneProgress)})`;
+  ctx.fillRect(0,0,w,h);
+ }
 }
 
 function resizeCanvas(){
@@ -103,7 +169,6 @@ function resizeCanvas(){
  scale=Math.min(w,h)/760;
  scale=Math.max(.48,Math.min(scale,1));
  initParticles();
- drawBackground();
 }
 window.addEventListener("resize",resizeCanvas);
 function initParticles(){
@@ -126,6 +191,8 @@ function selectedBins(){
 let objectURL=null;
 audioUpload.addEventListener("change",async function(){
  const file=this.files[0];if(!file)return;
+ audioElement.pause();
+ setSceneTarget(0);
  if(objectURL)URL.revokeObjectURL(objectURL);
  objectURL=URL.createObjectURL(file);audioElement.src=objectURL;
  if(!audioCtx){
@@ -138,17 +205,27 @@ audioUpload.addEventListener("change",async function(){
   source=audioCtx.createMediaElementSource(audioElement);source.connect(analyser);analyser.connect(audioCtx.destination);
   dataArray=new Uint8Array(analyser.frequencyBinCount);smooth=new Float32Array(analyser.frequencyBinCount);
  }
- if(audioCtx.state==="suspended")await audioCtx.resume();
- try{await audioElement.play()}catch(e){}
- status.textContent="LISTENING";
- if(!started){started=true;requestAnimationFrame(draw)}
+ smooth.fill(0);
+ energy=bassEnergy=midEnergy=highEnergy=pulse=0;
+ status.textContent="READY - SET INITIAL SHAPE / PRESS PLAY";
 });
-audioElement.addEventListener("play",()=>status.textContent="LISTENING");
-audioElement.addEventListener("pause",()=>status.textContent="PAUSED");
-audioElement.addEventListener("ended",()=>status.textContent="AUDIO COMPLETE");
+audioElement.addEventListener("play",async()=>{
+ if(audioCtx&&audioCtx.state==="suspended")await audioCtx.resume();
+ setSceneTarget(1);
+ status.textContent="LISTENING";
+});
+audioElement.addEventListener("pause",()=>{if(!audioElement.ended)status.textContent="PAUSED"});
+audioElement.addEventListener("ended",()=>{
+ status.textContent="AUDIO COMPLETE";
+ setSceneTarget(0);
+});
 
 function analyze(){
- if(!analyser)return{avg:0,low:0,mid:0,high:0};
+ if(!analyser||!dataArray)return{avg:0,low:0,mid:0,high:0};
+ if(audioElement.paused||audioElement.ended){
+  for(let i=0;i<smooth.length;i++)smooth[i]*=.86;
+  return{avg:0,low:0,mid:0,high:0};
+ }
  analyser.getByteFrequencyData(dataArray);
  let sum=0,low=0,mid=0,high=0,n=dataArray.length;
  const range=selectedBins(),lo=range.lo,hi=range.hi;
@@ -179,7 +256,7 @@ function drawSymmetricRing(r,thickness,alpha,glow){
 // Audio coil: every point is mirrored from the left/right partner. Amplitude is proportional to volume^2 * 10.
 function drawCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd,shape){
  const points=300,arr=[];
- const range=selectedBins(),lo=range.lo,hi=range.hi,span=Math.max(1,hi-lo);
+ const range=selectedBins(),lo=range.lo,hi=range.hi;
  for(let i=0;i<points;i++){
   const t=i/points;
   const u=t<.5?t*2:(1-t)*2;
@@ -235,7 +312,7 @@ function updateHexRotation(now){
 
 function drawHex(radius,rot,audio){
  ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
- const n=smooth.length,def=[];
+ const def=[];
  const range=selectedBins(),lo=range.lo,hi=range.hi;
  for(let i=0;i<6;i++){
   const band=Math.floor(lo+(i/6)*Math.max(1,(hi-lo)*.30));
@@ -268,19 +345,32 @@ function drawOuterHex(radius,rot,audio){
 }
 
 function drawParticles(audio){
- for(const p of particles){p.a+=p.s*16;const r=p.r+energy*42*scale+audio.high/255*16*scale,x=cx+Math.cos(p.a)*r,y=cy+Math.sin(p.a)*r;ctx.beginPath();ctx.arc(x,y,p.size+(audio.high/255)*.6,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${Math.min(.5,p.alpha*(.3+energy*2.1))})`;ctx.fill()}
+ for(const p of particles){
+  if(!audioElement.paused&&!audioElement.ended)p.a+=p.s*16;
+  const r=p.r+energy*42*scale+audio.high/255*16*scale,x=cx+Math.cos(p.a)*r,y=cy+Math.sin(p.a)*r;
+  ctx.beginPath();ctx.arc(x,y,p.size+(audio.high/255)*.6,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${Math.min(.5,p.alpha*(.3+energy*2.1))})`;ctx.fill();
+ }
 }
 function draw(){
- requestAnimationFrame(draw);if(!analyser)return;
- const now=performance.now(),dt=Math.min(40,now-lastTime||16);lastTime=now;
+ requestAnimationFrame(draw);
+ const now=performance.now();lastTime=now;
+ updateScene(now);
  const a=analyze(),target=Math.min(1,a.avg/68);
  energy+=(target-energy)*.15;bassEnergy+=(a.low-bassEnergy)*.20;midEnergy+=(a.mid-midEnergy)*.16;highEnergy+=(a.high-highEnergy)*.25;
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
- updateHexRotation(now);
+ if(!audioElement.paused&&!audioElement.ended)updateHexRotation(now);
  drawBackground();
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=waveBase+Math.min(w,h)*.075;
+ const idleX=w*(idleXPercent/100),idleY=h*(idleYPercent/100),idleScale=idleSizePercent/100;
+ const visualX=idleX+(cx-idleX)*sceneProgress;
+ const visualY=idleY+(cy-idleY)*sceneProgress;
+ const visualScale=idleScale+(1-idleScale)*sceneProgress;
+ ctx.save();
+ ctx.translate(visualX,visualY);
+ ctx.scale(visualScale,visualScale);
+ ctx.translate(-cx,-cy);
  drawParticles(a);
  drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
  drawSymmetricRing(ringR+8*scale,1,.025+energy*.065,energy*5*scale);
@@ -288,7 +378,9 @@ function draw(){
  drawCoilGlow(waveBase,now*.00045);
  drawOuterHex(hexR,rotation,a);
  drawHex(hexR,rotation,a);
+ ctx.restore();
 }
+requestAnimationFrame(draw);
 </script>
 </body>
 </html>
