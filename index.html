@@ -12,6 +12,10 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 #audioUpload{max-width:220px;color:#fff;font-size:12px}
 #audioUpload::file-selector-button{margin-right:7px;padding:6px 10px;border:0;border-radius:7px;background:#fff;color:#000;cursor:pointer;font-weight:600}
 #audioElement{width:240px;height:32px}
+#timerToggle{padding:8px 14px;border:1px solid rgba(255,255,255,.35);border-radius:8px;background:rgba(255,255,255,.09);color:#fff;font:600 12px inherit;cursor:pointer;white-space:nowrap;transition:background .2s,border-color .2s}
+#timerToggle:hover{background:rgba(255,255,255,.19)}
+#timerToggle[aria-pressed="true"]{background:rgba(255,255,255,.23);border-color:#fff}
+#timerToggle:focus-visible{outline:2px solid #fff;outline-offset:3px}
 #freqControls,#shapeControls{display:flex;align-items:center;gap:7px;font-size:11px;color:rgba(255,255,255,.75);white-space:nowrap}
 #freqControls label,#shapeControls label{display:flex;align-items:center;gap:5px}
 #freqControls input[type=range],#shapeControls input[type=range]{width:105px;accent-color:#fff}
@@ -30,6 +34,7 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 <div id="controls">
 <input type="file" id="audioUpload" accept=".mp3,.wav,.ogg,audio/*">
 <audio id="audioElement" controls></audio>
+<button id="timerToggle" type="button" aria-pressed="false">計時器 · 15:00</button>
 <div id="freqControls" aria-label="音頻顯示範圍">
  <span>頻率範圍</span>
  <label>低 <input id="freqMin" type="range" min="20" max="20000" step="10" value="20"><span id="freqMinValue">20 Hz</span></label>
@@ -51,6 +56,7 @@ const audioElement=document.getElementById("audioElement");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
 const status=document.getElementById("status");
+const timerToggle=document.getElementById("timerToggle");
 const freqMinInput=document.getElementById("freqMin");
 const freqMaxInput=document.getElementById("freqMax");
 const freqMinValue=document.getElementById("freqMinValue");
@@ -75,11 +81,15 @@ const ROTATE_INTERVAL=500;
 const ROTATE_DURATION=1400;
 const ROTATE_STEP=Math.PI/3;
 const SCENE_DURATION=1600;
+const TIMER_DURATION_MS=15*60*1000;
+const TIMER_MORPH_DURATION=1200;
 const particles=[];
 const PARTICLES=90;
 let freqMin=20,freqMax=20000;
 let idleXPercent=50,idleYPercent=50,idleSizePercent=100;
 let sceneProgress=0,sceneTarget=0,sceneFrom=0,sceneStart=0,sceneTransitioning=false;
+let timerActive=false,timerMorph=0,timerMorphFrom=0,timerMorphTo=0,timerMorphStart=0;
+let timerRemainingMs=TIMER_DURATION_MS,timerDeadline=null,timerState="idle",timerLastSecond=-1;
 
 function formatFreq(v){return v>=1000?(v/1000).toFixed(v%1000===0?0:1)+" kHz":Math.round(v)+" Hz"}
 function updateFreqLabels(){
@@ -138,9 +148,69 @@ function updateScene(now){
  if(p>=1){
   sceneProgress=sceneTarget;
   sceneTransitioning=false;
-  if(sceneTarget===0)setShapeControlsEnabled(true);
+  if(sceneTarget===0&&!timerActive)setShapeControlsEnabled(true);
  }
 }
+
+// A timer can be armed at any time; only the media "ended" event starts it.
+function resetTimer(){
+ timerRemainingMs=TIMER_DURATION_MS;
+ timerDeadline=null;
+ timerState=timerActive?"waiting":"idle";
+ timerLastSecond=-1;
+}
+function startTimerAfterAudio(){
+ if(!timerActive||!audioElement.ended||!audioElement.src)return;
+ timerDeadline=performance.now()+TIMER_DURATION_MS;
+ timerState="running";
+ timerRemainingMs=TIMER_DURATION_MS;
+ timerLastSecond=-1;
+ status.textContent="倒數中 · 15:00";
+}
+function updateTimer(now){
+ if(timerMorph!==timerMorphTo){
+  const p=Math.min(1,Math.max(0,(now-timerMorphStart)/TIMER_MORPH_DURATION));
+  timerMorph=timerMorphFrom+(timerMorphTo-timerMorphFrom)*easeInOutCubic(p);
+ }
+ if(timerState!=="running")return;
+ timerRemainingMs=Math.max(0,timerDeadline-now);
+ if(timerRemainingMs===0){
+  timerDeadline=null;
+  timerState="done";
+  status.textContent="計時結束 · 00:00";
+  return;
+ }
+ const seconds=Math.ceil(timerRemainingMs/1000);
+ if(seconds!==timerLastSecond){
+  timerLastSecond=seconds;
+  status.textContent="倒數中 · "+formatTimer(timerRemainingMs);
+ }
+}
+function formatTimer(ms){
+ const seconds=Math.ceil(Math.max(0,ms)/1000);
+ return String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");
+}
+timerToggle.addEventListener("click",()=>{
+ const now=performance.now();
+ updateTimer(now);
+ timerActive=!timerActive;
+ timerMorphFrom=timerMorph;
+ timerMorphTo=timerActive?1:0;
+ timerMorphStart=now;
+ resetTimer();
+ timerToggle.setAttribute("aria-pressed",String(timerActive));
+ timerToggle.textContent=timerActive?"還原圖形":"計時器 · 15:00";
+ if(timerActive){
+  setSceneTarget(0);
+  setShapeControlsEnabled(false);
+  if(audioElement.ended&&audioElement.src)startTimerAfterAudio();
+  else status.textContent="計時器待命 · 等待音訊播放完畢";
+ }else{
+  setSceneTarget(!audioElement.paused&&!audioElement.ended?1:0);
+  if(audioElement.paused&&!sceneTransitioning)setShapeControlsEnabled(true);
+  status.textContent=audioElement.ended?"AUDIO COMPLETE":audioElement.paused?"READY - SET INITIAL SHAPE / PRESS PLAY":"LISTENING";
+ }
+});
 
 function drawBackground(){
  ctx.clearRect(0,0,w,h);
@@ -192,6 +262,7 @@ let objectURL=null;
 audioUpload.addEventListener("change",async function(){
  const file=this.files[0];if(!file)return;
  audioElement.pause();
+ resetTimer();
  setSceneTarget(0);
  if(objectURL)URL.revokeObjectURL(objectURL);
  objectURL=URL.createObjectURL(file);audioElement.src=objectURL;
@@ -207,17 +278,23 @@ audioUpload.addEventListener("change",async function(){
  }
  smooth.fill(0);
  energy=bassEnergy=midEnergy=highEnergy=pulse=0;
- status.textContent="READY - SET INITIAL SHAPE / PRESS PLAY";
+ status.textContent=timerActive?"計時器待命 · 等待音訊播放完畢":"READY - SET INITIAL SHAPE / PRESS PLAY";
 });
 audioElement.addEventListener("play",async()=>{
+ // Replaying the audio cancels any previous countdown until it ends again.
+ if(timerActive)resetTimer();
  if(audioCtx&&audioCtx.state==="suspended")await audioCtx.resume();
- setSceneTarget(1);
- status.textContent="LISTENING";
+ setSceneTarget(timerActive?0:1);
+ if(timerActive)setShapeControlsEnabled(false);
+ status.textContent=timerActive?"計時器待命 · 等待音訊播放完畢":"LISTENING";
 });
-audioElement.addEventListener("pause",()=>{if(!audioElement.ended)status.textContent="PAUSED"});
+audioElement.addEventListener("pause",()=>{
+ if(!audioElement.ended)status.textContent=timerActive?"計時器待命 · 等待音訊播放完畢":"PAUSED";
+});
 audioElement.addEventListener("ended",()=>{
- status.textContent="AUDIO COMPLETE";
  setSceneTarget(0);
+ if(timerActive)startTimerAfterAudio();
+ else status.textContent="AUDIO COMPLETE";
 });
 
 function analyze(){
@@ -351,10 +428,48 @@ function drawParticles(audio){
   ctx.beginPath();ctx.arc(x,y,p.size+(audio.high/255)*.6,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${Math.min(.5,p.alpha*(.3+energy*2.1))})`;ctx.fill();
  }
 }
+// Draw the original visualizer as a circular timer during the morph.
+function drawTimerFace(radius){
+ const remaining=timerState==="running"?timerRemainingMs:TIMER_DURATION_MS;
+ const displayMs=timerState==="done"?0:remaining;
+ const progress=Math.max(0,Math.min(1,displayMs/TIMER_DURATION_MS));
+ ctx.save();
+ ctx.translate(cx,cy);
+ ctx.beginPath();ctx.arc(0,0,radius,0,Math.PI*2);
+ ctx.fillStyle="rgba(5,5,5,.90)";
+ ctx.fill();
+ ctx.strokeStyle="rgba(255,255,255,.20)";
+ ctx.lineWidth=2.5*scale;ctx.stroke();
+ // Twelve understated marks retain a connection with the rotating geometry.
+ for(let i=0;i<12;i++){
+  const a=i*Math.PI/6-Math.PI/2;
+  ctx.beginPath();
+  ctx.moveTo(Math.cos(a)*radius*.84,Math.sin(a)*radius*.84);
+  ctx.lineTo(Math.cos(a)*radius*.91,Math.sin(a)*radius*.91);
+  ctx.strokeStyle="rgba(255,255,255,.42)";
+  ctx.lineWidth=1.5*scale;
+  ctx.stroke();
+ }
+ ctx.beginPath();
+ ctx.arc(0,0,radius*.75,-Math.PI/2,-Math.PI/2+Math.PI*2*progress);
+ ctx.strokeStyle="rgba(255,255,255,.92)";
+ ctx.lineWidth=4*scale;ctx.lineCap="round";
+ ctx.shadowBlur=12*scale;ctx.shadowColor="rgba(255,255,255,.40)";
+ ctx.stroke();ctx.shadowBlur=0;
+ ctx.fillStyle="#fff";
+ ctx.textAlign="center";ctx.textBaseline="middle";
+ ctx.font="600 "+Math.max(16,Math.round(radius*.43))+"px system-ui, sans-serif";
+ ctx.fillText(formatTimer(displayMs),0,-radius*.04);
+ ctx.font="500 "+Math.max(8,Math.round(radius*.105))+"px system-ui, sans-serif";
+ ctx.fillStyle="rgba(255,255,255,.70)";
+ ctx.fillText(timerState==="done"?"時間到":timerState==="running"?"倒數中":"等待音訊結束",0,radius*.40);
+ ctx.restore();
+}
 function draw(){
  requestAnimationFrame(draw);
  const now=performance.now();lastTime=now;
  updateScene(now);
+ updateTimer(now);
  const a=analyze(),target=Math.min(1,a.avg/68);
  energy+=(target-energy)*.15;bassEnergy+=(a.low-bassEnergy)*.20;midEnergy+=(a.mid-midEnergy)*.16;highEnergy+=(a.high-highEnergy)*.25;
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
@@ -364,13 +479,23 @@ function draw(){
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=waveBase+Math.min(w,h)*.075;
  const idleX=w*(idleXPercent/100),idleY=h*(idleYPercent/100),idleScale=idleSizePercent/100;
- const visualX=idleX+(cx-idleX)*sceneProgress;
- const visualY=idleY+(cy-idleY)*sceneProgress;
- const visualScale=idleScale+(1-idleScale)*sceneProgress;
+ const originalX=idleX+(cx-idleX)*sceneProgress;
+ const originalY=idleY+(cy-idleY)*sceneProgress;
+ const originalScale=idleScale+(1-idleScale)*sceneProgress;
+ // Return toward the pre-play position while shrinking to about half size.
+ const timerScale=originalScale*(1-.52*timerMorph);
+ const visualX=originalX+(idleX-originalX)*timerMorph;
+ const visualY=originalY+(idleY-originalY)*timerMorph;
+ const timerRadius=Math.min(w,h)*.19;
+ const safePad=timerRadius*timerScale+5;
+ const timerX=timerMorph>0?Math.max(safePad,Math.min(w-safePad,visualX)):visualX;
+ const timerY=timerMorph>0?Math.max(safePad,Math.min(h-safePad,visualY)):visualY;
  ctx.save();
- ctx.translate(visualX,visualY);
- ctx.scale(visualScale,visualScale);
+ ctx.translate(timerX,timerY);
+ ctx.scale(timerScale,timerScale);
  ctx.translate(-cx,-cy);
+ ctx.globalAlpha=1-timerMorph;
+ if(timerMorph<1){
  drawParticles(a);
  drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
  drawSymmetricRing(ringR+8*scale,1,.025+energy*.065,energy*5*scale);
@@ -378,6 +503,11 @@ function draw(){
  drawCoilGlow(waveBase,now*.00045);
  drawOuterHex(hexR,rotation,a);
  drawHex(hexR,rotation,a);
+ }
+ if(timerMorph>0){
+  ctx.globalAlpha=timerMorph;
+  drawTimerFace(timerRadius);
+ }
  ctx.restore();
 }
 requestAnimationFrame(draw);
