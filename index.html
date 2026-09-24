@@ -16,10 +16,10 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 #timerToggle:hover{background:rgba(255,255,255,.19)}
 #timerToggle[aria-pressed="true"]{background:rgba(255,255,255,.23);border-color:#fff}
 #timerToggle:focus-visible{outline:2px solid #fff;outline-offset:3px}
-#freqControls,#shapeControls{display:flex;align-items:center;gap:7px;font-size:11px;color:rgba(255,255,255,.75);white-space:nowrap}
-#freqControls label,#shapeControls label{display:flex;align-items:center;gap:5px}
-#freqControls input[type=range],#shapeControls input[type=range]{width:105px;accent-color:#fff}
-#freqMinValue,#freqMaxValue,#shapeXValue,#shapeYValue,#shapeSizeValue{display:inline-block;min-width:48px;text-align:right;color:#fff;font-variant-numeric:tabular-nums}
+#freqControls,#shapeControls,#timerControls{display:flex;align-items:center;gap:7px;font-size:11px;color:rgba(255,255,255,.75);white-space:nowrap}
+#freqControls label,#shapeControls label,#timerControls label{display:flex;align-items:center;gap:5px}
+#freqControls input[type=range],#shapeControls input[type=range],#timerControls input[type=range]{width:105px;accent-color:#fff}
+#freqMinValue,#freqMaxValue,#shapeXValue,#shapeYValue,#shapeSizeValue,#timerSizeValue{display:inline-block;min-width:48px;text-align:right;color:#fff;font-variant-numeric:tabular-nums}
 #shapeControls{padding-left:10px;border-left:1px solid rgba(255,255,255,.12)}
 #shapeControls input:disabled{opacity:.35;cursor:not-allowed}
 #shapeControls.disabled{opacity:.48}
@@ -27,7 +27,7 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 #visualizer{position:absolute;inset:0;width:100%;height:100%;display:block}
 #status{position:relative;z-index:2;text-align:center;padding:7px 12px;background:rgba(10,10,10,.96);border-top:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.55);font-size:10px;letter-spacing:2px;pointer-events:none}
 @media(max-width:900px){#shapeControls{width:100%;justify-content:center;border-left:0;padding-left:0;flex-wrap:wrap}}
-@media(max-width:700px){body{grid-template-rows:auto minmax(0,1fr) auto}#controls{flex-direction:column;gap:6px;padding:7px 10px}#audioUpload,#audioElement{width:100%;max-width:none}#audioElement{height:30px}#freqControls,#shapeControls{width:100%;justify-content:center;flex-wrap:wrap}#freqControls input[type=range],#shapeControls input[type=range]{width:120px}}
+@media(max-width:700px){body{grid-template-rows:auto minmax(0,1fr) auto}#controls{flex-direction:column;gap:6px;padding:7px 10px}#audioUpload,#audioElement{width:100%;max-width:none}#audioElement{height:30px}#freqControls,#shapeControls,#timerControls{width:100%;justify-content:center;flex-wrap:wrap}#freqControls input[type=range],#shapeControls input[type=range],#timerControls input[type=range]{width:120px}}
 </style>
 </head>
 <body>
@@ -35,6 +35,9 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 <input type="file" id="audioUpload" accept=".mp3,.wav,.ogg,audio/*">
 <audio id="audioElement" controls></audio>
 <button id="timerToggle" type="button" aria-pressed="false">計時器 · 15:00</button>
+<div id="timerControls" aria-label="計時器大小設定">
+ <label for="timerSize">計時器大小 <input id="timerSize" type="range" min="50" max="300" step="5" value="100"><span id="timerSizeValue">100%</span></label>
+</div>
 <div id="freqControls" aria-label="音頻顯示範圍">
  <span>頻率範圍</span>
  <label>低 <input id="freqMin" type="range" min="20" max="20000" step="10" value="20"><span id="freqMinValue">20 Hz</span></label>
@@ -57,6 +60,8 @@ const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
 const status=document.getElementById("status");
 const timerToggle=document.getElementById("timerToggle");
+const timerSizeInput=document.getElementById("timerSize");
+const timerSizeValue=document.getElementById("timerSizeValue");
 const freqMinInput=document.getElementById("freqMin");
 const freqMaxInput=document.getElementById("freqMax");
 const freqMinValue=document.getElementById("freqMinValue");
@@ -86,7 +91,7 @@ const TIMER_MORPH_DURATION=1200;
 const particles=[];
 const PARTICLES=90;
 let freqMin=20,freqMax=20000;
-let idleXPercent=50,idleYPercent=50,idleSizePercent=100;
+let idleXPercent=50,idleYPercent=50,idleSizePercent=100,timerSizePercent=100;
 let sceneProgress=0,sceneTarget=0,sceneFrom=0,sceneStart=0,sceneTransitioning=false;
 let timerActive=false,timerMorph=0,timerMorphFrom=0,timerMorphTo=0,timerMorphStart=0;
 let timerRemainingMs=TIMER_DURATION_MS,timerDeadline=null,timerState="idle",timerLastSecond=-1;
@@ -151,6 +156,28 @@ shapeXInput.addEventListener("input",updateShapeSettings);
 shapeYInput.addEventListener("input",updateShapeSettings);
 shapeSizeInput.addEventListener("input",updateShapeSettings);
 updateShapeSettings();
+
+// Independent size, editable before and during the countdown.
+const TIMER_SIZE_STORAGE_KEY="ai-shape:timer-size:v1";
+function restoreTimerSize(){
+ try{
+  const value=JSON.parse(window.localStorage.getItem(TIMER_SIZE_STORAGE_KEY));
+  if(typeof value==="number"&&Number.isFinite(value)&&
+     value>=Number(timerSizeInput.min)&&value<=Number(timerSizeInput.max)){
+   timerSizeInput.value=String(value);
+  }
+ }catch(_){} // Use default if storage is unavailable or invalid.
+}
+function updateTimerSize(){
+ timerSizePercent=Number(timerSizeInput.value);
+ timerSizeValue.textContent=Math.round(timerSizePercent)+"%";
+ try{
+  window.localStorage.setItem(TIMER_SIZE_STORAGE_KEY,JSON.stringify(timerSizePercent));
+ }catch(_){}
+}
+restoreTimerSize();
+timerSizeInput.addEventListener("input",updateTimerSize);
+updateTimerSize();
 
 function easeInOutCubic(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
 function setSceneTarget(target){
@@ -486,11 +513,11 @@ function draw(){
  const originalX=idleX+(cx-idleX)*sceneProgress;
  const originalY=idleY+(cy-idleY)*sceneProgress;
  const originalScale=idleScale+(1-idleScale)*sceneProgress;
- // Return toward the preset position, retaining a larger, readable countdown.
+ // Morph to a timer whose size does not depend on the hexagon size.
  const timerRadius=Math.min(w,h)*.23;
- const requestedTimerScale=originalScale*(1-.30*timerMorph);
- const maxTimerScale=Math.min((w-12)/(timerRadius*2.4),(h-12)/(timerRadius*1.0));
- const timerScale=timerMorph>0?Math.min(requestedTimerScale,maxTimerScale):originalScale;
+ const maxTimerScale=Math.max(.01,Math.min((w-12)/(timerRadius*2.4),(h-12)/(timerRadius*1.0)));
+ const timerTargetScale=Math.min(.70*(timerSizePercent/100),maxTimerScale);
+ const timerScale=originalScale+(timerTargetScale-originalScale)*timerMorph;
  const visualX=originalX+(idleX-originalX)*timerMorph;
  const visualY=originalY+(idleY-originalY)*timerMorph;
  const safePadX=timerRadius*timerScale*1.2+6;
