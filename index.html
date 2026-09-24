@@ -147,7 +147,7 @@ function drawBackground(){
  ctx.fillStyle="#050505";
  ctx.fillRect(0,0,w,h);
  if(backgroundReady&&backgroundImage.naturalWidth&&backgroundImage.naturalHeight){
-  const imageScale=Math.max(w/backgroundImage.naturalWidth,h/backgroundImage.naturalHeight);
+  const imageScale=Math.min(w/backgroundImage.naturalWidth,h/backgroundImage.naturalHeight);
   const drawW=backgroundImage.naturalWidth*imageScale;
   const drawH=backgroundImage.naturalHeight*imageScale;
   const drawX=(w-drawW)/2;
