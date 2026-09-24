@@ -452,39 +452,21 @@ function drawParticles(audio){
 }
 // Draw the original visualizer as a circular timer during the morph.
 function drawTimerFace(radius){
- const remaining=timerState==="running"?timerRemainingMs:TIMER_DURATION_MS;
- const displayMs=timerState==="done"?0:remaining;
- const progress=Math.max(0,Math.min(1,displayMs/TIMER_DURATION_MS));
+ const displayMs=timerState==="done"?0:timerState==="running"?timerRemainingMs:TIMER_DURATION_MS;
  ctx.save();
  ctx.translate(cx,cy);
- ctx.beginPath();ctx.arc(0,0,radius,0,Math.PI*2);
- ctx.fillStyle="rgba(5,5,5,.90)";
- ctx.fill();
- ctx.strokeStyle="rgba(255,255,255,.20)";
- ctx.lineWidth=2.5*scale;ctx.stroke();
- // Twelve understated marks retain a connection with the rotating geometry.
- for(let i=0;i<12;i++){
-  const a=i*Math.PI/6-Math.PI/2;
-  ctx.beginPath();
-  ctx.moveTo(Math.cos(a)*radius*.84,Math.sin(a)*radius*.84);
-  ctx.lineTo(Math.cos(a)*radius*.91,Math.sin(a)*radius*.91);
-  ctx.strokeStyle="rgba(255,255,255,.42)";
-  ctx.lineWidth=1.5*scale;
-  ctx.stroke();
- }
- ctx.beginPath();
- ctx.arc(0,0,radius*.75,-Math.PI/2,-Math.PI/2+Math.PI*2*progress);
- ctx.strokeStyle="rgba(255,255,255,.92)";
- ctx.lineWidth=4*scale;ctx.lineCap="round";
- ctx.shadowBlur=12*scale;ctx.shadowColor="rgba(255,255,255,.40)";
- ctx.stroke();ctx.shadowBlur=0;
+ // Borderless typography: the timer is larger without a surrounding circle or arc.
+ ctx.textAlign="center";
+ ctx.textBaseline="middle";
  ctx.fillStyle="#fff";
- ctx.textAlign="center";ctx.textBaseline="middle";
- ctx.font="600 "+Math.max(16,Math.round(radius*.43))+"px system-ui, sans-serif";
- ctx.fillText(formatTimer(displayMs),0,-radius*.04);
- ctx.font="500 "+Math.max(8,Math.round(radius*.105))+"px system-ui, sans-serif";
- ctx.fillStyle="rgba(255,255,255,.70)";
- ctx.fillText(timerState==="done"?"時間到":timerState==="running"?"倒數中":"等待音訊結束",0,radius*.40);
+ ctx.shadowBlur=14*scale;
+ ctx.shadowColor="rgba(0,0,0,.92)";
+ ctx.font="600 "+Math.max(24,Math.round(radius*.60))+"px system-ui, sans-serif";
+ ctx.fillText(formatTimer(displayMs),0,-radius*.075);
+ ctx.shadowBlur=5*scale;
+ ctx.font="500 "+Math.max(13,Math.round(radius*.16))+"px system-ui, sans-serif";
+ ctx.fillStyle="rgba(255,255,255,.78)";
+ ctx.fillText(timerState==="done"?"時間到":timerState==="running"?"倒數中":"等待音訊結束",0,radius*.37);
  ctx.restore();
 }
 function draw(){
@@ -504,14 +486,17 @@ function draw(){
  const originalX=idleX+(cx-idleX)*sceneProgress;
  const originalY=idleY+(cy-idleY)*sceneProgress;
  const originalScale=idleScale+(1-idleScale)*sceneProgress;
- // Return toward the pre-play position while shrinking to about half size.
- const timerScale=originalScale*(1-.52*timerMorph);
+ // Return toward the preset position, retaining a larger, readable countdown.
+ const timerRadius=Math.min(w,h)*.23;
+ const requestedTimerScale=originalScale*(1-.30*timerMorph);
+ const maxTimerScale=Math.min((w-12)/(timerRadius*2.4),(h-12)/(timerRadius*1.0));
+ const timerScale=timerMorph>0?Math.min(requestedTimerScale,maxTimerScale):originalScale;
  const visualX=originalX+(idleX-originalX)*timerMorph;
  const visualY=originalY+(idleY-originalY)*timerMorph;
- const timerRadius=Math.min(w,h)*.19;
- const safePad=timerRadius*timerScale+5;
- const timerX=timerMorph>0?Math.max(safePad,Math.min(w-safePad,visualX)):visualX;
- const timerY=timerMorph>0?Math.max(safePad,Math.min(h-safePad,visualY)):visualY;
+ const safePadX=timerRadius*timerScale*1.2+6;
+ const safePadY=timerRadius*timerScale*.5+6;
+ const timerX=timerMorph>0?Math.max(safePadX,Math.min(w-safePadX,visualX)):visualX;
+ const timerY=timerMorph>0?Math.max(safePadY,Math.min(h-safePadY,visualY)):visualY;
  ctx.save();
  ctx.translate(timerX,timerY);
  ctx.scale(timerScale,timerScale);
