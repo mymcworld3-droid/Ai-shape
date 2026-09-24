@@ -111,6 +111,22 @@ freqMinInput.addEventListener("input",clampFreqRange);
 freqMaxInput.addEventListener("input",clampFreqRange);
 updateFreqLabels();
 
+// Keep the last manually selected shape position and size on this browser.
+const SHAPE_STORAGE_KEY="ai-shape:initial-shape:v1";
+function restoreShapeSettings(){
+ let saved;
+ try{
+  saved=JSON.parse(window.localStorage.getItem(SHAPE_STORAGE_KEY));
+ }catch(_){return;} // Private mode / disabled storage / invalid saved data.
+ if(!saved||typeof saved!=="object"||Array.isArray(saved))return;
+ for(const [input,key] of [[shapeXInput,"x"],[shapeYInput,"y"],[shapeSizeInput,"size"]]){
+  const value=saved[key];
+  if(typeof value!=="number"||!Number.isFinite(value))continue;
+  const min=Number(input.min),max=Number(input.max);
+  // Reject out-of-range or obsolete values rather than silently changing settings.
+  if(value>=min&&value<=max)input.value=String(value);
+ }
+}
 function updateShapeSettings(){
  idleXPercent=Number(shapeXInput.value);
  idleYPercent=Number(shapeYInput.value);
@@ -118,6 +134,11 @@ function updateShapeSettings(){
  shapeXValue.textContent=Math.round(idleXPercent)+"%";
  shapeYValue.textContent=Math.round(idleYPercent)+"%";
  shapeSizeValue.textContent=Math.round(idleSizePercent)+"%";
+ try{
+  window.localStorage.setItem(SHAPE_STORAGE_KEY,JSON.stringify({
+   x:idleXPercent,y:idleYPercent,size:idleSizePercent
+  }));
+ }catch(_){} // Rendering must continue if the browser blocks local storage.
 }
 function setShapeControlsEnabled(enabled){
  shapeXInput.disabled=!enabled;
@@ -125,6 +146,7 @@ function setShapeControlsEnabled(enabled){
  shapeSizeInput.disabled=!enabled;
  shapeControls.classList.toggle("disabled",!enabled);
 }
+restoreShapeSettings();
 shapeXInput.addEventListener("input",updateShapeSettings);
 shapeYInput.addEventListener("input",updateShapeSettings);
 shapeSizeInput.addEventListener("input",updateShapeSettings);
