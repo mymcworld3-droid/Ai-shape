@@ -88,12 +88,14 @@ const ROTATE_STEP=Math.PI/3;
 const SCENE_DURATION=1600;
 const TIMER_DURATION_MS=15*60*1000;
 const TIMER_MORPH_DURATION=1200;
+const TIMER_SETTLE_DURATION=1000;
 const particles=[];
 const PARTICLES=90;
 let freqMin=20,freqMax=20000;
 let idleXPercent=50,idleYPercent=50,idleSizePercent=100,timerSizePercent=100;
 let sceneProgress=0,sceneTarget=0,sceneFrom=0,sceneStart=0,sceneTransitioning=false;
 let timerActive=false,timerMorph=0,timerMorphFrom=0,timerMorphTo=0,timerMorphStart=0;
+let timerSettle=0,timerSettleFrom=0,timerSettleTo=0,timerSettleStart=0;
 let timerRemainingMs=TIMER_DURATION_MS,timerDeadline=null,timerState="idle",timerLastSecond=-1;
 
 function formatFreq(v){return v>=1000?(v/1000).toFixed(v%1000===0?0:1)+" kHz":Math.round(v)+" Hz"}
@@ -221,6 +223,18 @@ function updateTimer(now){
   const p=Math.min(1,Math.max(0,(now-timerMorphStart)/TIMER_MORPH_DURATION));
   timerMorph=timerMorphFrom+(timerMorphTo-timerMorphFrom)*easeInOutCubic(p);
  }
+ // Transform the original graphic into the clock first. Do not return or
+ // shrink until the audio has actually ended and the morph is complete.
+ if(timerActive&&audioElement.ended&&audioElement.src&&timerMorph===1&&timerSettleTo===0){
+  timerSettleFrom=timerSettle;
+  timerSettleTo=1;
+  timerSettleStart=now;
+  setSceneTarget(0);
+ }
+ if(timerSettle!==timerSettleTo){
+  const p=Math.min(1,Math.max(0,(now-timerSettleStart)/TIMER_SETTLE_DURATION));
+  timerSettle=timerSettleFrom+(timerSettleTo-timerSettleFrom)*easeInOutCubic(p);
+ }
  if(timerState!=="running")return;
  timerRemainingMs=Math.max(0,timerDeadline-now);
  if(timerRemainingMs===0){
@@ -246,11 +260,16 @@ timerToggle.addEventListener("click",()=>{
  timerMorphFrom=timerMorph;
  timerMorphTo=timerActive?1:0;
  timerMorphStart=now;
+ if(!timerActive){
+  timerSettleFrom=timerSettle;
+  timerSettleTo=0;
+  timerSettleStart=now;
+ }
  resetTimer();
  timerToggle.setAttribute("aria-pressed",String(timerActive));
  timerToggle.textContent=timerActive?"還原圖形":"計時器 · 15:00";
  if(timerActive){
-  setSceneTarget(0);
+  // Keep the current graphic's size and position until the track finishes.
   setShapeControlsEnabled(false);
   if(audioElement.ended&&audioElement.src)startTimerAfterAudio();
   else status.textContent="計時器待命 · 等待音訊播放完畢";
@@ -330,10 +349,15 @@ audioUpload.addEventListener("change",async function(){
  status.textContent=timerActive?"計時器待命 · 等待音訊播放完畢":"READY - SET INITIAL SHAPE / PRESS PLAY";
 });
 audioElement.addEventListener("play",async()=>{
- // Replaying the audio cancels any previous countdown until it ends again.
- if(timerActive)resetTimer();
+ // Replaying cancels the previous countdown and expands the clock while music plays.
+ if(timerActive){
+  resetTimer();
+  timerSettleFrom=timerSettle;
+  timerSettleTo=0;
+  timerSettleStart=performance.now();
+ }
  if(audioCtx&&audioCtx.state==="suspended")await audioCtx.resume();
- setSceneTarget(timerActive?0:1);
+ setSceneTarget(1);
  if(timerActive)setShapeControlsEnabled(false);
  status.textContent=timerActive?"計時器待命 · 等待音訊播放完畢":"LISTENING";
 });
@@ -341,9 +365,11 @@ audioElement.addEventListener("pause",()=>{
  if(!audioElement.ended)status.textContent=timerActive?"計時器待命 · 等待音訊播放完畢":"PAUSED";
 });
 audioElement.addEventListener("ended",()=>{
- setSceneTarget(0);
  if(timerActive)startTimerAfterAudio();
- else status.textContent="AUDIO COMPLETE";
+ else{
+  setSceneTarget(0);
+  status.textContent="AUDIO COMPLETE";
+ }
 });
 
 function analyze(){
@@ -555,13 +581,15 @@ function draw(){
  const timerRadius=Math.min(w,h)*.23;
  const maxTimerScale=Math.max(.01,Math.min((w-12)/(timerRadius*2.9),(h-12)/(timerRadius*1.05)));
  const timerTargetScale=Math.min(.70*(timerSizePercent/100),maxTimerScale);
- const timerScale=originalScale+(timerTargetScale-originalScale)*timerMorph;
- const visualX=originalX+(idleX-originalX)*timerMorph;
- const visualY=originalY+(idleY-originalY)*timerMorph;
+ const timerScale=originalScale+(timerTargetScale-originalScale)*timerSettle;
+ const visualX=originalX+(idleX-originalX)*timerSettle;
+ const visualY=originalY+(idleY-originalY)*timerSettle;
  const safePadX=timerRadius*timerScale*1.45+6;
  const safePadY=timerRadius*timerScale*.525+6;
- const timerX=timerMorph>0?Math.max(safePadX,Math.min(w-safePadX,visualX)):visualX;
- const timerY=timerMorph>0?Math.max(safePadY,Math.min(h-safePadY,visualY)):visualY;
+ const clampedX=Math.max(safePadX,Math.min(w-safePadX,visualX));
+ const clampedY=Math.max(safePadY,Math.min(h-safePadY,visualY));
+ const timerX=visualX+(clampedX-visualX)*timerSettle;
+ const timerY=visualY+(clampedY-visualY)*timerSettle;
  ctx.save();
  ctx.translate(timerX,timerY);
  ctx.scale(timerScale,timerScale);
