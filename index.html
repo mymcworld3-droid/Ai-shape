@@ -16,6 +16,13 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 #timerToggle:hover{background:rgba(255,255,255,.19)}
 #timerToggle[aria-pressed="true"]{background:rgba(255,255,255,.23);border-color:#fff}
 #timerToggle:focus-visible{outline:2px solid #fff;outline-offset:3px}
+#fullscreenToggle,#fullscreenTimerToggle,#fullscreenExit{padding:8px 12px;border:1px solid rgba(255,255,255,.35);border-radius:8px;background:rgba(15,15,18,.78);color:#fff;font:600 12px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;cursor:pointer}
+#fullscreenToggle:hover,#fullscreenTimerToggle:hover,#fullscreenExit:hover{background:rgba(65,65,70,.9)}
+#fullscreenToggle:focus-visible,#fullscreenTimerToggle:focus-visible,#fullscreenExit:focus-visible{outline:2px solid white;outline-offset:2px}
+#fullscreenActions{display:none;position:absolute;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:5;gap:8px;align-items:center}
+#visualizerWrap:fullscreen{width:100vw;height:100vh;min-height:100vh;background:#050505}
+#visualizerWrap:fullscreen #fullscreenActions{display:flex}
+#visualizerWrap:fullscreen #visualizer{width:100%;height:100%}
 #freqControls,#shapeControls,#timerControls{display:flex;align-items:center;gap:7px;font-size:11px;color:rgba(255,255,255,.75);white-space:nowrap}
 #freqControls label,#shapeControls label,#timerControls label{display:flex;align-items:center;gap:5px}
 #freqControls input[type=range],#shapeControls input[type=range],#timerControls input[type=range]{width:105px;accent-color:#fff}
@@ -24,7 +31,8 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 #shapeControls input:disabled{opacity:.35;cursor:not-allowed}
 #shapeControls.disabled{opacity:.48}
 #visualizerWrap{position:relative;min-height:0;overflow:hidden;background:#050505}
-#visualizer{position:absolute;inset:0;width:100%;height:100%;display:block}
+#visualizer{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:zoom-in}
+#visualizerWrap:fullscreen #visualizer{cursor:zoom-out}
 #status{position:relative;z-index:2;text-align:center;padding:7px 12px;background:rgba(10,10,10,.96);border-top:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.55);font-size:10px;letter-spacing:2px;pointer-events:none}
 @media(max-width:900px){#shapeControls{width:100%;justify-content:center;border-left:0;padding-left:0;flex-wrap:wrap}}
 @media(max-width:700px){body{grid-template-rows:auto minmax(0,1fr) auto}#controls{flex-direction:column;gap:6px;padding:7px 10px}#audioUpload,#audioElement{width:100%;max-width:none}#audioElement{height:30px}#freqControls,#shapeControls,#timerControls{width:100%;justify-content:center;flex-wrap:wrap}#freqControls input[type=range],#shapeControls input[type=range],#timerControls input[type=range]{width:120px}}
@@ -35,6 +43,7 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 <input type="file" id="audioUpload" accept=".mp3,.wav,.ogg,audio/*">
 <audio id="audioElement" controls></audio>
 <button id="timerToggle" type="button" aria-pressed="false">計時器 · 15:00</button>
+<button id="fullscreenToggle" type="button" aria-label="進入全螢幕">全螢幕</button>
 <div id="timerControls" aria-label="計時器大小設定">
  <label for="timerSize">計時器大小 <input id="timerSize" type="range" min="50" max="300" step="5" value="100"><span id="timerSizeValue">100%</span></label>
 </div>
@@ -50,7 +59,12 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
  <label>大小 <input id="shapeSize" type="range" min="30" max="220" step="1" value="100"><span id="shapeSizeValue">100%</span></label>
 </div>
 </div>
-<div id="visualizerWrap"><canvas id="visualizer"></canvas></div>
+<div id="visualizerWrap"><canvas id="visualizer" aria-label="點擊畫面切換全螢幕"></canvas>
+ <div id="fullscreenActions" aria-label="全螢幕控制">
+  <button id="fullscreenTimerToggle" type="button" aria-pressed="false">計時器 · 15:00</button>
+  <button id="fullscreenExit" type="button" aria-label="退出全螢幕">退出全螢幕</button>
+ </div>
+</div>
 <div id="status">SET INITIAL SHAPE / CHOOSE AUDIO</div>
 <script>
 "use strict";
@@ -60,6 +74,10 @@ const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
 const status=document.getElementById("status");
 const timerToggle=document.getElementById("timerToggle");
+const fullscreenTimerToggle=document.getElementById("fullscreenTimerToggle");
+const fullscreenToggle=document.getElementById("fullscreenToggle");
+const fullscreenExit=document.getElementById("fullscreenExit");
+const visualizerWrap=document.getElementById("visualizerWrap");
 const timerSizeInput=document.getElementById("timerSize");
 const timerSizeValue=document.getElementById("timerSizeValue");
 const freqMinInput=document.getElementById("freqMin");
@@ -253,7 +271,7 @@ function formatTimer(ms){
  const seconds=Math.ceil(Math.max(0,ms)/1000);
  return String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");
 }
-timerToggle.addEventListener("click",()=>{
+function toggleTimerMode(){
  const now=performance.now();
  updateTimer(now);
  timerActive=!timerActive;
@@ -266,8 +284,10 @@ timerToggle.addEventListener("click",()=>{
   timerSettleStart=now;
  }
  resetTimer();
- timerToggle.setAttribute("aria-pressed",String(timerActive));
- timerToggle.textContent=timerActive?"還原圖形":"計時器 · 15:00";
+ for(const button of [timerToggle,fullscreenTimerToggle]){
+  button.setAttribute("aria-pressed",String(timerActive));
+  button.textContent=timerActive?"還原圖形":"計時器 · 15:00";
+ }
  if(timerActive){
   // Keep the current graphic's size and position until the track finishes.
   setShapeControlsEnabled(false);
@@ -278,8 +298,38 @@ timerToggle.addEventListener("click",()=>{
   if(audioElement.paused&&!sceneTransitioning)setShapeControlsEnabled(true);
   status.textContent=audioElement.ended?"AUDIO COMPLETE":audioElement.paused?"READY - SET INITIAL SHAPE / PRESS PLAY":"LISTENING";
  }
-});
+}
+timerToggle.addEventListener("click",toggleTimerMode);
+fullscreenTimerToggle.addEventListener("click",toggleTimerMode);
 
+// Fullscreen requires a real click. Only clicks on the visual canvas/background
+// toggle it, so timer/exit buttons stay clickable in fullscreen.
+async function setFullscreen(enter){
+ try{
+  if(enter){
+   if(document.fullscreenElement===visualizerWrap)return;
+   if(!visualizerWrap.requestFullscreen)throw new Error("unsupported");
+   await visualizerWrap.requestFullscreen();
+  }else if(document.fullscreenElement&&document.exitFullscreen){
+   await document.exitFullscreen();
+  }
+ }catch(_){
+  status.textContent="此瀏覽器無法切換全螢幕";
+ }
+}
+fullscreenToggle.addEventListener("click",()=>setFullscreen(document.fullscreenElement!==visualizerWrap));
+fullscreenExit.addEventListener("click",()=>setFullscreen(false));
+visualizerWrap.addEventListener("click",event=>{
+ if(event.target!==visualizerWrap&&event.target!==canvas)return;
+ setFullscreen(document.fullscreenElement!==visualizerWrap);
+});
+document.addEventListener("fullscreenchange",()=>{
+ const active=document.fullscreenElement===visualizerWrap;
+ fullscreenToggle.textContent=active?"退出全螢幕":"全螢幕";
+ fullscreenToggle.setAttribute("aria-label",active?"退出全螢幕":"進入全螢幕");
+ resizeCanvas();
+});
+// Keep the toolbar button usable after leaving fullscreen with Escape.
 function drawBackground(){
  ctx.clearRect(0,0,w,h);
  ctx.fillStyle="#050505";
