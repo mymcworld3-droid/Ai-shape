@@ -525,17 +525,20 @@ function drawDigitalDigit(character,x){
  const enabled=DIGITAL_DIGITS[character]||[];
  ctx.save();
  ctx.translate(x,0);
- for(let i=0;i<DIGITAL_SEGMENTS.length;i++){
-  const vertices=DIGITAL_SEGMENTS[i];
-  ctx.beginPath();
-  ctx.moveTo(vertices[0][0],vertices[0][1]);
-  for(let j=1;j<vertices.length;j++)ctx.lineTo(vertices[j][0],vertices[j][1]);
-  ctx.closePath();
-  const on=enabled.includes(i);
-  ctx.fillStyle=on?"rgba(241,250,255,.97)":"rgba(241,250,255,.045)";
-  ctx.shadowBlur=on?6:0;
-  ctx.shadowColor="rgba(190,231,255,.58)";
-  ctx.fill();
+ // An unlit grey "8" remains underneath each illuminated numeral.
+ for(let pass=0;pass<2;pass++){
+  for(let i=0;i<DIGITAL_SEGMENTS.length;i++){
+   if(pass===1&&!enabled.includes(i))continue;
+   const vertices=DIGITAL_SEGMENTS[i];
+   ctx.beginPath();
+   ctx.moveTo(vertices[0][0],vertices[0][1]);
+   for(let j=1;j<vertices.length;j++)ctx.lineTo(vertices[j][0],vertices[j][1]);
+   ctx.closePath();
+   ctx.fillStyle=pass===0?"rgba(125,130,136,.28)":"rgba(241,250,255,.97)";
+   ctx.shadowBlur=pass===0?0:6;
+   ctx.shadowColor="rgba(190,231,255,.58)";
+   ctx.fill();
+  }
  }
  ctx.restore();
 }
@@ -552,11 +555,16 @@ function drawTimerFace(radius){
  drawDigitalDigit(time[1],56);
  drawDigitalDigit(time[3],132);
  drawDigitalDigit(time[4],188);
- ctx.fillStyle="rgba(241,250,255,.97)";
- ctx.shadowBlur=6;
- ctx.shadowColor="rgba(190,231,255,.58)";
  for(const y of [28,56]){
-  ctx.beginPath();ctx.arc(118,y,3.7,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(118,y,3.7,0,Math.PI*2);
+  ctx.fillStyle="rgba(125,130,136,.28)";
+  ctx.shadowBlur=0;
+  ctx.fill();
+  ctx.beginPath();ctx.arc(118,y,3.7,0,Math.PI*2);
+  ctx.fillStyle="rgba(241,250,255,.97)";
+  ctx.shadowBlur=6;
+  ctx.shadowColor="rgba(190,231,255,.58)";
+  ctx.fill();
  }
  ctx.restore();
 }
@@ -594,8 +602,11 @@ function draw(){
  ctx.translate(timerX,timerY);
  ctx.scale(timerScale,timerScale);
  ctx.translate(-cx,-cy);
- ctx.globalAlpha=1-timerMorph;
- if(timerMorph<1){
+ // Sequential transition: graphic fades completely before LEDs turn on.
+ const graphicOpacity=1-easeInOutCubic(Math.min(1,timerMorph/.55));
+ const clockOpacity=easeInOutCubic(Math.max(0,Math.min(1,(timerMorph-.55)/.45)));
+ ctx.globalAlpha=graphicOpacity;
+ if(graphicOpacity>0){
  drawParticles(a);
  drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
  drawSymmetricRing(ringR+8*scale,1,.025+energy*.065,energy*5*scale);
@@ -604,8 +615,8 @@ function draw(){
  drawOuterHex(hexR,rotation,a);
  drawHex(hexR,rotation,a);
  }
- if(timerMorph>0){
-  ctx.globalAlpha=timerMorph;
+ if(clockOpacity>0){
+  ctx.globalAlpha=clockOpacity;
   drawTimerFace(timerRadius);
  }
  ctx.restore();
