@@ -41,6 +41,21 @@ for the final speaker, brightness and browser-permission check.
 - `opening-config.js`: asset paths, countdown duration and the monitor rectangle
   expressed as fractions of the background image.
 
+### Uploaded scene materials
+
+- `assets/videos/Start_animation.MP4`: supplied 4.24-second room-lighting
+  transition, H.264/AAC, 1280 × 720, 24 fps.
+- `assets/backgrounds/Start_dark.PNG`: supplied blue-lit room still,
+  1536 × 1024. This is a PNG image, rather than a second video.
+- [Background prompts](docs/background-prompts.md): matching memory-room and
+  office-flashback backgrounds, with suggested destination filenames.
+
+The supplied files have been organized without changing their bytes. They are
+source materials awaiting playback integration. The video is 16:9, while the
+existing and supplied stills are 3:2; match the framing and recalibrate the wall
+monitor before using the transition in the opening. The video also has a small
+visible mark in its lower-right corner.
+
 All runtime assets are included in the folder. The projection has no CDN,
 external font, speech-service or network dependency. The opening narration is:
 
