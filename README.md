@@ -90,13 +90,17 @@ The 22 tests cover separate room and narration cues, actual end-event gating,
 duplicate and pending presses, click filtering, playback failure and retry,
 media errors, skipped frames, clock boundaries and keyboard shortcuts.
 
-For the real Chromium playback and projection checks:
+For the real Google Chrome playback and projection checks:
 
 ```sh
 npm install
-npx playwright install chromium
+npx playwright install chrome
 npm run test:browser
 ```
+
+The browser tests use the official Chrome channel so the supplied H.264/AAC
+video is tested with its real codecs. GitHub's Ubuntu runner already supplies
+Google Chrome; the workflow checks its version and installs shared dependencies.
 
 ## Browser verification
 
@@ -106,6 +110,12 @@ complete video and the complete narration to their natural ends, and check
 clicks, held Space across the video end, no automatic narration, double-clicks,
 touch, fullscreen rejection, video/audio failure retries, layout and hidden
 controls. Screenshots and results are uploaded as `opening-browser-evidence`.
+
+The live preview was also checked from the initial dark still through the
+complete video to the bright room, with narration still paused at zero:
+
+![Initial dark room](docs/room-dark.jpg)
+![Original room restored after video](docs/room-bright.jpg)
 
 ### Original narration evidence
 

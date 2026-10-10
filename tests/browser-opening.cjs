@@ -31,7 +31,19 @@ const server = http.createServer((request, response) => {
 
 async function ready(page, url) {
   await page.goto(url);
-  await page.waitForSelector('body[data-background-ready="true"][data-dark-background-ready="true"][data-video-ready="true"][data-audio-ready="true"]', {timeout:15000});
+  try {
+    await page.waitForSelector('body[data-background-ready="true"][data-dark-background-ready="true"][data-video-ready="true"][data-audio-ready="true"]', {timeout:15000});
+  } catch (error) {
+    console.error("Media readiness",await page.evaluate(()=>({
+      flags:{...document.body.dataset},
+      media:Array.from(document.querySelectorAll("audio,video"),element=>({
+        tag:element.tagName,readyState:element.readyState,networkState:element.networkState,
+        error:element.error?.message||null,mp4:element.canPlayType('video/mp4; codecs="avc1.64001f, mp4a.40.2"')
+      }))
+    })));
+    await page.screenshot({path:path.join(output,"media-load-failure.png")});
+    throw error;
+  }
 }
 async function state(page, expected) {
   await page.waitForFunction(value => document.body.dataset.openingState === value, expected, {timeout:35000});
@@ -86,7 +98,9 @@ async function noControls(page) {
   let browser;
   const results=[];
   try {
-    browser=await chromium.launch({args:["--autoplay-policy=user-gesture-required"]});
+    // Official Chrome includes the H.264/AAC codecs used by the supplied MP4;
+    // Playwright's open-source Chromium build does not bundle every codec.
+    browser=await chromium.launch({channel:"chrome",args:["--autoplay-policy=user-gesture-required"]});
     const page=await browser.newPage({viewport:{width:1280,height:720}});
     const errors=[];
     page.on("pageerror",error=>errors.push(String(error)));
