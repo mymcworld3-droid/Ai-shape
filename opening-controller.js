@@ -6,6 +6,64 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  class RoomRevealController {
+    constructor({ video, onStateChange = () => {}, onError = () => {} }) {
+      this.video = video;
+      this.onStateChange = onStateChange;
+      this.onError = onError;
+      this.state = "dark";
+      this.run = 0;
+      this.ended = () => this.finish();
+      this.failed = () => this.fail(new Error("Room transition video could not be played."));
+      video.addEventListener("ended", this.ended);
+      video.addEventListener("error", this.failed);
+    }
+
+    setState(state) {
+      this.state = state;
+      this.onStateChange(state);
+    }
+
+    async advance() {
+      if (this.state !== "dark") return false;
+      const run = ++this.run;
+      this.setState("starting");
+      try {
+        if (this.video.error) this.video.load();
+        this.video.currentTime = 0;
+        // Play stays inside the genuine click/key event, before fullscreen.
+        await this.video.play();
+        if (run !== this.run || this.state !== "starting") return false;
+        this.setState("playing");
+        return true;
+      } catch (error) {
+        if (run === this.run) this.fail(error);
+        return false;
+      }
+    }
+
+    finish() {
+      if (!this.video.ended || !["starting", "playing"].includes(this.state)) return;
+      ++this.run;
+      // This cue reveals the room only. Narration needs a separate user cue.
+      this.setState("ready");
+    }
+
+    fail(error) {
+      if (this.state === "ready") return;
+      ++this.run;
+      this.video.pause();
+      this.setState("dark");
+      this.onError(error);
+    }
+
+    destroy() {
+      ++this.run;
+      this.video.removeEventListener("ended", this.ended);
+      this.video.removeEventListener("error", this.failed);
+    }
+  }
+
   class OpeningController {
     constructor({ audio, now = () => performance.now(), durationMs = 900000,
       onStateChange = () => {}, onError = () => {} }) {
@@ -108,5 +166,15 @@
     };
   }
 
-  return { OpeningController, formatTime, bindAdvanceKey };
+  function bindAdvanceClick(target, advance) {
+    const click = event => {
+      if (event.button !== 0 || event.detail > 1 || event.ctrlKey || event.altKey ||
+          event.metaKey || event.shiftKey) return;
+      advance();
+    };
+    target.addEventListener("click", click);
+    return () => target.removeEventListener("click", click);
+  }
+
+  return { RoomRevealController, OpeningController, formatTime, bindAdvanceKey, bindAdvanceClick };
 });

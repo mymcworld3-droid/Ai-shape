@@ -10,32 +10,45 @@ Open `index.html` in a desktop browser, or serve this folder with:
 python -m http.server 8765
 ```
 
-The waiting screen contains only the room background and the AI graphic inside
-the pictured wall monitor. There are no buttons, sliders, file pickers, player
-controls, status bars or fullscreen overlays.
+The initial screen contains only `assets/backgrounds/Start_dark.PNG`. The AI
+graphic is not shown over this still or the transition video. There are no
+buttons, sliders, file pickers, player controls, status bars or fullscreen overlays.
 
-Press **Space once** at the opening AI cue. That one press:
+**Click the projection once, or press Space once**, to request fullscreen and
+play `assets/videos/Start_animation.MP4`. The entire clip plays once, then its
+natural `ended` event reveals the original bright room background,
+`assets/backgrounds/IMG_0165.png`, with the small AI graphic inside its wall
+monitor. The room stays there until the next cue; no narration or countdown
+starts automatically. Clicks and keys during video playback are ignored.
 
-1. Starts the bundled English narration and requests fullscreen.
+At the opening AI cue, **click or press Space again**. That cue:
+
+1. Starts the bundled English narration and requests fullscreen if needed.
 2. Expands the audio-reactive AI graphic while the room fades to black.
 3. Waits for the actual audio `ended` event.
 4. Fades the AI graphic into a seven-segment clock.
 5. Returns the room background and settles the clock inside its wall monitor.
 6. Counts down from 15 minutes, ending at `00:00`.
 
-Held keys and additional presses cannot replay the opening or reset its countdown.
+Held keys cannot spill across the video's end into the narration cue. Additional
+clicks or keys cannot replay the narration or reset its countdown.
 The clock keeps elapsed time when the tab is in the background. Escape exits
 fullscreen without stopping the opening or exposing controls. Reload the page to
 restart a rehearsal. Later scenes are not yet wired to Space on this branch.
 
-The first key must be sent to the page, rather than the browser address bar.
+Keys must be sent to the page, rather than the browser address bar. Touching the
+projection works as a click, including on its letterbox area.
 Fullscreen availability depends on the browser; a rejected fullscreen request
 does not stop the narration. Use the actual performance computer and projector
 for the final speaker, brightness and browser-permission check.
 
 ## Assets and calibration
 
-- `IMG_0165.png`: existing room background, preserved without stretching.
+- `assets/backgrounds/IMG_0165.png`: original bright room background, moved into
+  the background folder with its bytes unchanged.
+- `assets/backgrounds/Start_dark.PNG`: supplied dark room still, used initially.
+- `assets/videos/Start_animation.MP4`: supplied lighting transition, used for
+  the first cue. Playback is muted until show sound effects are supplied.
 - `assets/audio/ai-opening.mp3`: bundled 23.7-second AI narration, generated for
   this opening. Replace this file with the final recording at the same path.
 - `opening-config.js`: asset paths, countdown duration and the monitor rectangle
@@ -50,11 +63,11 @@ for the final speaker, brightness and browser-permission check.
 - [Background prompts](docs/background-prompts.md): matching memory-room and
   office-flashback backgrounds, with suggested destination filenames.
 
-The supplied files have been organized without changing their bytes. They are
-source materials awaiting playback integration. The video is 16:9, while the
-existing and supplied stills are 3:2; match the framing and recalibrate the wall
-monitor before using the transition in the opening. The video also has a small
-visible mark in its lower-right corner.
+The supplied files are connected to the first cue without changing their bytes.
+The video is 16:9, while both stills are 3:2. Each is contained without stretching
+or cropping, with 240 ms fades at the still/video handoffs. The clock calibration
+still refers to the original bright image. The video has a small visible mark
+in its lower-right corner; use a clean source for the final show.
 
 All runtime assets are included in the folder. The projection has no CDN,
 external font, speech-service or network dependency. The opening narration is:
@@ -73,9 +86,9 @@ node --test tests/opening.test.cjs
 node --check visualizer.js
 ```
 
-The tests cover actual end-event gating, duplicate and pending key presses,
-playback failure and retry, media errors, skipped frames, clock boundaries and
-keyboard shortcuts.
+The 22 tests cover separate room and narration cues, actual end-event gating,
+duplicate and pending presses, click filtering, playback failure and retry,
+media errors, skipped frames, clock boundaries and keyboard shortcuts.
 
 For the real Chromium playback and projection checks:
 
@@ -85,7 +98,16 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-## Verified opening
+## Browser verification
+
+The current browser checks compare the initial canvas pixels with the supplied
+dark PNG and the final room with the original bright PNG. They play both the
+complete video and the complete narration to their natural ends, and check
+clicks, held Space across the video end, no automatic narration, double-clicks,
+touch, fullscreen rejection, video/audio failure retries, layout and hidden
+controls. Screenshots and results are uploaded as `opening-browser-evidence`.
+
+### Original narration evidence
 
 [GitHub checks on 2026-10-10](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/38042553950)
 passed both jobs: 13 controller tests and Chromium browser checks. The browser

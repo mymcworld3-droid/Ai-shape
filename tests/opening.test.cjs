@@ -1,7 +1,7 @@
 "use strict";
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { OpeningController, formatTime, bindAdvanceKey } = require("../opening-controller.js");
+const { RoomRevealController, OpeningController, formatTime, bindAdvanceKey, bindAdvanceClick } = require("../opening-controller.js");
 
 class FakeAudio extends EventTarget {
   constructor() { super(); this.ended = false; this.currentTime = 0; this.calls = 0; this.error = null; }
@@ -17,6 +17,128 @@ function setup() {
     onStateChange: state => states.push(state), onError: error => errors.push(error) });
   return { audio, controller, states, errors, setTime: value => { time = value; } };
 }
+
+function roomSetup() {
+  const video = new FakeAudio(), states = [], errors = [];
+  const controller = new RoomRevealController({ video,
+    onStateChange: state => states.push(state), onError: error => errors.push(error) });
+  return { video, controller, states, errors };
+}
+
+test("room starts dark, waits for a cue, and reaches ready only at the real video end", async () => {
+  const { video, controller, states } = roomSetup();
+  assert.equal(controller.state, "dark");
+  assert.equal(video.calls, 0);
+  video.dispatchEvent(new Event("ended"));
+  assert.equal(controller.state, "dark");
+  await controller.advance();
+  assert.equal(controller.state, "playing");
+  video.dispatchEvent(new Event("ended"));
+  assert.equal(controller.state, "playing");
+  video.end();
+  assert.equal(controller.state, "ready");
+  assert.deepEqual(states, ["starting", "playing", "ready"]);
+});
+
+test("rapid room cues while play is pending make one request", async () => {
+  const { video, controller } = roomSetup();
+  let resolve;
+  video.result = new Promise(done => { resolve = done; });
+  const pending = controller.advance();
+  await Promise.all(Array.from({ length: 20 }, () => controller.advance()));
+  assert.equal(video.calls, 1);
+  assert.equal(controller.state, "starting");
+  resolve();
+  assert.equal(await pending, true);
+  assert.equal(controller.state, "playing");
+});
+
+test("room cues during and after playback never restart the clip or start narration", async () => {
+  const { video, controller } = roomSetup();
+  const { audio, controller: narration } = setup();
+  await controller.advance();
+  assert.equal(await controller.advance(), false);
+  video.end(); video.end();
+  assert.equal(await controller.advance(), false);
+  assert.equal(controller.state, "ready");
+  assert.equal(video.calls, 1);
+  assert.equal(audio.calls, 0);
+  assert.equal(narration.deadline, null);
+});
+
+test("blocked video playback restores the dark room and permits retry", async () => {
+  const { video, controller, errors } = roomSetup();
+  video.result = Promise.reject(new Error("NotAllowedError"));
+  assert.equal(await controller.advance(), false);
+  assert.equal(controller.state, "dark");
+  assert.equal(video.paused, true);
+  assert.equal(errors.length, 1);
+  video.result = Promise.resolve();
+  assert.equal(await controller.advance(), true);
+  assert.equal(video.calls, 2);
+});
+
+test("video errors cancel pending starts without a false ready state", async () => {
+  const { video, controller, errors } = roomSetup();
+  let resolve;
+  video.result = new Promise(done => { resolve = done; });
+  const pending = controller.advance();
+  video.dispatchEvent(new Event("error")); resolve();
+  assert.equal(await pending, false);
+  assert.equal(controller.state, "dark");
+  assert.equal(errors.length, 1);
+  video.result = Promise.resolve();
+  assert.equal(await controller.advance(), true);
+});
+
+test("immediate video end stays ready even if play settles or fails later", async () => {
+  for (const rejected of [false, true]) {
+    const { video, controller, errors } = roomSetup();
+    let resolve, reject;
+    video.result = new Promise((yes, no) => { resolve = yes; reject = no; });
+    const pending = controller.advance();
+    video.end();
+    if (rejected) reject(new Error("Late playback failure")); else resolve();
+    await pending;
+    video.dispatchEvent(new Event("error"));
+    assert.equal(controller.state, "ready");
+    assert.equal(errors.length, 0);
+  }
+});
+
+test("destroy removes video listeners and invalidates pending starts", async () => {
+  const { video, controller, states, errors } = roomSetup();
+  let resolve;
+  video.result = new Promise(done => { resolve = done; });
+  const pending = controller.advance();
+  controller.destroy(); resolve(); await pending;
+  video.end(); video.dispatchEvent(new Event("error"));
+  assert.deepEqual(states, ["starting"]);
+  assert.equal(errors.length, 0);
+});
+
+function click(target, options = {}) {
+  const event = new Event("click");
+  Object.assign(event, { button: 0, detail: 1, ...options });
+  target.dispatchEvent(event);
+}
+
+test("a primary click or touch-generated click advances and unbind removes it", () => {
+  const target = new EventTarget(); let calls = 0;
+  const unbind = bindAdvanceClick(target, () => ++calls);
+  click(target); click(target, { pointerType: "touch" });
+  assert.equal(calls, 2);
+  unbind(); click(target);
+  assert.equal(calls, 2);
+});
+
+test("right, middle, double-click followups and modifier clicks do not advance", () => {
+  const target = new EventTarget(); let calls = 0;
+  bindAdvanceClick(target, () => ++calls);
+  for (const options of [{button:1},{button:2},{detail:2},{detail:3},
+    {ctrlKey:true},{altKey:true},{metaKey:true},{shiftKey:true}]) click(target, options);
+  assert.equal(calls, 0);
+});
 
 test("waits for a genuine key cue and media end before starting the clock", async () => {
   const { audio, controller, states, setTime } = setup();

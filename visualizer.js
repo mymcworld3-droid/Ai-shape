@@ -1,11 +1,13 @@
 "use strict";
 const config=window.OPENING_CONFIG;
 const audioElement=document.getElementById("openingAudio");
+const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
 const visualizerWrap=document.getElementById("visualizerWrap");
 const backgroundImage=new Image();
-let backgroundReady=false;
+const darkBackgroundImage=new Image();
+let backgroundReady=false,darkBackgroundReady=false,roomReadyAt=null;
 let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1;
 let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0;
@@ -50,10 +52,20 @@ const opening=new StageOpening.OpeningController({
  },
  onError(error){document.body.dataset.audioError="true";console.error("[Opening]",error);}
 });
+const roomReveal=new StageOpening.RoomRevealController({
+ video:revealVideo,
+ onStateChange(state){
+  document.body.dataset.roomState=state;
+  if(state==="ready")roomReadyAt=performance.now();
+ },
+ onError(error){document.body.dataset.videoError="true";console.error("[Opening]",error);}
+});
 document.body.dataset.openingState="ready";
+document.body.dataset.roomState="dark";
 // Read-only diagnostics for rehearsals; no control UI appears on the projection.
 window.stageOpening=Object.freeze({
- get state(){return opening.state;},
+ get state(){return roomReveal.state==="ready"?opening.state:roomReveal.state;},
+ get roomState(){return roomReveal.state;},
  get remainingMs(){return opening.getRemainingMs();}
 });
 
@@ -65,6 +77,17 @@ backgroundImage.addEventListener("error",()=>{
  console.error("[Opening] Room background could not be loaded.");
 });
 backgroundImage.src=config.background;
+darkBackgroundImage.addEventListener("load",()=>{
+ darkBackgroundReady=true;document.body.dataset.darkBackgroundReady="true";
+});
+darkBackgroundImage.addEventListener("error",()=>{
+ document.body.dataset.darkBackgroundReady="false";
+ console.error("[Opening] Dark room background could not be loaded.");
+});
+darkBackgroundImage.src=config.darkBackground;
+revealVideo.addEventListener("canplay",()=>{document.body.dataset.videoReady="true";});
+revealVideo.src=config.roomReveal;
+revealVideo.load();
 audioElement.addEventListener("canplay",()=>{document.body.dataset.audioReady="true";});
 audioElement.src=config.narration;
 audioElement.load();
@@ -84,13 +107,7 @@ function prepareAudio(){
   if(audioCtx.state==="suspended")audioCtx.resume().catch(error=>console.warn("[Opening] Audio analysis:",error));
  }catch(error){console.warn("[Opening] Audio analysis unavailable:",error);}
 }
-function startOpening(){
- if(opening.state!=="ready")return;
- document.body.dataset.audioError="false";
- prepareAudio();
- // Both calls originate in the same genuine keyboard event. A fullscreen failure
- // never interrupts narration; browser audio permissions still require the key.
- opening.advance();
+function requestStageFullscreen(){
  if(!document.fullscreenElement&&visualizerWrap.requestFullscreen){
   try{
    const request=visualizerWrap.requestFullscreen();
@@ -98,23 +115,58 @@ function startOpening(){
   }catch(_){}
  }
 }
-StageOpening.bindAdvanceKey(window,startOpening);
+function advanceStage(){
+ if(roomReveal.state!=="ready"){
+  if(roomReveal.state!=="dark")return;
+  document.body.dataset.videoError="false";
+  roomReveal.advance();requestStageFullscreen();return;
+ }
+ if(!backgroundReady||performance.now()-roomReadyAt<config.revealFadeMs||opening.state!=="ready")return;
+ document.body.dataset.audioError="false";
+ prepareAudio();opening.advance();requestStageFullscreen();
+}
+StageOpening.bindAdvanceKey(window,advanceStage);
+StageOpening.bindAdvanceClick(visualizerWrap,advanceStage);
 document.addEventListener("fullscreenchange",resizeCanvas);
 window.addEventListener("resize",resizeCanvas);
 
-function backgroundLayout(){
- const iw=backgroundImage.naturalWidth||1536,ih=backgroundImage.naturalHeight||1024;
+function containedLayout(iw,ih){
  const s=Math.min(w/iw,h/ih),width=iw*s,height=ih*s;
  return{x:(w-width)/2,y:(h-height)/2,width,height};
+}
+function backgroundLayout(){
+ return containedLayout(backgroundImage.naturalWidth||1536,backgroundImage.naturalHeight||1024);
 }
 function monitorLayout(){
  const b=backgroundLayout(),m=config.monitor;
  return{x:b.x+b.width*(m.x+m.width/2),y:b.y+b.height*(m.y+m.height/2),
   width:b.width*m.width,height:b.height*m.height};
 }
-function drawBackground(){
+function drawRevealVideo(alpha){
+ if(alpha<=0||revealVideo.readyState<2||!revealVideo.videoWidth)return;
+ const b=containedLayout(revealVideo.videoWidth,revealVideo.videoHeight);
+ ctx.save();ctx.globalAlpha=alpha;
+ // The clip and stills have different aspect ratios: contain each without
+ // cropping doors or distorting geometry, and fade their handoffs.
+ ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
+ ctx.drawImage(revealVideo,b.x,b.y,b.width,b.height);ctx.restore();
+}
+function roomHandoffProgress(now){
+ if(roomReveal.state!=="ready"||!backgroundReady)return 0;
+ return easeInOutCubic(Math.max(0,Math.min(1,(now-roomReadyAt)/config.revealFadeMs)));
+}
+function drawBackground(now){
  ctx.clearRect(0,0,w,h);ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
- if(backgroundReady){const b=backgroundLayout();ctx.drawImage(backgroundImage,b.x,b.y,b.width,b.height);}
+ const roomReady=roomReveal.state==="ready"&&backgroundReady;
+ const image=roomReady?backgroundImage:darkBackgroundImage;
+ if(roomReady||darkBackgroundReady){
+  const b=containedLayout(image.naturalWidth,image.naturalHeight);ctx.drawImage(image,b.x,b.y,b.width,b.height);
+ }
+ if(roomReveal.state==="playing"){
+  drawRevealVideo(easeInOutCubic(Math.min(1,revealVideo.currentTime*1000/config.revealFadeMs)));
+ }else if(roomReveal.state==="ready"){
+  drawRevealVideo(1-roomHandoffProgress(now));
+ }
  if(sceneProgress>0){ctx.fillStyle=`rgba(0,0,0,${sceneProgress})`;ctx.fillRect(0,0,w,h);}
 }
 function resizeCanvas(){
@@ -343,7 +395,9 @@ function draw(){
  energy+=(target-energy)*.15;bassEnergy+=(a.low-bassEnergy)*.20;
  midEnergy+=(a.mid-midEnergy)*.16;highEnergy+=(a.high-highEnergy)*.25;
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
- updateHexRotation(now);drawBackground();
+ updateHexRotation(now);drawBackground(now);
+ // No AI graphic or clock is overlaid on the initial still or room video.
+ if(roomReveal.state!=="ready"||roomHandoffProgress(now)<1)return;
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=waveBase+Math.min(w,h)*.075;
