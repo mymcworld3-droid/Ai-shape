@@ -61,3 +61,26 @@ node --check visualizer.js
 The tests cover actual end-event gating, duplicate and pending key presses,
 playback failure and retry, media errors, skipped frames, clock boundaries and
 keyboard shortcuts.
+
+For the real Chromium playback and projection checks:
+
+```sh
+npm install
+npx playwright install chromium
+npm run test:browser
+```
+
+## Verified opening
+
+[GitHub checks on 2026-10-10](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/38042553950)
+passed both jobs: 13 controller tests and Chromium browser checks. The browser
+played the complete MP3 to its natural end and verified real audio analyser
+samples, fullscreen, automatic countdown, repeated keys, Escape, 1920x1080,
+1440x900 and 390x844 layouts, fullscreen rejection and playback failure/retry.
+The `opening-browser-evidence` artifact contains the waiting, narration and
+countdown screenshots plus the browser results.
+
+The projection was also inspected in a live browser with no player controls or
+buttons, including a held Space press during narration and again during countdown.
+
+![Clock settled inside the room monitor](docs/opening-countdown.jpg)
