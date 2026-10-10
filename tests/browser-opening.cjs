@@ -60,7 +60,19 @@ async function ready(page, url) {
   }
 }
 async function flag(page, name, expected, timeout=35000) {
-  await page.waitForFunction(({name,expected})=>document.body.dataset[name]===expected,{name,expected},{timeout});
+  try {
+    await page.waitForFunction(({name,expected})=>document.body.dataset[name]===expected,{name,expected},{timeout});
+  } catch (error) {
+    console.error("Cue failure",{waitingFor:{name,expected},observed:await page.evaluate(()=>({
+      flags:{...document.body.dataset},cue:stage.state,effect:stage.effectState,
+      busyFor:stage.busyUntil-performance.now(),deadline:opening.deadline,
+      focused:document.activeElement?.tagName,
+      media:Array.from(document.querySelectorAll('audio,video'),e=>({id:e.id,paused:e.paused,
+        ended:e.ended,time:e.currentTime,duration:e.duration,ready:e.readyState,error:e.error?.message||null}))
+    }))});
+    await page.screenshot({path:path.join(output,`failure-${name}-${expected}.png`)});
+    throw error;
+  }
 }
 async function cue(page, expected) { await flag(page,"cue",expected); }
 async function state(page, expected) { await flag(page,"openingState",expected); }
@@ -298,9 +310,14 @@ async function checkClockPlacement(page) {
     await matchesStill(touch,"assets/backgrounds/IMG_0165.png");
     await touch.touchscreen.tap(190,420); await cue(touch,"ai"); await touch.waitForTimeout(1000);
     await touch.touchscreen.tap(190,420); await cue(touch,"door-kick"); await touch.waitForTimeout(200);
+    // A second tap inside Chrome's double-click interval is intentionally
+    // filtered. A fresh tap, after releasing that gesture, is a new cue.
+    await touch.touchscreen.tap(190,420); await cue(touch,"door-kick");
+    assert.equal(await touch.locator('#openingAudio').evaluate(a=>a.currentTime),0);
+    await touch.waitForTimeout(650);
     await touch.touchscreen.tap(190,420); await state(touch,"narration");
     await noControls(touch); await touch.close();
-    results.push("touch advances the separate room, AI, effect and voice cues with no visible controls");
+    results.push("touch advances separate cues; a quick double tap is ignored and a fresh tap starts voice without controls");
 
     fs.writeFileSync(path.join(output,"browser-results.json"),JSON.stringify({passed:true,checks:results},null,2));
     for(const result of results)console.log("PASS",result);
