@@ -119,7 +119,10 @@ async function noControls(page) {
 }
 async function naturalAudioEnd(page) {
   await page.locator('#openingAudio').evaluate(audio=>{audio.currentTime=audio.duration-.1;});
-  await state(page,"countdown"); await page.waitForTimeout(1100);
+  await state(page,"countdown");
+  // Fast seeking can end the fixture during its expansion lock. Wait for the
+  // renderer and operator gate, as a real operator does, before the next cue.
+  await page.waitForFunction(()=>transitions.scene.value===0&&performance.now()>=stage.busyUntil);
 }
 async function checkClockPlacement(page) {
   const viewport=await page.evaluate(()=>({width:innerWidth,height:innerHeight}));
