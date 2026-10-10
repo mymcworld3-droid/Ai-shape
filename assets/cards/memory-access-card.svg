@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
+  <defs>
+    <linearGradient id="metal" x2="0" y2="1">
+      <stop stop-color="#e9edf0"/>
+      <stop offset="1" stop-color="#a8b4be"/>
+    </linearGradient>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28 0H0V28" fill="none" stroke="#152b3a" stroke-opacity=".05"/>
+    </pattern>
+  </defs>
+  <rect x="8" y="8" width="884" height="544" rx="32" fill="url(#metal)" stroke="#f3f7fa" stroke-width="3"/>
+  <rect x="9" y="9" width="882" height="542" rx="31" fill="url(#grid)"/>
+  <path d="M54 144H846M54 424H846" stroke="#5b6c79" stroke-width="2"/>
+  <text x="54" y="86" fill="#253e50" font-family="Arial,sans-serif" font-size="22" letter-spacing="5">HUMAN VERIFICATION</text>
+  <text x="846" y="96" text-anchor="end" fill="#253e50" font-family="Arial,sans-serif" font-size="56">67</text>
+  <rect x="57" y="208" width="104" height="104" rx="12" fill="#99a8b2" stroke="#526775" stroke-width="3"/>
+  <path d="M78 208V312M140 208V312M57 240H161M57 280H161M98 240V280H120V240Z" fill="none" stroke="#526775" stroke-width="3"/>
+  <text x="205" y="258" fill="#132d40" font-family="Arial,sans-serif" font-weight="700" font-size="66" letter-spacing="4">MEMORY</text>
+  <text x="208" y="322" fill="#253e50" font-family="Arial,sans-serif" font-size="38" letter-spacing="13">ACCESS</text>
+  <path d="M57 482H224M250 482H283M309 482H342" stroke="#526775" stroke-width="8"/>
+  <circle cx="803" cy="482" r="15" fill="none" stroke="#526775" stroke-width="3"/>
+</svg>

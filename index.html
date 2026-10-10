@@ -19,9 +19,10 @@ audio,video{display:none}
 </head>
 <body>
 <main id="visualizerWrap">
-<canvas id="visualizer" aria-label="Stage projection: click or press Space to reveal the room; advance again for the AI opening"></canvas>
+<canvas id="visualizer" aria-label="Stage projection: click or press Space to advance each opening cue"></canvas>
 <video id="roomRevealVideo" preload="auto" muted playsinline disablepictureinpicture aria-hidden="true" tabindex="-1"></video>
 <audio id="openingAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+<audio id="doorKickAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
 </main>
 <script src="opening-config.js"></script>
 <script src="opening-controller.js"></script>

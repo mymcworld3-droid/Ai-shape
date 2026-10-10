@@ -137,6 +137,119 @@
     }
   }
 
+  // Operator cues and media completion are separate. The clock may replace the
+  // graphic during narration, while its deadline still belongs to audio.ended.
+  class StageCueController {
+    constructor({ video, audio, effect = null, now = () => performance.now(),
+      durationMs = 900000, revealFadeMs = 240, aiFadeMs = 900,
+      expandMs = 1600, morphMs = 1200, settleMs = 1000,
+      cardFadeMs = 400, blackoutMs = 1200,
+      onCue = () => {}, onMediaState = () => {},
+      onNarrationEnd = () => {}, onError = () => {} }) {
+      Object.assign(this, { now, effect, revealFadeMs, aiFadeMs, expandMs,
+        morphMs, settleMs, cardFadeMs, blackoutMs, onCue, onMediaState,
+        onNarrationEnd, onError });
+      this.state = "dark";
+      this.busyUntil = 0;
+      this.effectState = "idle";
+      this.effectRun = 0;
+      this.destroyed = false;
+      this.room = new RoomRevealController({ video,
+        onStateChange: state => {
+          if (state === "starting") this.setCue("room-reveal");
+          if (state === "ready") { this.lock(this.revealFadeMs); this.setCue("bright"); }
+          if (state === "dark") { this.busyUntil = 0; this.setCue("dark"); }
+          this.onMediaState("room", state);
+        }, onError: error => this.onError("room", error) });
+      this.opening = new OpeningController({ audio, now, durationMs,
+        onStateChange: state => {
+          if (state === "countdown") {
+            this.lock(this.settleMs);
+            this.onNarrationEnd();
+          }
+          if (state === "ready") { this.busyUntil = 0; this.setCue("door-kick"); }
+          this.onMediaState("narration", state);
+        }, onError: error => this.onError("narration", error) });
+      this.effectEnded = () => {
+        if (this.effect.ended && ["starting", "playing"].includes(this.effectState)) {
+          ++this.effectRun;
+          this.setEffectState("finished");
+        }
+      };
+      this.effectFailed = () => this.failEffect(new Error("Door kick audio could not be played."));
+      if (effect) {
+        effect.addEventListener("ended", this.effectEnded);
+        effect.addEventListener("error", this.effectFailed);
+      }
+    }
+
+    setCue(state) { this.state = state; this.onCue(state); }
+    setEffectState(state) { this.effectState = state; this.onMediaState("effect", state); }
+    lock(ms) { this.busyUntil = Math.max(this.busyUntil, this.now() + ms); }
+
+    async playEffect() {
+      if (!this.effect) { this.setEffectState("missing"); this.lock(150); return true; }
+      const run = ++this.effectRun;
+      this.setEffectState("starting");
+      try {
+        if (this.effect.error) this.effect.load();
+        this.effect.currentTime = 0;
+        await this.effect.play();
+        if (this.destroyed || run !== this.effectRun || this.effectState !== "starting") return false;
+        this.setEffectState("playing");
+        return true;
+      } catch (error) {
+        if (run === this.effectRun && !this.destroyed) this.failEffect(error);
+        return false;
+      }
+    }
+
+    failEffect(error) {
+      if (this.effectState === "finished" || this.destroyed) return;
+      ++this.effectRun;
+      this.effect.pause();
+      this.setEffectState("error");
+      this.onError("effect", error);
+    }
+
+    async advance() {
+      if (this.destroyed || this.now() < this.busyUntil) return false;
+      switch (this.state) {
+        case "dark": return this.room.advance();
+        case "bright":
+          this.lock(this.aiFadeMs); this.setCue("ai"); return true;
+        case "ai":
+          this.setCue("door-kick"); return this.playEffect();
+        case "door-kick":
+          if (["starting", "playing"].includes(this.effectState)) return false;
+          if (this.effectState === "error") return this.playEffect();
+          this.lock(this.expandMs); this.setCue("welcome");
+          return this.opening.advance();
+        case "welcome":
+          if (!["narration", "countdown", "finished"].includes(this.opening.state)) return false;
+          this.lock(this.morphMs); this.setCue("clock"); return true;
+        case "clock":
+          if (!["countdown", "finished"].includes(this.opening.state)) return false;
+          this.lock(this.cardFadeMs); this.setCue("card"); return true;
+        case "card":
+          this.lock(this.cardFadeMs); this.setCue("card-hidden"); return true;
+        case "card-hidden":
+          this.lock(this.blackoutMs); this.setCue("blackout"); return true;
+        default: return false;
+      }
+    }
+
+    destroy() {
+      this.destroyed = true;
+      ++this.effectRun;
+      this.room.destroy(); this.opening.destroy();
+      if (this.effect) {
+        this.effect.removeEventListener("ended", this.effectEnded);
+        this.effect.removeEventListener("error", this.effectFailed);
+      }
+    }
+  }
+
   function formatTime(ms) {
     const seconds = Math.ceil(Math.max(0, ms) / 1000);
     return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" +
@@ -176,5 +289,5 @@
     return () => target.removeEventListener("click", click);
   }
 
-  return { RoomRevealController, OpeningController, formatTime, bindAdvanceKey, bindAdvanceClick };
+  return { RoomRevealController, OpeningController, StageCueController, formatTime, bindAdvanceKey, bindAdvanceClick };
 });

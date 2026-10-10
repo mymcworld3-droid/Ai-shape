@@ -1,13 +1,15 @@
 "use strict";
 const config=window.OPENING_CONFIG;
 const audioElement=document.getElementById("openingAudio");
+const effectElement=document.getElementById("doorKickAudio");
 const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
 const visualizerWrap=document.getElementById("visualizerWrap");
 const backgroundImage=new Image();
 const darkBackgroundImage=new Image();
-let backgroundReady=false,darkBackgroundReady=false,roomReadyAt=null;
+const cardImage=new Image();
+let backgroundReady=false,darkBackgroundReady=false,cardReady=false,roomReadyAt=null;
 let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1;
 let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0;
@@ -15,57 +17,63 @@ let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
 const ROTATE_INTERVAL=500,ROTATE_DURATION=1400,ROTATE_STEP=Math.PI/3;
 const particles=[],PARTICLES=90;
 const freqMin=20,freqMax=20000;
-let sceneProgress=0,sceneTarget=0,sceneFrom=0,sceneStart=0,sceneTransitioning=false;
-let timerActive=false,timerMorph=0,timerMorphStart=0,timerSettle=0,timerSettleStart=null;
+const transitions=Object.fromEntries(["scene","ai","clock","card","blackout"].map(name=>
+ [name,{value:0,from:0,target:0,start:0,duration:0}]));
 
 function easeInOutCubic(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
-function setSceneTarget(target){
- sceneFrom=sceneProgress;sceneTarget=target;sceneStart=performance.now();sceneTransitioning=true;
+function animate(name,target,duration){
+ updateTransitions(performance.now());
+ const t=transitions[name];
+ Object.assign(t,{from:t.value,target,start:performance.now(),duration});
 }
 function updateTransitions(now){
- if(sceneTransitioning){
-  const p=Math.max(0,Math.min(1,(now-sceneStart)/config.sceneDurationMs));
-  sceneProgress=sceneFrom+(sceneTarget-sceneFrom)*easeInOutCubic(p);
-  if(p===1)sceneTransitioning=false;
- }
- if(!timerActive)return;
- const p=Math.max(0,Math.min(1,(now-timerMorphStart)/config.morphDurationMs));
- timerMorph=easeInOutCubic(p);
- if(p===1&&timerSettleStart===null){timerSettleStart=now;setSceneTarget(0);}
- if(timerSettleStart!==null){
-  const q=Math.max(0,Math.min(1,(now-timerSettleStart)/config.settleDurationMs));
-  timerSettle=easeInOutCubic(q);
+ for(const t of Object.values(transitions)){
+  const p=t.duration?Math.max(0,Math.min(1,(now-t.start)/t.duration)):1;
+  t.value=t.from+(t.target-t.from)*easeInOutCubic(p);
  }
 }
 
-const opening=new StageOpening.OpeningController({
- audio:audioElement,durationMs:config.countdownMs,
- onStateChange(state){
-  document.body.dataset.openingState=state;
-  if(state==="narration")setSceneTarget(1);
-  if(state==="countdown"){
-   timerActive=true;timerMorphStart=performance.now();timerMorph=0;timerSettle=0;timerSettleStart=null;
+const stage=new StageOpening.StageCueController({
+ video:revealVideo,audio:audioElement,effect:config.doorKick?effectElement:null,
+ durationMs:config.countdownMs,revealFadeMs:config.revealFadeMs,
+ aiFadeMs:config.aiFadeMs,expandMs:config.sceneDurationMs,
+ morphMs:config.morphDurationMs,settleMs:config.settleDurationMs,
+ cardFadeMs:config.cardFadeMs,blackoutMs:config.blackoutMs,
+ onCue(cue){
+  document.body.dataset.cue=cue;
+  if(cue==="bright")roomReadyAt=performance.now();
+  if(cue==="ai")animate("ai",1,config.aiFadeMs);
+  if(cue==="door-kick"){
+   animate("clock",0,0);animate("scene",0,config.settleDurationMs);
   }
-  if(state==="ready"){
-   timerActive=false;timerMorph=0;timerSettle=0;timerSettleStart=null;setSceneTarget(0);
-  }
+  if(cue==="welcome")animate("scene",1,config.sceneDurationMs);
+  if(cue==="clock")animate("clock",1,config.morphDurationMs);
+  if(cue==="card")animate("card",1,config.cardFadeMs);
+  if(cue==="card-hidden")animate("card",0,config.cardFadeMs);
+  if(cue==="blackout")animate("blackout",1,config.blackoutMs);
  },
- onError(error){document.body.dataset.audioError="true";console.error("[Opening]",error);}
-});
-const roomReveal=new StageOpening.RoomRevealController({
- video:revealVideo,
- onStateChange(state){
-  document.body.dataset.roomState=state;
-  if(state==="ready")roomReadyAt=performance.now();
+ onMediaState(kind,state){
+  const key={room:"roomState",narration:"openingState",effect:"effectState"}[kind];
+  document.body.dataset[key]=state;
  },
- onError(error){document.body.dataset.videoError="true";console.error("[Opening]",error);}
+ onNarrationEnd(){animate("scene",0,config.settleDurationMs);},
+ onError(kind,error){
+  document.body.dataset[{room:"videoError",narration:"audioError",effect:"effectError"}[kind]]="true";
+  console.error("[Opening]",error);
+ }
 });
+const opening=stage.opening,roomReveal=stage.room;
+document.body.dataset.cue="dark";
 document.body.dataset.openingState="ready";
 document.body.dataset.roomState="dark";
+document.body.dataset.effectState="idle";
+document.body.dataset.effectAvailable=String(Boolean(config.doorKick));
 // Read-only diagnostics for rehearsals; no control UI appears on the projection.
 window.stageOpening=Object.freeze({
- get state(){return roomReveal.state==="ready"?opening.state:roomReveal.state;},
+ get state(){return stage.state;},
  get roomState(){return roomReveal.state;},
+ get narrationState(){return opening.state;},
+ get effectAvailable(){return Boolean(config.doorKick);},
  get remainingMs(){return opening.getRemainingMs();}
 });
 
@@ -85,12 +93,18 @@ darkBackgroundImage.addEventListener("error",()=>{
  console.error("[Opening] Dark room background could not be loaded.");
 });
 darkBackgroundImage.src=config.darkBackground;
+cardImage.addEventListener("load",()=>{cardReady=true;document.body.dataset.cardReady="true";});
+cardImage.addEventListener("error",()=>{
+ document.body.dataset.cardReady="false";console.error("[Opening] Card image could not be loaded.");
+});
+cardImage.src=config.card;
 revealVideo.addEventListener("canplay",()=>{document.body.dataset.videoReady="true";});
 revealVideo.src=config.roomReveal;
 revealVideo.load();
 audioElement.addEventListener("canplay",()=>{document.body.dataset.audioReady="true";});
 audioElement.src=config.narration;
 audioElement.load();
+if(config.doorKick){effectElement.src=config.doorKick;effectElement.load();}
 
 function prepareAudio(){
  try{
@@ -116,14 +130,14 @@ function requestStageFullscreen(){
  }
 }
 function advanceStage(){
- if(roomReveal.state!=="ready"){
-  if(roomReveal.state!=="dark")return;
-  document.body.dataset.videoError="false";
-  roomReveal.advance();requestStageFullscreen();return;
+ if(!backgroundReady||!darkBackgroundReady)return;
+ if(stage.state==="clock"&&!cardReady)return;
+ if(performance.now()<stage.busyUntil)return;
+ if(stage.state==="dark")document.body.dataset.videoError="false";
+ if(stage.state==="door-kick"&&!["starting","playing","error"].includes(stage.effectState)){
+  document.body.dataset.audioError="false";prepareAudio();
  }
- if(!backgroundReady||performance.now()-roomReadyAt<config.revealFadeMs||opening.state!=="ready")return;
- document.body.dataset.audioError="false";
- prepareAudio();opening.advance();requestStageFullscreen();
+ stage.advance();requestStageFullscreen();
 }
 StageOpening.bindAdvanceKey(window,advanceStage);
 StageOpening.bindAdvanceClick(visualizerWrap,advanceStage);
@@ -136,11 +150,6 @@ function containedLayout(iw,ih){
 }
 function backgroundLayout(){
  return containedLayout(backgroundImage.naturalWidth||1536,backgroundImage.naturalHeight||1024);
-}
-function monitorLayout(){
- const b=backgroundLayout(),m=config.monitor;
- return{x:b.x+b.width*(m.x+m.width/2),y:b.y+b.height*(m.y+m.height/2),
-  width:b.width*m.width,height:b.height*m.height};
 }
 function drawRevealVideo(alpha){
  if(alpha<=0||revealVideo.readyState<2||!revealVideo.videoWidth)return;
@@ -167,7 +176,7 @@ function drawBackground(now){
  }else if(roomReveal.state==="ready"){
   drawRevealVideo(1-roomHandoffProgress(now));
  }
- if(sceneProgress>0){ctx.fillStyle=`rgba(0,0,0,${sceneProgress})`;ctx.fillRect(0,0,w,h);}
+ if(transitions.scene.value>0){ctx.fillStyle=`rgba(0,0,0,${transitions.scene.value})`;ctx.fillRect(0,0,w,h);}
 }
 function resizeCanvas(){
  dpr=Math.min(window.devicePixelRatio||1,2);
@@ -324,7 +333,6 @@ function drawParticles(audio){
   ctx.beginPath();ctx.arc(x,y,p.size+(audio.high/255)*.6,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${Math.min(.5,p.alpha*(.3+energy*2.1))})`;ctx.fill();
  }
 }
-// Draw the original visualizer as a circular timer during the morph.
 // Seven-segment electronic clock: no circular frame or caption below the digits.
 const DIGITAL_SEGMENTS=[
  // a, b, c, d, e, f, g
@@ -391,31 +399,28 @@ function drawTimerFace(radius){
 function draw(){
  requestAnimationFrame(draw);
  const now=performance.now();opening.getRemainingMs();updateTransitions(now);
+ // Complete blackout includes the room, clock, card and letterbox pixels.
+ // The audio-owned deadline continues even while nothing is projected.
+ if(transitions.blackout.value===1){ctx.fillStyle="#000";ctx.fillRect(0,0,w,h);return;}
  const a=analyze(),target=Math.min(1,a.avg/68);
  energy+=(target-energy)*.15;bassEnergy+=(a.low-bassEnergy)*.20;
  midEnergy+=(a.mid-midEnergy)*.16;highEnergy+=(a.high-highEnergy)*.25;
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
  updateHexRotation(now);drawBackground(now);
- // No AI graphic or clock is overlaid on the initial still or room video.
+ // The bright room also remains empty until the separate AI fade-in cue.
  if(roomReveal.state!=="ready"||roomHandoffProgress(now)<1)return;
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=waveBase+Math.min(w,h)*.075;
- const monitor=monitorLayout();
- // Keep the waiting graphic and settled clock inside the pictured wall screen.
- const idleScale=Math.min(monitor.width,monitor.height)*.30/(Math.min(w,h)*.275);
- const originalScale=idleScale+(1-idleScale)*sceneProgress;
- const originalX=monitor.x+(cx-monitor.x)*sceneProgress;
- const originalY=monitor.y+(cy-monitor.y)*sceneProgress;
+ const idle=config.idleShape,expansion=transitions.scene.value;
+ const visualScale=idle.size+(1-idle.size)*expansion;
+ const visualX=w*idle.x+(cx-w*idle.x)*expansion;
+ const visualY=h*idle.y+(cy-h*idle.y)*expansion;
  const timerRadius=Math.min(w,h)*.23;
- const timerTargetScale=Math.min(monitor.width*.86/(timerRadius*.012*236),
-  monitor.height*.65/(timerRadius*.012*84));
- const visualScale=originalScale+(timerTargetScale-originalScale)*timerSettle;
- const visualX=originalX+(monitor.x-originalX)*timerSettle;
- const visualY=originalY+(monitor.y-originalY)*timerSettle;
  ctx.save();ctx.translate(visualX,visualY);ctx.scale(visualScale,visualScale);ctx.translate(-cx,-cy);
- const graphicOpacity=1-easeInOutCubic(Math.min(1,timerMorph/.55));
- const clockOpacity=easeInOutCubic(Math.max(0,Math.min(1,(timerMorph-.55)/.45)));
+ const morph=transitions.clock.value;
+ const graphicOpacity=transitions.ai.value*(1-easeInOutCubic(Math.min(1,morph/.55)));
+ const clockOpacity=easeInOutCubic(Math.max(0,Math.min(1,(morph-.55)/.45)));
  ctx.globalAlpha=graphicOpacity;
  if(graphicOpacity>0){
   drawParticles(a);drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
@@ -425,5 +430,13 @@ function draw(){
  }
  if(clockOpacity>0){ctx.globalAlpha=clockOpacity;drawTimerFace(timerRadius);}
  ctx.restore();
+ if(cardReady&&transitions.card.value>0){
+  const width=Math.min(w*.8,h*.6),height=width*cardImage.naturalHeight/cardImage.naturalWidth;
+  ctx.save();ctx.globalAlpha=transitions.card.value;ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=24;
+  ctx.drawImage(cardImage,(w-width)/2,h*.72-height/2,width,height);ctx.restore();
+ }
+ if(transitions.blackout.value>0){
+  ctx.fillStyle=`rgba(0,0,0,${transitions.blackout.value})`;ctx.fillRect(0,0,w,h);
+ }
 }
 requestAnimationFrame(draw);
