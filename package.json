@@ -1,0 +1,11 @@
+{
+  "name": "human-verification-stage-opening",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/opening.test.cjs",
+    "test:browser": "node tests/browser-opening.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}
