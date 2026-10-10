@@ -11,7 +11,9 @@ jobs:
       - run: node --check opening-controller.js
       - run: node --check opening-config.js
       - run: node --check visualizer.js
-      - run: node --test tests/opening.test.cjs
+      - run: node --check stage-layout.js
+      - run: node --check stage-review.js
+      - run: npm test
   opening-browser:
     runs-on: ubuntu-latest
     steps:

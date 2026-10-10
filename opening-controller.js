@@ -256,12 +256,29 @@
       String(seconds % 60).padStart(2, "0");
   }
 
-  function bindAdvanceKey(target, advance) {
+  class StartGate {
+    constructor({ isReady, onStart }) {
+      this.isReady = isReady;
+      this.onStart = onStart;
+      this.started = false;
+    }
+    start() {
+      if (this.started || !this.isReady()) return false;
+      this.started = true;
+      // Stay synchronous so media play/fullscreen retain the button gesture.
+      this.onStart();
+      return true;
+    }
+  }
+
+  function bindAdvanceKey(target, advance, { isEnabled = () => true } = {}) {
     let held = false;
     const isSpace = event => event.code === "Space" || event.key === " ";
     const down = event => {
       if (!isSpace(event) || event.ctrlKey || event.altKey || event.metaKey ||
           event.shiftKey || event.isComposing) return;
+      // Preserve native Space activation on the Start button before the show.
+      if (!isEnabled()) return;
       event.preventDefault();
       if (event.repeat || held) return;
       held = true;
@@ -289,5 +306,5 @@
     return () => target.removeEventListener("click", click);
   }
 
-  return { RoomRevealController, OpeningController, StageCueController, formatTime, bindAdvanceKey, bindAdvanceClick };
+  return { RoomRevealController, OpeningController, StageCueController, StartGate, formatTime, bindAdvanceKey, bindAdvanceClick };
 });

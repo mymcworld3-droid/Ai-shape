@@ -2,7 +2,7 @@
   "name": "human-verification-stage-opening",
   "private": true,
   "scripts": {
-    "test": "node --test tests/opening.test.cjs",
+    "test": "node --test tests/*.test.cjs",
     "test:browser": "node tests/browser-opening.cjs"
   },
   "devDependencies": {

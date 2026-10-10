@@ -6,7 +6,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "test-results");
-const types = { ".html":"text/html", ".js":"text/javascript", ".png":"image/png", ".svg":"image/svg+xml", ".mp3":"audio/mpeg", ".mp4":"video/mp4" };
+const types = { ".html":"text/html", ".js":"text/javascript", ".css":"text/css", ".png":"image/png", ".svg":"image/svg+xml", ".mp3":"audio/mpeg", ".mp4":"video/mp4" };
 
 // A short, quiet PCM test tone exercises the optional audio slot. It is never
 // shipped as a show effect or configured on the production page.
@@ -48,6 +48,7 @@ async function ready(page, url) {
   await page.goto(url);
   try {
     await page.waitForSelector('body[data-background-ready="true"][data-dark-background-ready="true"][data-video-ready="true"][data-audio-ready="true"][data-card-ready="true"]', {timeout:15000});
+    await page.waitForFunction(()=>!document.getElementById('startButton').disabled);
   } catch (error) {
     console.error("Media readiness",await page.evaluate(()=>({
       flags:{...document.body.dataset},
@@ -78,7 +79,7 @@ async function cue(page, expected) { await flag(page,"cue",expected); }
 async function state(page, expected) { await flag(page,"openingState",expected); }
 async function roomState(page, expected) { await flag(page,"roomState",expected,15000); }
 async function fastReveal(page) {
-  await page.keyboard.press("Space"); await roomState(page,"playing");
+  await page.locator('#startButton').click(); await roomState(page,"playing");
   await page.locator('#roomRevealVideo').evaluate(video=>{video.currentTime=video.duration-.1;});
   await cue(page,"bright"); await page.waitForTimeout(350);
 }
@@ -93,7 +94,8 @@ async function expectedDifference(page, sourcePath, region=null, threshold=15) {
     expected.width=actual.width; expected.height=actual.height;
     const context=expected.getContext("2d"); context.fillStyle="#050505";
     context.fillRect(0,0,expected.width,expected.height);
-    const scale=Math.min(expected.width/img.naturalWidth,expected.height/img.naturalHeight);
+    // Independent pixel oracle: max scale must fill, cropping excess.
+    const scale=Math.max(expected.width/img.naturalWidth,expected.height/img.naturalHeight);
     const width=img.naturalWidth*scale,height=img.naturalHeight*scale;
     context.drawImage(img,(expected.width-width)/2,(expected.height-height)/2,width,height);
     const a=actual.getContext("2d").getImageData(0,0,actual.width,actual.height).data;
@@ -119,15 +121,21 @@ async function matchesStill(page, sourcePath, region=null) {
   const comparison=await expectedDifference(page,sourcePath,region);
   assert.ok(comparison.mean<1,`Projection must match ${sourcePath}; mean pixel error ${comparison.mean}`);
 }
+async function fixedFrame(page) {
+  const box=await page.locator('#visualizer').boundingBox();
+  const available=await page.locator('#projectionViewport').boundingBox();
+  assert.ok(Math.abs(box.width/box.height-16/9)<.003,"Stage must retain 16:9");
+  assert.ok(box.width<=available.width+1&&box.height<=available.height+1);
+  assert.ok(Math.abs(box.x-(available.x+(available.width-box.width)/2))<1);
+  assert.ok(Math.abs(box.y-(available.y+(available.height-box.height)/2))<1);
+  assert.ok(Math.abs(box.width-available.width)<1||Math.abs(box.height-available.height)<1);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight),false);
+}
 async function noControls(page) {
-  assert.equal(await page.locator('button,input,select,[role="button"],audio[controls],video[controls]').count(),0);
+  assert.equal(await page.locator('button:visible,input:visible,select:visible,[role="button"]:visible,audio[controls]:visible,video[controls]:visible').count(),0);
+  assert.equal(await page.getByRole('button').count(),0,"Hidden review buttons must also leave the accessibility tree");
   for(const id of ['openingAudio','roomRevealVideo','doorKickAudio'])assert.equal(await page.locator('#'+id).isVisible(),false);
-  const box = await page.locator('#visualizer').boundingBox();
-  const viewport = await page.evaluate(() => ({width:innerWidth,height:innerHeight,overflow:
-    document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight}));
-  assert.equal(box.x,0); assert.equal(box.y,0);
-  assert.equal(box.width,viewport.width); assert.equal(box.height,viewport.height);
-  assert.equal(viewport.overflow,false);
+  await fixedFrame(page);
 }
 async function naturalAudioEnd(page) {
   await page.locator('#openingAudio').evaluate(audio=>{audio.currentTime=audio.duration-.1;});
@@ -137,7 +145,7 @@ async function naturalAudioEnd(page) {
   await page.waitForFunction(()=>transitions.scene.value===0&&performance.now()>=stage.busyUntil);
 }
 async function checkClockPlacement(page) {
-  const viewport=await page.evaluate(()=>({width:innerWidth,height:innerHeight}));
+  const viewport=await page.locator('#visualizer').boundingBox();
   const bounds=await expectedDifference(page,"assets/backgrounds/IMG_0165.png",[.1,.2,.9,.55]);
   const expectedWidth=Math.min(viewport.width,viewport.height)*.23*.012*236*.37;
   assert.ok(Math.abs(bounds.centerY-viewport.height*.4)<6,`Clock Y must be 40%: ${JSON.stringify(bounds)}`);
@@ -156,13 +164,21 @@ async function checkClockPlacement(page) {
     const errors=[],requests=[];
     page.on("pageerror",error=>errors.push(String(error)));
     page.on("request",request=>requests.push(request.url()));
-    await ready(page,url); await noControls(page); await page.waitForTimeout(150);
+    await ready(page,url); await fixedFrame(page); await page.waitForTimeout(150);
+    assert.equal(await page.locator('#startButton').isVisible(),true);
+    assert.equal(await page.locator('#stepsPanel').isVisible(),false);
+    assert.equal(await page.locator('#startDock').evaluate(e=>getComputedStyle(e).position),"fixed");
     await matchesStill(page,"assets/backgrounds/Start_dark.PNG");
     assert.equal(await page.locator('body').getAttribute('data-cue'),"dark");
     await page.screenshot({path:path.join(output,"00-dark.png")});
-    await page.keyboard.press("Enter"); await page.keyboard.press("Shift+Space");
+    await page.keyboard.press("Space"); await page.keyboard.press("Enter"); await page.keyboard.press("Shift+Space");
+    await page.locator('#visualizer').click(); await page.waitForTimeout(300);
     await cue(page,"dark");
-    await page.mouse.click(30,30); await roomState(page,"playing");
+    assert.equal(await page.evaluate(()=>stageOpening.started),false);
+    assert.equal(await page.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
+    assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0);
+    await page.locator('#startButton').click(); await roomState(page,"playing");
+    await noControls(page);
     const video=await page.locator('#roomRevealVideo').evaluate(v=>({muted:v.muted,inline:v.playsInline,loop:v.loop}));
     assert.deepEqual(video,{muted:true,inline:true,loop:false});
     await page.waitForTimeout(500); await page.screenshot({path:path.join(output,"01-room-reveal.png")});
@@ -187,7 +203,7 @@ async function checkClockPlacement(page) {
     assert.ok(playing.time>1); assert.equal(playing.paused,false);
     assert.equal(await page.evaluate(()=>opening.deadline),null);
     assert.ok(await page.evaluate(()=>smooth.some(v=>v>0)),"Real narration must reach the analyser");
-    assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),"visualizerWrap");
+    assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),"showShell");
     await page.screenshot({path:path.join(output,"04-welcome.png")});
     await page.keyboard.press("Space"); await cue(page,"clock"); await page.waitForTimeout(1400);
     assert.equal(await page.evaluate(()=>transitions.clock.value),1);
@@ -210,7 +226,7 @@ async function checkClockPlacement(page) {
     const remaining=await page.evaluate(()=>stageOpening.remainingMs);
     assert.ok(remaining>890000&&remaining<900000);
     await page.screenshot({path:path.join(output,"06-countdown.png")});
-    results.push("natural MP4 and MP3 ends; eight separate cues, AI fade, waiting 15:00 during speech, automatic shrink and real countdown");
+    results.push("explicit Start gate, hidden controls, natural MP4 and MP3 ends, eight separate cues, waiting clock and automatic countdown");
 
     await page.keyboard.press("Escape");
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]) {
@@ -243,7 +259,60 @@ async function checkClockPlacement(page) {
     assert.equal(errors.length,0,errors.join("\n"));
     assert.ok(requests.every(request=>request.startsWith(url)),"Show assets must be local");
     await page.close();
-    results.push("Y=40% and scale=37% measured from pixels at three aspect ratios; card show/hide, exact black pixels and uninterrupted deadline");
+    results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; Y=40%, size=37%, card show/hide and exact blackout pixels");
+
+    const review=await browser.newPage({viewport:{width:1440,height:900}});
+    const reviewErrors=[];review.on('pageerror',error=>reviewErrors.push(String(error)));
+    await ready(review,url);
+    await review.locator('#stepsViewButton').click(); await flag(review,'view','steps');
+    await review.waitForTimeout(100);await fixedFrame(review);
+    assert.equal(await review.locator('#stepList button').count(),8);
+    await matchesStill(review,"assets/backgrounds/IMG_0165.png");
+    for(const preview of ['welcome','clock','card','card-hidden','blackout','ai','door-kick','bright']){
+      await review.locator(`[data-preview="${preview}"]`).click();await flag(review,'previewCue',preview);
+      await review.waitForTimeout(60);
+      assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
+      assert.equal(await review.locator('#openingAudio').evaluate(a=>a.currentTime),0);
+      assert.equal(await review.evaluate(()=>opening.deadline),null);
+      assert.equal(await review.evaluate(()=>stageOpening.started),false);
+    }
+    await review.locator('[data-preview="card"]').click();await review.waitForTimeout(100);
+    const previewCard=await expectedDifference(review,'assets/backgrounds/IMG_0165.png',[.1,.55,.9,.95]);
+    assert.ok(previewCard.width>200&&previewCard.height>100,"Step card preview must actually render");
+    await review.screenshot({path:path.join(output,'10-steps-review.png')});
+    await review.locator('#pageViewButton').click();await flag(review,'view','page');await review.waitForTimeout(100);
+    await matchesStill(review,'assets/backgrounds/Start_dark.PNG');await fixedFrame(review);
+    await review.locator('#stepsViewButton').click();await review.locator('[data-preview="blackout"]').click();
+    await flag(review,'previewCue','blackout');
+    // Starting after inspecting the last cue must still play the first clip.
+    await review.locator('#startButton').click();await roomState(review,'playing');await noControls(review);
+    await flag(review,'view','page');
+    assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.currentTime<1),true);
+    await review.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
+    await cue(review,'bright');await review.waitForTimeout(400);
+    await matchesStill(review,'assets/backgrounds/IMG_0165.png');
+    assert.equal(reviewErrors.length,0,reviewErrors.join('\n'));
+    await review.close();
+    results.push("full-page and eight silent step previews; no audio/video or timer before Start; Start from last preview resets to first cue and hides every button");
+
+    const slow=await browser.newPage();
+    let releaseAudio;
+    const heldAudio=new Promise(resolve=>{releaseAudio=resolve;});
+    await slow.route('**/assets/audio/ai-opening.mp3',async route=>{
+      await heldAudio;await route.fulfill({contentType:'audio/mpeg',body:fs.readFileSync(path.join(root,'assets/audio/ai-opening.mp3'))});
+    });
+    await slow.goto(url,{waitUntil:'domcontentloaded'});
+    await slow.locator('#startButton').waitFor({state:'visible'});
+    assert.equal(await slow.locator('#startButton').isDisabled(),true);
+    await slow.keyboard.press('Space');await slow.locator('#visualizer').click();
+    assert.equal(await slow.evaluate(()=>stageOpening.started),false);
+    releaseAudio();
+    await slow.waitForFunction(()=>!document.getElementById('startButton').disabled);
+    assert.equal(await slow.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
+    assert.equal(await slow.locator('#openingAudio').evaluate(a=>a.currentTime),0);
+    await slow.locator('#startButton').press('Space');await roomState(slow,'playing');await noControls(slow);
+    await slow.close();
+    results.push("loading cannot start the show; readiness does not autoplay; focused Start button remains keyboard-accessible");
 
     const failedFullscreen=await browser.newPage();
     await failedFullscreen.addInitScript(()=>{HTMLElement.prototype.requestFullscreen=()=>Promise.reject(new Error("Unavailable"));});
@@ -260,7 +329,7 @@ async function checkClockPlacement(page) {
       const play=HTMLMediaElement.prototype.play;let blocked=true;
       HTMLMediaElement.prototype.play=function(){if(this.tagName==="VIDEO"&&blocked){blocked=false;return Promise.reject(new DOMException("Blocked","NotAllowedError"));}return play.call(this);};
     });
-    await ready(videoRetry,url); await videoRetry.mouse.click(30,30);
+    await ready(videoRetry,url); await videoRetry.locator('#startButton').click();
     await flag(videoRetry,"videoError","true"); await cue(videoRetry,"dark");
     await matchesStill(videoRetry,"assets/backgrounds/Start_dark.PNG");
     await videoRetry.mouse.dblclick(30,30); await roomState(videoRetry,"playing");
@@ -304,7 +373,14 @@ async function checkClockPlacement(page) {
     results.push("optional SFX slot tested with real PCM fixture playback, failure/retry and separate welcome cue; production stays explicitly silent until the effect is supplied");
 
     const touch=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
-    await ready(touch,url); await touch.touchscreen.tap(190,420); await roomState(touch,"playing");
+    await ready(touch,url); await fixedFrame(touch);
+    await touch.locator('#stepsViewButton').click();await touch.waitForTimeout(100);await fixedFrame(touch);
+    await touch.locator('[data-preview="card"]').click();await flag(touch,'previewCue','card');
+    assert.equal(await touch.locator('#openingAudio').evaluate(a=>a.currentTime),0);
+    const startBox=await touch.locator('#startButton').boundingBox();
+    assert.ok(startBox.y+startBox.height<=844&&startBox.y>700,"Floating Start remains on-screen on mobile");
+    await touch.touchscreen.tap(startBox.x+startBox.width/2,startBox.y+startBox.height/2); await roomState(touch,"playing");
+    await noControls(touch);
     await touch.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
     await cue(touch,"bright"); await touch.waitForTimeout(400);
     await matchesStill(touch,"assets/backgrounds/IMG_0165.png");
@@ -317,7 +393,7 @@ async function checkClockPlacement(page) {
     await touch.waitForTimeout(650);
     await touch.touchscreen.tap(190,420); await state(touch,"narration");
     await noControls(touch); await touch.close();
-    results.push("touch advances separate cues; a quick double tap is ignored and a fresh tap starts voice without controls");
+    results.push("mobile step review and fixed Start; touch advances cues, filters double taps and retains a 16:9 projection without visible controls");
 
     fs.writeFileSync(path.join(output,"browser-results.json"),JSON.stringify({passed:true,checks:results},null,2));
     for(const result of results)console.log("PASS",result);

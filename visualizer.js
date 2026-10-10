@@ -6,10 +6,13 @@ const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
 const visualizerWrap=document.getElementById("visualizerWrap");
+const projectionViewport=document.getElementById("projectionViewport");
+const fullscreenRoot=document.getElementById("showShell");
 const backgroundImage=new Image();
 const darkBackgroundImage=new Image();
 const cardImage=new Image();
 let backgroundReady=false,darkBackgroundReady=false,cardReady=false,roomReadyAt=null;
+let previewCue=null;
 let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1;
 let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0;
@@ -59,10 +62,25 @@ const stage=new StageOpening.StageCueController({
  onNarrationEnd(){animate("scene",0,config.settleDurationMs);},
  onError(kind,error){
   document.body.dataset[{room:"videoError",narration:"audioError",effect:"effectError"}[kind]]="true";
+  notifyAssetsChange();
   console.error("[Opening]",error);
  }
 });
 const opening=stage.opening,roomReveal=stage.room;
+const startGate=new StageOpening.StartGate({
+ isReady:showAssetsReady,
+ onStart(){
+  previewCue=null;
+  document.body.dataset.started="true";
+  document.body.dataset.view="page";
+  document.body.dataset.previewCue="dark";
+  for(const id of ["reviewControls","stepsPanel","startDock"])document.getElementById(id).hidden=true;
+  visualizerWrap.focus({preventScroll:true});
+  resizeCanvas();
+  // This is the first real cue, still inside the Start button's click event.
+  advanceStage();
+ }
+});
 document.body.dataset.cue="dark";
 document.body.dataset.openingState="ready";
 document.body.dataset.roomState="dark";
@@ -70,6 +88,7 @@ document.body.dataset.effectState="idle";
 document.body.dataset.effectAvailable=String(Boolean(config.doorKick));
 // Read-only diagnostics for rehearsals; no control UI appears on the projection.
 window.stageOpening=Object.freeze({
+ get started(){return startGate.started;},
  get state(){return stage.state;},
  get roomState(){return roomReveal.state;},
  get narrationState(){return opening.state;},
@@ -77,31 +96,48 @@ window.stageOpening=Object.freeze({
  get remainingMs(){return opening.getRemainingMs();}
 });
 
+function showAssetsReady(){
+ return backgroundReady&&darkBackgroundReady&&cardReady&&revealVideo.readyState>=2&&audioElement.readyState>=2;
+}
+function notifyAssetsChange(){window.dispatchEvent(new Event("stageassetschange"));}
+function setProjectionPreview(cue){
+ if(startGate.started)return;
+ previewCue=StageLayout.previewFrame(cue)?cue:null;
+ document.body.dataset.previewCue=previewCue||"dark";
+}
+function projectionFrame(){
+ if(!startGate.started&&previewCue)return {...StageLayout.previewFrame(previewCue),preview:true};
+ return {room:roomReveal.state==="ready"&&backgroundReady,preview:false,
+  ...Object.fromEntries(Object.entries(transitions).map(([key,t])=>[key,t.value]))};
+}
+
 backgroundImage.addEventListener("load",()=>{
- backgroundReady=true;document.body.dataset.backgroundReady="true";
+ backgroundReady=true;document.body.dataset.backgroundReady="true";notifyAssetsChange();
 });
 backgroundImage.addEventListener("error",()=>{
  document.body.dataset.backgroundReady="false";
+ notifyAssetsChange();
  console.error("[Opening] Room background could not be loaded.");
 });
 backgroundImage.src=config.background;
 darkBackgroundImage.addEventListener("load",()=>{
- darkBackgroundReady=true;document.body.dataset.darkBackgroundReady="true";
+ darkBackgroundReady=true;document.body.dataset.darkBackgroundReady="true";notifyAssetsChange();
 });
 darkBackgroundImage.addEventListener("error",()=>{
  document.body.dataset.darkBackgroundReady="false";
+ notifyAssetsChange();
  console.error("[Opening] Dark room background could not be loaded.");
 });
 darkBackgroundImage.src=config.darkBackground;
-cardImage.addEventListener("load",()=>{cardReady=true;document.body.dataset.cardReady="true";});
+cardImage.addEventListener("load",()=>{cardReady=true;document.body.dataset.cardReady="true";notifyAssetsChange();});
 cardImage.addEventListener("error",()=>{
- document.body.dataset.cardReady="false";console.error("[Opening] Card image could not be loaded.");
+ document.body.dataset.cardReady="false";notifyAssetsChange();console.error("[Opening] Card image could not be loaded.");
 });
 cardImage.src=config.card;
-revealVideo.addEventListener("canplay",()=>{document.body.dataset.videoReady="true";});
+revealVideo.addEventListener("canplay",()=>{document.body.dataset.videoReady="true";notifyAssetsChange();});
 revealVideo.src=config.roomReveal;
 revealVideo.load();
-audioElement.addEventListener("canplay",()=>{document.body.dataset.audioReady="true";});
+audioElement.addEventListener("canplay",()=>{document.body.dataset.audioReady="true";notifyAssetsChange();});
 audioElement.src=config.narration;
 audioElement.load();
 if(config.doorKick){effectElement.src=config.doorKick;effectElement.load();}
@@ -122,14 +158,15 @@ function prepareAudio(){
  }catch(error){console.warn("[Opening] Audio analysis unavailable:",error);}
 }
 function requestStageFullscreen(){
- if(!document.fullscreenElement&&visualizerWrap.requestFullscreen){
+ if(!document.fullscreenElement&&fullscreenRoot.requestFullscreen){
   try{
-   const request=visualizerWrap.requestFullscreen();
+   const request=fullscreenRoot.requestFullscreen();
    if(request&&request.catch)request.catch(()=>{});
   }catch(_){}
  }
 }
 function advanceStage(){
+ if(!startGate.started)return;
  if(!backgroundReady||!darkBackgroundReady)return;
  if(stage.state==="clock"&&!cardReady)return;
  if(performance.now()<stage.busyUntil)return;
@@ -139,24 +176,16 @@ function advanceStage(){
  }
  stage.advance();requestStageFullscreen();
 }
-StageOpening.bindAdvanceKey(window,advanceStage);
-StageOpening.bindAdvanceClick(visualizerWrap,advanceStage);
+StageOpening.bindAdvanceKey(window,advanceStage,{isEnabled:()=>startGate.started});
+StageOpening.bindAdvanceClick(projectionViewport,advanceStage);
 document.addEventListener("fullscreenchange",resizeCanvas);
 window.addEventListener("resize",resizeCanvas);
 
-function containedLayout(iw,ih){
- const s=Math.min(w/iw,h/ih),width=iw*s,height=ih*s;
- return{x:(w-width)/2,y:(h-height)/2,width,height};
-}
-function backgroundLayout(){
- return containedLayout(backgroundImage.naturalWidth||1536,backgroundImage.naturalHeight||1024);
-}
 function drawRevealVideo(alpha){
  if(alpha<=0||revealVideo.readyState<2||!revealVideo.videoWidth)return;
- const b=containedLayout(revealVideo.videoWidth,revealVideo.videoHeight);
+ const b=StageLayout.coverLayout(w,h,revealVideo.videoWidth,revealVideo.videoHeight);
  ctx.save();ctx.globalAlpha=alpha;
- // The clip and stills have different aspect ratios: contain each without
- // cropping doors or distorting geometry, and fade their handoffs.
+ // Fill the fixed 16:9 frame without distortion, cropping excess equally.
  ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
  ctx.drawImage(revealVideo,b.x,b.y,b.width,b.height);ctx.restore();
 }
@@ -164,21 +193,24 @@ function roomHandoffProgress(now){
  if(roomReveal.state!=="ready"||!backgroundReady)return 0;
  return easeInOutCubic(Math.max(0,Math.min(1,(now-roomReadyAt)/config.revealFadeMs)));
 }
-function drawBackground(now){
+function drawBackground(now,frame){
  ctx.clearRect(0,0,w,h);ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
- const roomReady=roomReveal.state==="ready"&&backgroundReady;
+ const roomReady=frame.room&&backgroundReady;
  const image=roomReady?backgroundImage:darkBackgroundImage;
  if(roomReady||darkBackgroundReady){
-  const b=containedLayout(image.naturalWidth,image.naturalHeight);ctx.drawImage(image,b.x,b.y,b.width,b.height);
+  const b=StageLayout.coverLayout(w,h,image.naturalWidth,image.naturalHeight);ctx.drawImage(image,b.x,b.y,b.width,b.height);
  }
- if(roomReveal.state==="playing"){
+ if(!frame.preview&&roomReveal.state==="playing"){
   drawRevealVideo(easeInOutCubic(Math.min(1,revealVideo.currentTime*1000/config.revealFadeMs)));
- }else if(roomReveal.state==="ready"){
+ }else if(!frame.preview&&roomReveal.state==="ready"){
   drawRevealVideo(1-roomHandoffProgress(now));
  }
- if(transitions.scene.value>0){ctx.fillStyle=`rgba(0,0,0,${transitions.scene.value})`;ctx.fillRect(0,0,w,h);}
+ if(frame.scene>0){ctx.fillStyle=`rgba(0,0,0,${frame.scene})`;ctx.fillRect(0,0,w,h);}
 }
 function resizeCanvas(){
+ const available=projectionViewport.getBoundingClientRect();
+ const frame=StageLayout.fitStage(available.width,available.height);
+ visualizerWrap.style.width=frame.width+"px";visualizerWrap.style.height=frame.height+"px";
  dpr=Math.min(window.devicePixelRatio||1,2);
  w=canvas.clientWidth;h=canvas.clientHeight;
  canvas.width=Math.max(1,Math.floor(w*dpr));canvas.height=Math.max(1,Math.floor(h*dpr));
@@ -191,6 +223,7 @@ function initParticles(){
  s:.00012+Math.random()*.00065,size:.45+Math.random()*1.5,alpha:.035+Math.random()*.19});
 }
 resizeCanvas();
+if(window.ResizeObserver)new ResizeObserver(resizeCanvas).observe(projectionViewport);
 
 function freqToBin(freq){
  if(!analyser||!audioCtx)return 0;
@@ -399,27 +432,28 @@ function drawTimerFace(radius){
 function draw(){
  requestAnimationFrame(draw);
  const now=performance.now();opening.getRemainingMs();updateTransitions(now);
+ const frame=projectionFrame();
  // Complete blackout includes the room, clock, card and letterbox pixels.
  // The audio-owned deadline continues even while nothing is projected.
- if(transitions.blackout.value===1){ctx.fillStyle="#000";ctx.fillRect(0,0,w,h);return;}
+ if(frame.blackout===1){ctx.fillStyle="#000";ctx.fillRect(0,0,w,h);return;}
  const a=analyze(),target=Math.min(1,a.avg/68);
  energy+=(target-energy)*.15;bassEnergy+=(a.low-bassEnergy)*.20;
  midEnergy+=(a.mid-midEnergy)*.16;highEnergy+=(a.high-highEnergy)*.25;
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
- updateHexRotation(now);drawBackground(now);
+ updateHexRotation(now);drawBackground(now,frame);
  // The bright room also remains empty until the separate AI fade-in cue.
- if(roomReveal.state!=="ready"||roomHandoffProgress(now)<1)return;
+ if(!frame.room||(!frame.preview&&roomHandoffProgress(now)<1))return;
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=waveBase+Math.min(w,h)*.075;
- const idle=config.idleShape,expansion=transitions.scene.value;
+ const idle=config.idleShape,expansion=frame.scene;
  const visualScale=idle.size+(1-idle.size)*expansion;
  const visualX=w*idle.x+(cx-w*idle.x)*expansion;
  const visualY=h*idle.y+(cy-h*idle.y)*expansion;
  const timerRadius=Math.min(w,h)*.23;
  ctx.save();ctx.translate(visualX,visualY);ctx.scale(visualScale,visualScale);ctx.translate(-cx,-cy);
- const morph=transitions.clock.value;
- const graphicOpacity=transitions.ai.value*(1-easeInOutCubic(Math.min(1,morph/.55)));
+ const morph=frame.clock;
+ const graphicOpacity=frame.ai*(1-easeInOutCubic(Math.min(1,morph/.55)));
  const clockOpacity=easeInOutCubic(Math.max(0,Math.min(1,(morph-.55)/.45)));
  ctx.globalAlpha=graphicOpacity;
  if(graphicOpacity>0){
@@ -430,13 +464,13 @@ function draw(){
  }
  if(clockOpacity>0){ctx.globalAlpha=clockOpacity;drawTimerFace(timerRadius);}
  ctx.restore();
- if(cardReady&&transitions.card.value>0){
+ if(cardReady&&frame.card>0){
   const width=Math.min(w*.8,h*.6),height=width*cardImage.naturalHeight/cardImage.naturalWidth;
-  ctx.save();ctx.globalAlpha=transitions.card.value;ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=24;
+  ctx.save();ctx.globalAlpha=frame.card;ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=24;
   ctx.drawImage(cardImage,(w-width)/2,h*.72-height/2,width,height);ctx.restore();
  }
- if(transitions.blackout.value>0){
-  ctx.fillStyle=`rgba(0,0,0,${transitions.blackout.value})`;ctx.fillRect(0,0,w,h);
+ if(frame.blackout>0){
+  ctx.fillStyle=`rgba(0,0,0,${frame.blackout})`;ctx.fillRect(0,0,w,h);
  }
 }
 requestAnimationFrame(draw);
