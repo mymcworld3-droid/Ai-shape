@@ -137,6 +137,111 @@
     }
   }
 
+  // This scene has its own media runs. Its welcome must never touch the
+  // opening narration or the fifteen-minute deadline owned by that narration.
+  class MemorySceneController {
+    constructor({ voice = null, click = null, isReady = () => true,
+      now = () => performance.now(), fadeMs = 1000, aiFadeMs = 600,
+      blackoutMs = 1200, onCue = () => {}, onMediaState = () => {},
+      onLock = () => {}, onVoiceEnd = () => {}, onError = () => {} }) {
+      Object.assign(this, { isReady, now, fadeMs, aiFadeMs, blackoutMs,
+        onCue, onMediaState, onLock, onVoiceEnd, onError });
+      this.state = "waiting";
+      this.busyUntil = 0;
+      this.destroyed = false;
+      this.media = { memoryVoice: voice, memoryClick: click };
+      this.mediaStates = { memoryVoice: "idle", memoryClick: "idle" };
+      this.runs = { memoryVoice: 0, memoryClick: 0 };
+      this.listeners = [];
+      for (const [kind, media] of Object.entries(this.media)) {
+        if (!media) continue;
+        const ended = () => this.finish(kind);
+        const failed = () => this.fail(kind, new Error("Memory room audio could not be played."));
+        media.addEventListener("ended", ended);
+        media.addEventListener("error", failed);
+        this.listeners.push({ media, ended, failed });
+      }
+    }
+
+    setCue(state) { this.state = state; this.onCue(state); }
+    setMediaState(kind, state) { this.mediaStates[kind] = state; this.onMediaState(kind, state); }
+    lock(ms) { this.busyUntil = Math.max(this.busyUntil, this.now() + ms); this.onLock(ms); }
+
+    async play(kind) {
+      const media = this.media[kind];
+      if (!media) { this.setMediaState(kind, "missing"); return true; }
+      const run = ++this.runs[kind];
+      this.setMediaState(kind, "starting");
+      try {
+        if (media.error) media.load();
+        media.currentTime = 0;
+        // Keep actual playback in the operator's click/key activation.
+        await media.play();
+        if (this.destroyed || run !== this.runs[kind] || this.mediaStates[kind] !== "starting") return false;
+        this.setMediaState(kind, "playing");
+        return true;
+      } catch (error) {
+        if (!this.destroyed && run === this.runs[kind]) this.fail(kind, error);
+        return false;
+      }
+    }
+
+    finish(kind) {
+      if (this.destroyed || !this.media[kind]?.ended ||
+        !["starting", "playing"].includes(this.mediaStates[kind])) return;
+      ++this.runs[kind];
+      this.setMediaState(kind, "finished");
+      if (kind === "memoryVoice") {
+        this.lock(this.aiFadeMs);
+        // Fade the AI automatically, but retain the next operator cue.
+        this.onVoiceEnd();
+      }
+    }
+
+    fail(kind, error) {
+      if (this.destroyed || this.mediaStates[kind] === "finished") return;
+      ++this.runs[kind];
+      this.media[kind]?.pause();
+      this.setMediaState(kind, "error");
+      this.onError(kind, error);
+    }
+
+    enter() {
+      if (this.destroyed || this.state !== "waiting" || !this.isReady()) return false;
+      this.lock(this.fadeMs);
+      this.setCue("memory-light");
+      return this.play("memoryClick");
+    }
+
+    advance() {
+      if (this.destroyed || this.now() < this.busyUntil) return false;
+      switch (this.state) {
+        case "memory-light":
+          if (["starting", "playing"].includes(this.mediaStates.memoryClick)) return false;
+          if (this.mediaStates.memoryClick === "error") return this.play("memoryClick");
+          this.lock(this.aiFadeMs); this.setCue("memory-welcome");
+          return this.play("memoryVoice");
+        case "memory-welcome":
+          if (["starting", "playing"].includes(this.mediaStates.memoryVoice)) return false;
+          if (this.mediaStates.memoryVoice === "error") return this.play("memoryVoice");
+          this.lock(this.aiFadeMs); this.setCue("memory-room"); return true;
+        case "memory-room":
+          this.lock(this.blackoutMs); this.setCue("memory-blackout"); return true;
+        default: return false;
+      }
+    }
+
+    destroy() {
+      this.destroyed = true;
+      for (const kind of Object.keys(this.runs)) ++this.runs[kind];
+      for (const { media, ended, failed } of this.listeners) {
+        media.removeEventListener("ended", ended);
+        media.removeEventListener("error", failed);
+        media.pause();
+      }
+    }
+  }
+
   // Operator cues and media completion are separate. The clock may replace the
   // graphic during narration, while its deadline still belongs to audio.ended.
   class StageCueController {
@@ -145,7 +250,8 @@
       expandMs = 1600, morphMs = 1200, settleMs = 1000,
       cardFadeMs = 400, blackoutMs = 1200,
       onCue = () => {}, onMediaState = () => {},
-      onNarrationEnd = () => {}, onError = () => {} }) {
+      onNarrationEnd = () => {}, onError = () => {}, memoryScene = null,
+      onMemoryNarrationEnd = () => {} }) {
       Object.assign(this, { now, effect, revealFadeMs, aiFadeMs, expandMs,
         morphMs, settleMs, cardFadeMs, blackoutMs, onCue, onMediaState,
         onNarrationEnd, onError });
@@ -154,6 +260,9 @@
       this.effectState = "idle";
       this.effectRun = 0;
       this.destroyed = false;
+      this.memory = memoryScene ? new MemorySceneController({ ...memoryScene, now, blackoutMs,
+        onCue: state => this.setCue(state), onMediaState,
+        onLock: ms => this.lock(ms), onVoiceEnd: onMemoryNarrationEnd, onError }) : null;
       this.room = new RoomRevealController({ video,
         onStateChange: state => {
           if (state === "starting") this.setCue("room-reveal");
@@ -235,6 +344,11 @@
           this.lock(this.cardFadeMs); this.setCue("card-hidden"); return true;
         case "card-hidden":
           this.lock(this.blackoutMs); this.setCue("blackout"); return true;
+        case "blackout": return this.memory ? this.memory.enter() : false;
+        case "memory-light":
+        case "memory-welcome":
+        case "memory-room":
+        case "memory-blackout": return this.memory ? this.memory.advance() : false;
         default: return false;
       }
     }
@@ -243,6 +357,7 @@
       this.destroyed = true;
       ++this.effectRun;
       this.room.destroy(); this.opening.destroy();
+      this.memory?.destroy();
       if (this.effect) {
         this.effect.removeEventListener("ended", this.effectEnded);
         this.effect.removeEventListener("error", this.effectFailed);
@@ -306,5 +421,5 @@
     return () => target.removeEventListener("click", click);
   }
 
-  return { RoomRevealController, OpeningController, StageCueController, StartGate, formatTime, bindAdvanceKey, bindAdvanceClick };
+  return { RoomRevealController, OpeningController, MemorySceneController, StageCueController, StartGate, formatTime, bindAdvanceKey, bindAdvanceClick };
 });

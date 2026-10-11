@@ -10,6 +10,14 @@ window.OPENING_CONFIG = Object.freeze({
   // null reserves its cue silently, without requesting a nonexistent file.
   doorKick: null,
   card: "assets/cards/memory-access-card.svg",
+  memory: Object.freeze({
+    background: "assets/backgrounds/memory-room.png",
+    // Add final assets later. null makes no missing-file requests.
+    narration: null,
+    lightClick: null,
+    fadeMs: 1000,
+    aiFadeMs: 600
+  }),
   countdownMs: 15 * 60 * 1000,
   // Same viewport percentages and scale multiplier as the original sliders.
   idleShape: Object.freeze({ x: 0.5, y: 0.4, size: 0.37 }),

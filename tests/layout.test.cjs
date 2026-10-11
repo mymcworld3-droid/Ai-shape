@@ -30,13 +30,17 @@ test("cover rejects unloaded or invalid dimensions rather than drawing a broken 
  for(const bad of [0,-1,NaN,Infinity])assert.throws(()=>coverLayout(1280,720,bad,1024),RangeError);
 });
 test("silent step frames cover every cue and cannot mutate the playback transition data",()=>{
- const expected=["bright","ai","door-kick","welcome","clock","card","card-hidden","blackout"];
+ const expected=["bright","ai","door-kick","welcome","clock","card","card-hidden","blackout",
+  "memory-light","memory-welcome","memory-room","memory-blackout"];
  for(const cue of expected){const frame=previewFrame(cue);assert.ok(frame);assert.equal(Object.isFrozen(frame),true);}
  assert.equal(previewFrame("clock").clock,1);
  assert.equal(previewFrame("clock").scene,1);
  assert.equal(previewFrame("card").card,1);
  assert.equal(previewFrame("card").scene,0);
  assert.equal(previewFrame("blackout").blackout,1);
+ assert.equal(previewFrame("memory-room").background,"memory");
+ assert.equal(previewFrame("memory-room").clock,0);
+ assert.equal(previewFrame("memory-room").card,0);
  assert.equal(previewFrame("unknown"),null);assert.equal(previewFrame("__proto__"),null);
 });
 test("merely creating a Start gate or checking readiness never begins playback",()=>{

@@ -2,6 +2,8 @@
 const config=window.OPENING_CONFIG;
 const audioElement=document.getElementById("openingAudio");
 const effectElement=document.getElementById("doorKickAudio");
+const memoryAudio=document.getElementById("memoryWelcomeAudio");
+const memoryLightAudio=document.getElementById("memoryLightAudio");
 const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
@@ -11,9 +13,11 @@ const fullscreenRoot=document.getElementById("showShell");
 const backgroundImage=new Image();
 const darkBackgroundImage=new Image();
 const cardImage=new Image();
-let backgroundReady=false,darkBackgroundReady=false,cardReady=false,roomReadyAt=null;
+const memoryBackgroundImage=new Image();
+let backgroundReady=false,darkBackgroundReady=false,cardReady=false,memoryBackgroundReady=false,roomReadyAt=null;
 let previewCue=null;
 let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
+const audioSources=new Map();
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1;
 let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0;
 let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
@@ -42,6 +46,9 @@ const stage=new StageOpening.StageCueController({
  aiFadeMs:config.aiFadeMs,expandMs:config.sceneDurationMs,
  morphMs:config.morphDurationMs,settleMs:config.settleDurationMs,
  cardFadeMs:config.cardFadeMs,blackoutMs:config.blackoutMs,
+ memoryScene:{voice:config.memory.narration?memoryAudio:null,
+  click:config.memory.lightClick?memoryLightAudio:null,isReady:()=>memoryBackgroundReady,
+  fadeMs:config.memory.fadeMs,aiFadeMs:config.memory.aiFadeMs},
  onCue(cue){
   document.body.dataset.cue=cue;
   if(cue==="bright")roomReadyAt=performance.now();
@@ -54,14 +61,26 @@ const stage=new StageOpening.StageCueController({
   if(cue==="card")animate("card",1,config.cardFadeMs);
   if(cue==="card-hidden")animate("card",0,config.cardFadeMs);
   if(cue==="blackout")animate("blackout",1,config.blackoutMs);
+  if(cue==="memory-light"){
+   // Change rooms underneath the completed blackout. Never flash the old clock.
+   document.body.dataset.scene="memory";
+   for(const name of ["scene","ai","clock","card"])animate(name,0,0);
+   animate("blackout",0,config.memory.fadeMs);
+  }
+  if(cue==="memory-welcome")animate("ai",1,config.memory.aiFadeMs);
+  if(cue==="memory-room")animate("ai",0,config.memory.aiFadeMs);
+  if(cue==="memory-blackout")animate("blackout",1,config.blackoutMs);
  },
  onMediaState(kind,state){
-  const key={room:"roomState",narration:"openingState",effect:"effectState"}[kind];
+  const key={room:"roomState",narration:"openingState",effect:"effectState",
+   memoryVoice:"memoryVoiceState",memoryClick:"memoryClickState"}[kind];
   document.body.dataset[key]=state;
  },
  onNarrationEnd(){animate("scene",0,config.settleDurationMs);},
+ onMemoryNarrationEnd(){animate("ai",0,config.memory.aiFadeMs);},
  onError(kind,error){
-  document.body.dataset[{room:"videoError",narration:"audioError",effect:"effectError"}[kind]]="true";
+  document.body.dataset[{room:"videoError",narration:"audioError",effect:"effectError",
+   memoryVoice:"memoryVoiceError",memoryClick:"memoryClickError"}[kind]]="true";
   notifyAssetsChange();
   console.error("[Opening]",error);
  }
@@ -86,6 +105,11 @@ document.body.dataset.openingState="ready";
 document.body.dataset.roomState="dark";
 document.body.dataset.effectState="idle";
 document.body.dataset.effectAvailable=String(Boolean(config.doorKick));
+document.body.dataset.scene="opening";
+document.body.dataset.memoryVoiceState="idle";
+document.body.dataset.memoryClickState="idle";
+document.body.dataset.memoryVoiceAvailable=String(Boolean(config.memory.narration));
+document.body.dataset.memoryClickAvailable=String(Boolean(config.memory.lightClick));
 // Read-only diagnostics for rehearsals; no control UI appears on the projection.
 window.stageOpening=Object.freeze({
  get started(){return startGate.started;},
@@ -93,11 +117,12 @@ window.stageOpening=Object.freeze({
  get roomState(){return roomReveal.state;},
  get narrationState(){return opening.state;},
  get effectAvailable(){return Boolean(config.doorKick);},
+ get memoryState(){return stage.memory.state;},
  get remainingMs(){return opening.getRemainingMs();}
 });
 
 function showAssetsReady(){
- return backgroundReady&&darkBackgroundReady&&cardReady&&revealVideo.readyState>=2&&audioElement.readyState>=2;
+ return backgroundReady&&darkBackgroundReady&&cardReady&&memoryBackgroundReady&&revealVideo.readyState>=2&&audioElement.readyState>=2;
 }
 function notifyAssetsChange(){window.dispatchEvent(new Event("stageassetschange"));}
 function setProjectionPreview(cue){
@@ -107,7 +132,9 @@ function setProjectionPreview(cue){
 }
 function projectionFrame(){
  if(!startGate.started&&previewCue)return {...StageLayout.previewFrame(previewCue),preview:true};
- return {room:roomReveal.state==="ready"&&backgroundReady,preview:false,
+ const memory=document.body.dataset.scene==="memory";
+ return {background:memory?"memory":"opening",
+  room:memory?memoryBackgroundReady:roomReveal.state==="ready"&&backgroundReady,preview:false,
   ...Object.fromEntries(Object.entries(transitions).map(([key,t])=>[key,t.value]))};
 }
 
@@ -134,6 +161,14 @@ cardImage.addEventListener("error",()=>{
  document.body.dataset.cardReady="false";notifyAssetsChange();console.error("[Opening] Card image could not be loaded.");
 });
 cardImage.src=config.card;
+memoryBackgroundImage.addEventListener("load",()=>{
+ memoryBackgroundReady=true;document.body.dataset.memoryBackgroundReady="true";notifyAssetsChange();
+});
+memoryBackgroundImage.addEventListener("error",()=>{
+ memoryBackgroundReady=false;document.body.dataset.memoryBackgroundReady="false";
+ notifyAssetsChange();console.error("[Memory room] Background could not be loaded.");
+});
+memoryBackgroundImage.src=config.memory.background;
 revealVideo.addEventListener("canplay",()=>{document.body.dataset.videoReady="true";notifyAssetsChange();});
 revealVideo.src=config.roomReveal;
 revealVideo.load();
@@ -141,8 +176,10 @@ audioElement.addEventListener("canplay",()=>{document.body.dataset.audioReady="t
 audioElement.src=config.narration;
 audioElement.load();
 if(config.doorKick){effectElement.src=config.doorKick;effectElement.load();}
+if(config.memory.narration){memoryAudio.src=config.memory.narration;memoryAudio.load();}
+if(config.memory.lightClick){memoryLightAudio.src=config.memory.lightClick;memoryLightAudio.load();}
 
-function prepareAudio(){
+function prepareAudio(media=audioElement){
  try{
   if(!audioCtx){
    const AudioContext=window.AudioContext||window.webkitAudioContext;
@@ -150,9 +187,11 @@ function prepareAudio(){
    audioCtx=new AudioContext();analyser=audioCtx.createAnalyser();
    analyser.fftSize=1024;analyser.minDecibels=-90;analyser.maxDecibels=-10;
    analyser.smoothingTimeConstant=.22;
-   source=audioCtx.createMediaElementSource(audioElement);
-   source.connect(analyser);analyser.connect(audioCtx.destination);
+   analyser.connect(audioCtx.destination);
    dataArray=new Uint8Array(analyser.frequencyBinCount);smooth=new Float32Array(analyser.frequencyBinCount);
+  }
+  if(!audioSources.has(media)){
+   source=audioCtx.createMediaElementSource(media);source.connect(analyser);audioSources.set(media,source);
   }
   if(audioCtx.state==="suspended")audioCtx.resume().catch(error=>console.warn("[Opening] Audio analysis:",error));
  }catch(error){console.warn("[Opening] Audio analysis unavailable:",error);}
@@ -174,6 +213,13 @@ function advanceStage(){
  if(stage.state==="door-kick"&&!["starting","playing","error"].includes(stage.effectState)){
   document.body.dataset.audioError="false";prepareAudio();
  }
+ if(stage.state==="memory-light"&&config.memory.narration){
+  document.body.dataset.memoryVoiceError="false";prepareAudio(memoryAudio);
+ }
+ if(stage.state==="memory-welcome"&&stage.memory.mediaStates.memoryVoice==="error"){
+  document.body.dataset.memoryVoiceError="false";prepareAudio(memoryAudio);
+ }
+ if(stage.state==="blackout"||stage.state==="memory-light")document.body.dataset.memoryClickError="false";
  stage.advance();requestStageFullscreen();
 }
 StageOpening.bindAdvanceKey(window,advanceStage,{isEnabled:()=>startGate.started});
@@ -195,14 +241,15 @@ function roomHandoffProgress(now){
 }
 function drawBackground(now,frame){
  ctx.clearRect(0,0,w,h);ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
- const roomReady=frame.room&&backgroundReady;
- const image=roomReady?backgroundImage:darkBackgroundImage;
- if(roomReady||darkBackgroundReady){
+ const memory=frame.background==="memory";
+ const roomReady=frame.room&&(memory?memoryBackgroundReady:backgroundReady);
+ const image=memory?memoryBackgroundImage:roomReady?backgroundImage:darkBackgroundImage;
+ if(memory?memoryBackgroundReady:roomReady||darkBackgroundReady){
   const b=StageLayout.coverLayout(w,h,image.naturalWidth,image.naturalHeight);ctx.drawImage(image,b.x,b.y,b.width,b.height);
  }
- if(!frame.preview&&roomReveal.state==="playing"){
+ if(!memory&&!frame.preview&&roomReveal.state==="playing"){
   drawRevealVideo(easeInOutCubic(Math.min(1,revealVideo.currentTime*1000/config.revealFadeMs)));
- }else if(!frame.preview&&roomReveal.state==="ready"){
+ }else if(!memory&&!frame.preview&&roomReveal.state==="ready"){
   drawRevealVideo(1-roomHandoffProgress(now));
  }
  if(frame.scene>0){ctx.fillStyle=`rgba(0,0,0,${frame.scene})`;ctx.fillRect(0,0,w,h);}
@@ -237,7 +284,7 @@ function selectedBins(){
 
 function analyze(){
  if(!analyser||!dataArray)return{avg:0,low:0,mid:0,high:0};
- if(audioElement.paused||audioElement.ended){
+ if((audioElement.paused||audioElement.ended)&&(memoryAudio.paused||memoryAudio.ended)){
   for(let i=0;i<smooth.length;i++)smooth[i]*=.86;
   return{avg:0,low:0,mid:0,high:0};
  }
@@ -442,7 +489,7 @@ function draw(){
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
  updateHexRotation(now);drawBackground(now,frame);
  // The bright room also remains empty until the separate AI fade-in cue.
- if(!frame.room||(!frame.preview&&roomHandoffProgress(now)<1))return;
+ if(!frame.room||(!frame.preview&&frame.background!=="memory"&&roomHandoffProgress(now)<1))return;
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=waveBase+Math.min(w,h)*.075;

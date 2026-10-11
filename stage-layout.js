@@ -27,7 +27,11 @@
     clock: { room: true, ai: 1, scene: 1, clock: 1, card: 0, blackout: 0 },
     card: { room: true, ai: 1, scene: 0, clock: 1, card: 1, blackout: 0 },
     "card-hidden": { room: true, ai: 1, scene: 0, clock: 1, card: 0, blackout: 0 },
-    blackout: { room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 }
+    blackout: { room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
+    "memory-light": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
+    "memory-welcome": { background: "memory", room: true, ai: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
+    "memory-room": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
+    "memory-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 }
   });
   for (const frame of Object.values(previews)) Object.freeze(frame);
   function previewFrame(cue) {

@@ -30,7 +30,7 @@ function updateStartButton(){
  if(startGate.started)return;
  startButton.disabled=!showAssetsReady();
  startLabel.textContent=startButton.disabled?"載入中…":"開始";
- const failed=["backgroundReady","darkBackgroundReady","cardReady","videoError","audioError"]
+ const failed=["backgroundReady","darkBackgroundReady","cardReady","memoryBackgroundReady","videoError","audioError"]
   .some(key=>document.body.dataset[key]===(key.endsWith("Error")?"true":"false"));
  document.getElementById("startStatus").textContent=failed?"素材未載入，請重新整理":"";
 }

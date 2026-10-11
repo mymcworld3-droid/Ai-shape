@@ -18,14 +18,20 @@ effectFixture.writeUInt32LE(8000,24); effectFixture.writeUInt32LE(16000,28);
 effectFixture.writeUInt16LE(2,32); effectFixture.writeUInt16LE(16,34);
 effectFixture.write("data",36); effectFixture.writeUInt32LE(16000,40);
 for(let i=0;i<8000;i++)effectFixture.writeInt16LE(Math.round(Math.sin(i*Math.PI*2*300/8000)*800),44+i*2);
+const memoryVoiceFixture=Buffer.alloc(44+48000);
+effectFixture.copy(memoryVoiceFixture,0,0,44);
+memoryVoiceFixture.writeUInt32LE(memoryVoiceFixture.length-8,4);
+memoryVoiceFixture.writeUInt32LE(48000,40);
+for(let i=0;i<24000;i++)memoryVoiceFixture.writeInt16LE(Math.round(Math.sin(i*Math.PI*2*450/8000)*800),44+i*2);
 
 const server = http.createServer((request, response) => {
   let requested;
   try { requested = decodeURIComponent(new URL(request.url, "http://localhost").pathname); }
   catch { response.writeHead(400).end(); return; }
-  if(requested === "/test-fixtures/door-kick.wav") {
-    response.writeHead(200,{"Content-Type":"audio/wav","Content-Length":effectFixture.length});
-    response.end(effectFixture); return;
+  if(["/test-fixtures/door-kick.wav","/test-fixtures/memory-welcome.wav"].includes(requested)) {
+    const fixture=requested.endsWith('memory-welcome.wav')?memoryVoiceFixture:effectFixture;
+    response.writeHead(200,{"Content-Type":"audio/wav","Content-Length":fixture.length});
+    response.end(fixture); return;
   }
   const file = path.resolve(root, "." + (requested === "/" ? "/index.html" : requested));
   if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
@@ -134,7 +140,7 @@ async function fixedFrame(page) {
 async function noControls(page) {
   assert.equal(await page.locator('button:visible,input:visible,select:visible,[role="button"]:visible,audio[controls]:visible,video[controls]:visible').count(),0);
   assert.equal(await page.getByRole('button').count(),0,"Hidden review buttons must also leave the accessibility tree");
-  for(const id of ['openingAudio','roomRevealVideo','doorKickAudio'])assert.equal(await page.locator('#'+id).isVisible(),false);
+  for(const id of ['openingAudio','roomRevealVideo','doorKickAudio','memoryWelcomeAudio','memoryLightAudio'])assert.equal(await page.locator('#'+id).isVisible(),false);
   await fixedFrame(page);
 }
 async function naturalAudioEnd(page) {
@@ -150,6 +156,16 @@ async function checkClockPlacement(page) {
   const expectedWidth=Math.min(viewport.width,viewport.height)*.23*.012*236*.37;
   assert.ok(Math.abs(bounds.centerY-viewport.height*.4)<6,`Clock Y must be 40%: ${JSON.stringify(bounds)}`);
   assert.ok(Math.abs(bounds.width-expectedWidth)<12,`Clock scale must be 37%: ${JSON.stringify(bounds)}`);
+}
+async function fastMemory(page){
+ await fastReveal(page);await prepareWelcome(page);
+ await page.keyboard.press('Space');await state(page,'narration');await naturalAudioEnd(page);
+ await page.keyboard.press('Space');await cue(page,'clock');await page.waitForTimeout(1300);
+ await page.keyboard.press('Space');await cue(page,'card');await page.waitForTimeout(450);
+ await page.keyboard.press('Space');await cue(page,'card-hidden');await page.waitForTimeout(450);
+ await page.keyboard.press('Space');await cue(page,'blackout');await page.waitForTimeout(1300);
+ await page.keyboard.press('Space');await cue(page,'memory-light');
+ await page.waitForFunction(()=>transitions.blackout.value===0&&performance.now()>=stage.busyUntil);
 }
 
 (async () => {
@@ -253,26 +269,62 @@ async function checkClockPlacement(page) {
     await page.screenshot({path:path.join(output,"09-blackout.png")});
     const hiddenRemaining=await page.evaluate(()=>stageOpening.remainingMs);
     await page.keyboard.press("Space"); await page.mouse.dblclick(30,30); await page.waitForTimeout(200);
+    await cue(page,'memory-light');
+    await page.keyboard.down('Space'); // Held while this room fades in.
     assert.equal(await page.evaluate(()=>opening.deadline),deadline);
     assert.ok(await page.evaluate(()=>stageOpening.remainingMs)<hiddenRemaining);
     await noControls(page);
+    await page.waitForTimeout(1100);await page.keyboard.down('Space');await cue(page,'memory-light');
+    await matchesStill(page,'assets/backgrounds/memory-room.png');
+    assert.equal(await page.evaluate(()=>transitions.clock.value+transitions.card.value+transitions.ai.value),0,
+      'The previous clock, card and AI must not leak into the new room');
+    assert.equal(await page.locator('#memoryWelcomeAudio').getAttribute('src'),null);
+    assert.equal(await page.locator('#memoryLightAudio').getAttribute('src'),null);
+    await page.screenshot({path:path.join(output,'11-memory-light.png')});
+    await page.keyboard.up('Space');await page.keyboard.press('Space');await cue(page,'memory-welcome');
+    await page.keyboard.press('Space');await cue(page,'memory-welcome');await page.waitForTimeout(750);
+    const memoryAi=await expectedDifference(page,'assets/backgrounds/memory-room.png',[.1,.2,.9,.6],50);
+    assert.ok(Math.abs(memoryAi.centerY-720*.4)<12,'Memory AI also uses Y=40%');
+    await page.screenshot({path:path.join(output,'12-memory-welcome.png')});
+    await page.keyboard.press('Space');await cue(page,'memory-room');await page.waitForTimeout(750);
+    for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
+      await page.setViewportSize(viewport);await page.waitForTimeout(100);
+      await matchesStill(page,'assets/backgrounds/memory-room.png');await noControls(page);
+    }
+    await page.setViewportSize({width:1280,height:720});await page.waitForTimeout(1500);
+    await cue(page,'memory-room');await matchesStill(page,'assets/backgrounds/memory-room.png');
+    await page.screenshot({path:path.join(output,'13-memory-dialogue.png')});
+    assert.equal(await page.evaluate(()=>opening.deadline),deadline);
+    assert.equal(await page.locator('#roomRevealVideo').evaluate(v=>v.ended),true);
+    assert.equal(await page.locator('#openingAudio').evaluate(a=>a.ended),true);
+    await page.keyboard.press('Space');await cue(page,'memory-blackout');await page.waitForTimeout(1300);
+    assert.equal(await page.locator('#visualizer').evaluate(c=>{
+      const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+      return d.every((v,i)=>i%4===3||v===0);
+    }),true);
+    await page.keyboard.press('Space');await cue(page,'memory-blackout');await noControls(page);
+    assert.equal(await page.evaluate(()=>opening.deadline),deadline);
     assert.equal(errors.length,0,errors.join("\n"));
     assert.ok(requests.every(request=>request.startsWith(url)),"Show assets must be local");
     await page.close();
     results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; Y=40%, size=37%, card show/hide and exact blackout pixels");
+    results.push("natural opening continues into Memory Room, held presses cannot skip the room fade, previous overlays disappear, local background fills three ratios, dialogue holds and the original deadline never resets");
 
     const review=await browser.newPage({viewport:{width:1440,height:900}});
     const reviewErrors=[];review.on('pageerror',error=>reviewErrors.push(String(error)));
     await ready(review,url);
     await review.locator('#stepsViewButton').click(); await flag(review,'view','steps');
     await review.waitForTimeout(100);await fixedFrame(review);
-    assert.equal(await review.locator('#stepList button').count(),8);
+    assert.equal(await review.locator('#stepList button').count(),12);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
-    for(const preview of ['welcome','clock','card','card-hidden','blackout','ai','door-kick','bright']){
+    for(const preview of ['welcome','clock','card','card-hidden','blackout','ai','door-kick','bright',
+      'memory-light','memory-welcome','memory-room','memory-blackout']){
       await review.locator(`[data-preview="${preview}"]`).click();await flag(review,'previewCue',preview);
       await review.waitForTimeout(60);
       assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
       assert.equal(await review.locator('#openingAudio').evaluate(a=>a.currentTime),0);
+      assert.equal(await review.locator('#memoryWelcomeAudio').evaluate(a=>a.currentTime),0);
+      assert.equal(await review.locator('#memoryLightAudio').evaluate(a=>a.currentTime),0);
       assert.equal(await review.evaluate(()=>opening.deadline),null);
       assert.equal(await review.evaluate(()=>stageOpening.started),false);
     }
@@ -280,10 +332,13 @@ async function checkClockPlacement(page) {
     const previewCard=await expectedDifference(review,'assets/backgrounds/IMG_0165.png',[.1,.55,.9,.95]);
     assert.ok(previewCard.width>200&&previewCard.height>100,"Step card preview must actually render");
     await review.screenshot({path:path.join(output,'10-steps-review.png')});
+    await review.locator('[data-preview="memory-room"]').click();await review.waitForTimeout(100);
+    await matchesStill(review,'assets/backgrounds/memory-room.png');
+    await review.screenshot({path:path.join(output,'14-memory-step-review.png')});
     await review.locator('#pageViewButton').click();await flag(review,'view','page');await review.waitForTimeout(100);
     await matchesStill(review,'assets/backgrounds/Start_dark.PNG');await fixedFrame(review);
-    await review.locator('#stepsViewButton').click();await review.locator('[data-preview="blackout"]').click();
-    await flag(review,'previewCue','blackout');
+    await review.locator('#stepsViewButton').click();await review.locator('[data-preview="memory-blackout"]').click();
+    await flag(review,'previewCue','memory-blackout');
     // Starting after inspecting the last cue must still play the first clip.
     await review.locator('#startButton').click();await roomState(review,'playing');await noControls(review);
     await flag(review,'view','page');
@@ -293,7 +348,7 @@ async function checkClockPlacement(page) {
     await matchesStill(review,'assets/backgrounds/IMG_0165.png');
     assert.equal(reviewErrors.length,0,reviewErrors.join('\n'));
     await review.close();
-    results.push("full-page and eight silent step previews; no audio/video or timer before Start; Start from last preview resets to first cue and hides every button");
+    results.push("full-page and twelve silent step previews; no audio/video or timer before Start; Start from the final memory preview resets to first cue and hides every button");
 
     const slow=await browser.newPage();
     let releaseAudio;
@@ -371,6 +426,39 @@ async function checkClockPlacement(page) {
     await effectPage.keyboard.press("Space"); await state(effectPage,"narration");
     await noControls(effectPage); await effectPage.close();
     results.push("optional SFX slot tested with real PCM fixture playback, failure/retry and separate welcome cue; production stays explicitly silent until the effect is supplied");
+
+    const memoryMedia=await browser.newPage();
+    await memoryMedia.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:
+      fs.readFileSync(path.join(root,'opening-config.js'),'utf8')
+        .replace('narration: null','narration: "test-fixtures/memory-welcome.wav"')
+        .replace('lightClick: null','lightClick: "test-fixtures/door-kick.wav"')}));
+    await memoryMedia.addInitScript(()=>{
+      const play=HTMLMediaElement.prototype.play;const blocked=new Set(['memoryLightAudio','memoryWelcomeAudio']);
+      HTMLMediaElement.prototype.play=function(){
+        if(blocked.delete(this.id))return Promise.reject(new DOMException('Blocked','NotAllowedError'));
+        return play.call(this);
+      };
+    });
+    await ready(memoryMedia,url);await fastMemory(memoryMedia);
+    const memoryDeadline=await memoryMedia.evaluate(()=>opening.deadline);
+    await flag(memoryMedia,'memoryClickState','error');await cue(memoryMedia,'memory-light');
+    await memoryMedia.keyboard.press('Space');await flag(memoryMedia,'memoryClickState','playing');
+    await memoryMedia.keyboard.press('Space');await cue(memoryMedia,'memory-light');
+    await flag(memoryMedia,'memoryClickState','finished');
+    await memoryMedia.keyboard.press('Space');await flag(memoryMedia,'memoryVoiceState','error');
+    await memoryMedia.waitForFunction(()=>performance.now()>=stage.busyUntil);
+    await memoryMedia.keyboard.press('Space');await flag(memoryMedia,'memoryVoiceState','playing');
+    await memoryMedia.waitForTimeout(700);
+    assert.ok(await memoryMedia.evaluate(()=>smooth.some(v=>v>0)), 'Memory voice reaches the audio analyser');
+    await memoryMedia.keyboard.down('Space');await cue(memoryMedia,'memory-welcome');
+    await flag(memoryMedia,'memoryVoiceState','finished');
+    await memoryMedia.waitForFunction(()=>transitions.ai.value===0&&performance.now()>=stage.busyUntil);
+    await memoryMedia.keyboard.down('Space');await cue(memoryMedia,'memory-welcome');
+    await matchesStill(memoryMedia,'assets/backgrounds/memory-room.png');
+    assert.equal(await memoryMedia.evaluate(()=>opening.deadline),memoryDeadline);
+    await memoryMedia.keyboard.up('Space');await memoryMedia.keyboard.press('Space');await cue(memoryMedia,'memory-room');
+    await noControls(memoryMedia);await memoryMedia.close();
+    results.push('Memory click and welcome slots play real PCM fixtures, retry their own failures, block premature/held cues, fade AI only at real voice end and preserve the original opening deadline');
 
     const touch=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
     await ready(touch,url); await fixedFrame(touch);

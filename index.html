@@ -4,23 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#000000">
-<title>Human Verification Test #67 - Stage Opening</title>
+<title>Human Verification Test #67 - Stage Projection</title>
 <link rel="preload" href="assets/backgrounds/Start_dark.PNG" as="image">
 <link rel="preload" href="assets/backgrounds/IMG_0165.png" as="image">
+<link rel="preload" href="assets/backgrounds/memory-room.png" as="image">
 <link rel="stylesheet" href="stage.css">
 </head>
 <body data-started="false" data-view="page" data-preview-cue="dark">
 <main id="showShell">
   <div id="projectionViewport">
     <div id="visualizerWrap" tabindex="-1">
-      <canvas id="visualizer" aria-label="16:9 開場投影；開始後按空白鍵或點一下畫面推進"></canvas>
+      <canvas id="visualizer" aria-label="16:9 劇場投影；開始後按空白鍵或點一下畫面推進"></canvas>
       <video id="roomRevealVideo" preload="auto" muted playsinline disablepictureinpicture aria-hidden="true" tabindex="-1"></video>
       <audio id="openingAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
       <audio id="doorKickAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="memoryWelcomeAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="memoryLightAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
     </div>
   </div>
-  <aside id="stepsPanel" aria-label="開場步驟檢視" hidden>
-    <header><h1>開場步驟<span>08</span></h1><p>點選預覽，不播放影音</p></header>
+  <aside id="stepsPanel" aria-label="演出步驟檢視" hidden>
+    <header><h1>演出步驟<span>12</span></h1><p>點選預覽，不播放影音</p></header>
     <ol id="stepList">
       <li><button type="button" data-preview="bright" aria-pressed="true"><span class="step-number">01</span><span>暗 → 亮<small>影片播完，接回原本房間</small></span></button></li>
       <li><button type="button" data-preview="ai" aria-pressed="false"><span class="step-number">02</span><span>AI 漸顯<small>Y 40% · 大小 37%</small></span></button></li>
@@ -29,7 +32,12 @@
       <li><button type="button" data-preview="clock" aria-pressed="false"><span class="step-number">05</span><span>顯示碼錶<small>語音播完才開始倒數</small></span></button></li>
       <li><button type="button" data-preview="card" aria-pressed="false"><span class="step-number">06</span><span>顯示卡片<small>MEMORY ACCESS</small></span></button></li>
       <li><button type="button" data-preview="card-hidden" aria-pressed="false"><span class="step-number">07</span><span>隱藏卡片<small>倒數繼續</small></span></button></li>
-      <li><button type="button" data-preview="blackout" aria-pressed="false"><span class="step-number">08</span><span>全暗<small>結束開場</small></span></button></li>
+      <li><button type="button" data-preview="blackout" aria-pressed="false"><span class="step-number">08</span><span>全暗<small>記憶室進場，等待台詞</small></span></button></li>
+      <li class="scene-divider">第一幕 · 第二場</li>
+      <li><button type="button" data-preview="memory-light" aria-pressed="false"><span class="step-number">09</span><span>記憶室亮起<small>Where’s the light?</small></span></button></li>
+      <li><button type="button" data-preview="memory-welcome" aria-pressed="false"><span class="step-number">10</span><span>記憶室 AI<small>Welcome to the Memory Room.</small></span></button></li>
+      <li><button type="button" data-preview="memory-room" aria-pressed="false"><span class="step-number">11</span><span>演員對話<small>AI 退場，保留房間</small></span></button></li>
+      <li><button type="button" data-preview="memory-blackout" aria-pressed="false"><span class="step-number">12</span><span>記憶室全暗<small>第二場結束，等待下一幕</small></span></button></li>
     </ol>
   </aside>
 </main>

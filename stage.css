@@ -26,6 +26,7 @@ body[data-view=steps]:not([data-started=true]) #showShell{grid-template-columns:
 #stepsPanel header p{margin:0 0 20px;color:#7e8a98;font-size:12px}
 #stepList{list-style:none;overflow:auto;margin:0;padding:0 4px 0 0;scrollbar-width:thin;scrollbar-color:#4b5563 transparent}
 #stepList li+li{margin-top:5px}
+#stepList .scene-divider{margin-top:20px;padding:12px 12px 8px;border-top:1px solid #ffffff18;color:#8797a9;font-size:12px;letter-spacing:.06em}
 #stepList button{display:flex;align-items:center;gap:15px;width:100%;padding:13px 12px;text-align:left;border:1px solid transparent;border-radius:9px;background:transparent;color:#a2afbe;cursor:pointer;font-size:15px}
 #stepList button:hover{background:#ffffff08}
 #stepList button[aria-pressed=true]{border-color:#ffffff24;background:#ffffff0b;color:#f3f6fb}
