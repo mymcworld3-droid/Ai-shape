@@ -6,7 +6,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "test-results");
-const types = { ".html":"text/html", ".js":"text/javascript", ".css":"text/css", ".png":"image/png", ".svg":"image/svg+xml", ".mp3":"audio/mpeg", ".mp4":"video/mp4" };
+const types = { ".html":"text/html", ".js":"text/javascript", ".css":"text/css", ".png":"image/png", ".svg":"image/svg+xml", ".mp3":"audio/mpeg", ".m4a":"audio/mp4", ".mp4":"video/mp4" };
 
 // A short, quiet PCM test tone exercises the optional audio slot. It is never
 // shipped as a show effect or configured on the production page.
@@ -285,7 +285,7 @@ async function fastVoting(page){
     const remaining=await page.evaluate(()=>stageOpening.remainingMs);
     assert.ok(remaining>890000&&remaining<900000);
     await page.screenshot({path:path.join(output,"06-countdown.png")});
-    results.push("explicit Start gate, hidden controls, natural MP4 and MP3 ends, eight separate cues, waiting clock and automatic countdown");
+    results.push("explicit Start gate, hidden controls, natural MP4 and M4A ends, eight separate cues, waiting clock and automatic countdown");
 
     await page.keyboard.press("Escape");
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]) {
@@ -552,8 +552,8 @@ async function fastVoting(page){
     const slow=await browser.newPage();
     let releaseAudio;
     const heldAudio=new Promise(resolve=>{releaseAudio=resolve;});
-    await slow.route('**/assets/audio/ai-opening.mp3',async route=>{
-      await heldAudio;await route.fulfill({contentType:'audio/mpeg',body:fs.readFileSync(path.join(root,'assets/audio/ai-opening.mp3'))});
+    await slow.route('**/assets/audio/ai-opening.m4a',async route=>{
+      await heldAudio;await route.fulfill({contentType:'audio/mp4',body:fs.readFileSync(path.join(root,'assets/audio/ai-opening.m4a'))});
     });
     await slow.goto(url,{waitUntil:'domcontentloaded'});
     await slow.locator('#startButton').waitFor({state:'visible'});

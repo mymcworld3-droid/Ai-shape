@@ -5,7 +5,7 @@ window.OPENING_CONFIG = Object.freeze({
   darkBackground: "assets/backgrounds/Start_dark.PNG",
   roomReveal: "assets/videos/Start_animation.mp4",
   revealFadeMs: 240,
-  narration: "assets/audio/ai-opening.mp3",
+  narration: "assets/audio/ai-opening.m4a",
   // Supply the final effect, then set this to "assets/audio/door-kick.mp3".
   // null reserves its cue silently, without requesting a nonexistent file.
   doorKick: null,

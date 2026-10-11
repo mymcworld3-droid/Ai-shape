@@ -42,7 +42,7 @@
 | 1 | 暗 → 亮 | 播放完整 `Start_animation.mp4`；自然播完後回到原本的 `IMG_0165.png`，先不顯示 AI。 |
 | 2 | AI 漸顯 | 900 ms 漸顯，置於電視內框正中央，依內框可容納的最大尺寸顯示。 |
 | 3 | 踢門音效 | 播放設定的音效；音效播完後等待下一個 cue。目前音效尚未提供，此 cue 保留但無聲。 |
-| 4 | 歡迎語音 | AI 在電視內框中央小幅放大，含波形及發光也不越界；房間漸暗，播放現有 23.7 秒語音。播完後自動縮小並恢復房間。 |
+| 4 | 歡迎語音 | AI 在電視內框中央小幅放大，含波形及發光也不越界；房間漸暗，播放最新 29 秒語音。播完後自動縮小並恢復房間。 |
 | 5 | 碼錶取代圖形 | **在歡迎語音播放期間按下**，讓 AI 漸變成七段電子碼錶；先顯示 15:00，不計時。 |
 | 6 | 顯示卡片 | 語音播完、畫面縮小完成後，顯示暫用的 MEMORY ACCESS 卡片。 |
 | 7 | 隱藏卡片 | 卡片淡出，房間與倒數繼續。 |
@@ -99,7 +99,7 @@ Y＝40% 指**整個投影畫面高度**；大小＝37% 是原本大小滑桿的�
 | 原本亮房間 | `assets/backgrounds/IMG_0165.png`，原檔未修改。 |
 | 初始暗房間 | `assets/backgrounds/Start_dark.PNG`，原檔未修改。 |
 | 暗亮轉場影片 | `assets/videos/Start_animation.mp4`，使用最新上傳的 4.27 秒版本，完整播放且靜音，原檔未修改。檔名大小寫須與設定一致。 |
-| 歡迎語音 | `assets/audio/ai-opening.mp3`，使用現有版本。 |
+| 歡迎語音 | `assets/audio/ai-opening.m4a`，使用最新上傳的 29 秒 AAC 原檔。 |
 | 踢門音效 | **待提供**。放到 `assets/audio/door-kick.mp3` 後，把設定的 `doorKick: null` 改成 `doorKick: "assets/audio/door-kick.mp3"`。 |
 | 卡片圖片 | 已有暫用 `assets/cards/memory-access-card.svg`。若提供正式 PNG/JPG，可放在 `assets/cards/`，並更新設定的 `card` 路徑。 |
 | 記憶室背景 | 已有 `assets/backgrounds/memory-room.png`，和原亮房間一樣明亮，只保留左側一扇門；左後方相框留白。 |
