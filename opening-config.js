@@ -19,7 +19,9 @@ window.OPENING_CONFIG = Object.freeze({
     aiFadeMs: 600
   }),
   countdownMs: 15 * 60 * 1000,
-  // Same viewport percentages and scale multiplier as the original sliders.
+  // Black display interior in IMG_0165.png's source pixels; excludes its bezel.
+  roomScreen: Object.freeze({ x: 552, y: 310, width: 430, height: 195, inset: 2 }),
+  // The clock and the screen-free Memory Room retain their existing placement.
   idleShape: Object.freeze({ x: 0.5, y: 0.4, size: 0.37 }),
   aiFadeMs: 900,
   sceneDurationMs: 1600,

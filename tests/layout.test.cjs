@@ -1,7 +1,7 @@
 "use strict";
 const {test}=require("node:test");
 const assert=require("node:assert/strict");
-const {fitStage,coverLayout,previewFrame}=require("../stage-layout.js");
+const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,previewFrame}=require("../stage-layout.js");
 const {StartGate,bindAdvanceKey}=require("../opening-controller.js");
 function close(actual,expected){assert.ok(Math.abs(actual-expected)<1e-8,`${actual} != ${expected}`);}
 
@@ -28,6 +28,28 @@ test("a very wide asset is cropped at the sides instead of stretched",()=>{
 });
 test("cover rejects unloaded or invalid dimensions rather than drawing a broken fit",()=>{
  for(const bad of [0,-1,NaN,Infinity])assert.throws(()=>coverLayout(1280,720,bad,1024),RangeError);
+});
+test("the room's source-pixel screen follows the same crop as the background",()=>{
+ const screen=projectImageRegion(1280,720,1536,1024,{x:552,y:310,width:430,height:195});
+ close(screen.x,460);close(screen.y,575/3);
+ close(screen.width,1075/3);close(screen.height,162.5);
+ const pose=fitRadialGraphic(screen,400,5/3);
+ close(pose.x,3835/6);close(pose.y,3275/12);
+ close(pose.scale*400,955/12);
+ // Doubling the projection doubles the physical-screen position and aperture.
+ const large=projectImageRegion(2560,1440,1536,1024,{x:552,y:310,width:430,height:195});
+ for(const key of ["x","y","width","height"])close(large[key],screen[key]*2);
+});
+test("a radial graphic uses the largest circle that stays inside either screen orientation",()=>{
+ for(const screen of [{x:50,y:30,width:360,height:160},{x:20,y:80,width:90,height:300}]){
+  for(const radius of [1,100,800,100000]){
+   const pose=fitRadialGraphic(screen,radius,2),r=radius*pose.scale;
+   close(pose.x,screen.x+screen.width/2);close(pose.y,screen.y+screen.height/2);
+   assert.ok(pose.x-r>=pose.clip.x&&pose.x+r<=pose.clip.x+pose.clip.width);
+   assert.ok(pose.y-r>=pose.clip.y&&pose.y+r<=pose.clip.y+pose.clip.height);
+   close(r,Math.min(pose.clip.width,pose.clip.height)/2);
+  }
+ }
 });
 test("silent step frames cover every cue and cannot mutate the playback transition data",()=>{
  const expected=["bright","ai","door-kick","welcome","clock","card","card-hidden","blackout",

@@ -18,6 +18,27 @@
     return { x: (width - drawnWidth) / 2, y: (height - drawnHeight) / 2,
       width: drawnWidth, height: drawnHeight };
   }
+  function projectImageRegion(width, height, imageWidth, imageHeight, region) {
+    if (!region || ![region.x, region.y, region.width, region.height].every(Number.isFinite) ||
+        region.width <= 0 || region.height <= 0) {
+      throw new RangeError("Image region must have finite coordinates and positive dimensions.");
+    }
+    const image = coverLayout(width, height, imageWidth, imageHeight);
+    const scale = image.width / imageWidth;
+    return { x: image.x + region.x * scale, y: image.y + region.y * scale,
+      width: region.width * scale, height: region.height * scale };
+  }
+  function fitRadialGraphic(region, radius, inset = 0, fill = 1) {
+    if (![region.x, region.y, region.width, region.height, radius, inset, fill].every(Number.isFinite) ||
+        region.width <= 0 || region.height <= 0 || radius <= 0 || inset < 0 || fill < 0 || fill > 1) {
+      throw new RangeError("Graphic fitting requires positive dimensions and radius, and a fill from zero to one.");
+    }
+    const availableRadius = Math.max(0, Math.min(region.width, region.height) / 2 - inset);
+    return { x: region.x + region.width / 2, y: region.y + region.height / 2,
+      scale: availableRadius * fill / radius,
+      clip: { x: region.x + inset, y: region.y + inset,
+        width: Math.max(0, region.width - inset * 2), height: Math.max(0, region.height - inset * 2) } };
+  }
   const previews = Object.freeze({
     dark: { room: false, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     bright: { room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
@@ -37,5 +58,5 @@
   function previewFrame(cue) {
     return Object.prototype.hasOwnProperty.call(previews, cue) ? previews[cue] : null;
   }
-  return { fitStage, coverLayout, previewFrame };
+  return { fitStage, coverLayout, projectImageRegion, fitRadialGraphic, previewFrame };
 });

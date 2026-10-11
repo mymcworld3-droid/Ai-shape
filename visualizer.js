@@ -18,7 +18,7 @@ let backgroundReady=false,darkBackgroundReady=false,cardReady=false,memoryBackgr
 let previewCue=null;
 let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
 const audioSources=new Map();
-let dpr=1,w=0,h=0,cx=0,cy=0,scale=1;
+let dpr=1,w=0,h=0,cx=0,cy=0,scale=1,graphicGlowScale=1;
 let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0;
 let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
 const ROTATE_INTERVAL=500,ROTATE_DURATION=1400,ROTATE_STEP=Math.PI/3;
@@ -312,12 +312,12 @@ function radialPoint(r,a){return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}}
 function drawSymmetricRing(r,thickness,alpha,glow){
  ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
  ctx.strokeStyle=`rgba(255,255,255,${alpha})`;ctx.lineWidth=thickness;
- ctx.shadowBlur=glow;ctx.shadowColor=`rgba(255,255,255,${Math.min(.9,alpha+.16)})`;ctx.stroke();ctx.restore();
+ ctx.shadowBlur=glow*graphicGlowScale;ctx.shadowColor=`rgba(255,255,255,${Math.min(.9,alpha+.16)})`;ctx.stroke();ctx.restore();
 }
 
 // Audio coil: every point is mirrored from the left/right partner. Amplitude is proportional to volume^2 * 10.
-function drawCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd,shape){
- const points=300,arr=[];
+function createCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd){
+ const points=300,arr=[];let radius=0;
  const range=selectedBins(),lo=range.lo,hi=range.hi;
  for(let i=0;i<points;i++){
   const t=i/points;
@@ -334,17 +334,24 @@ function drawCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd,shape){
   const fine=(highEnergy/255)**2*3.2*scale*Math.sin(u*Math.PI*54+phase*2.1);
   const bassBend=(bassEnergy/255)**2*amp*.16*scale*Math.sin(u*Math.PI*6+phase*.55);
   const a=t*Math.PI*2-Math.PI/2;
-  arr.push(radialPoint(base+ripple+fine+bassBend,a));
+  const r=base+ripple+fine+bassBend;
+  radius=Math.max(radius,r);arr.push(radialPoint(r,a));
  }
+ return {arr,radius,alpha,line,blur};
+}
+function drawCoil({arr,alpha,line,blur}){
+ const points=arr.length;
  ctx.save();ctx.beginPath();ctx.moveTo(arr[0].x,arr[0].y);
  for(let i=0;i<points;i++){const p=arr[i],q=arr[(i+1)%points];ctx.quadraticCurveTo(p.x,p.y,(p.x+q.x)/2,(p.y+q.y)/2)}
- ctx.closePath();ctx.strokeStyle=`rgba(255,255,255,${alpha})`;ctx.lineWidth=line;ctx.shadowBlur=blur;ctx.shadowColor=`rgba(255,255,255,${Math.min(1,alpha+.22)})`;ctx.stroke();ctx.restore();
+ ctx.closePath();ctx.strokeStyle=`rgba(255,255,255,${alpha})`;ctx.lineWidth=line;ctx.shadowBlur=blur*graphicGlowScale;ctx.shadowColor=`rgba(255,255,255,${Math.min(1,alpha+.22)})`;ctx.stroke();ctx.restore();
 }
-function drawCoilGlow(base,phase){
- drawCoil(base,52,.045,8,28,phase,.00,.72,"halo");
- drawCoil(base+2*scale,45,.075,5,20,phase*1.08+.8,.04,.78,"outer");
- drawCoil(base-1*scale,39,.18,3,13,phase*1.22+1.5,.08,.84,"mid");
- drawCoil(base-4*scale,34,.72,1.7,7,phase*1.45+2.7,.02,.90,"core");
+function createCoils(base,phase){
+ return [
+  createCoil(base,52,.045,8,28,phase,.00,.72),
+  createCoil(base+2*scale,45,.075,5,20,phase*1.08+.8,.04,.78),
+  createCoil(base-1*scale,39,.18,3,13,phase*1.22+1.5,.08,.84),
+  createCoil(base-4*scale,34,.72,1.7,7,phase*1.45+2.7,.02,.90)
+ ];
 }
 
 function drawBassArcs(radius,audio,phase){
@@ -357,7 +364,7 @@ function drawBassArcs(radius,audio,phase){
   const span=.55+bass*1.05;
   ctx.arc(cx,cy,arcRadius,start,start+span);
   ctx.strokeStyle=`rgba(255,255,255,${.08+bass*.16-j*.018})`;
-  ctx.lineWidth=(1.2+j*.7)*scale;ctx.shadowBlur=(5+bass*15)*scale;ctx.shadowColor="rgba(255,255,255,.55)";ctx.stroke();
+  ctx.lineWidth=(1.2+j*.7)*scale;ctx.shadowBlur=(5+bass*15)*scale*graphicGlowScale;ctx.shadowColor="rgba(255,255,255,.55)";ctx.stroke();
  }
  ctx.restore();
 }
@@ -385,7 +392,7 @@ function drawHex(radius,rot,audio){
  for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=radius+def[i],x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
  ctx.closePath();
  const bright=Math.min(1,.24+energy*.76);
- ctx.shadowBlur=(18+energy*24)*scale;ctx.shadowColor=`rgba(255,255,255,${bright})`;ctx.fillStyle=`rgba(255,255,255,${bright})`;ctx.fill();ctx.shadowBlur=0;
+ ctx.shadowBlur=(18+energy*24)*scale*graphicGlowScale;ctx.shadowColor=`rgba(255,255,255,${bright})`;ctx.fillStyle=`rgba(255,255,255,${bright})`;ctx.fill();ctx.shadowBlur=0;
  ctx.beginPath();
  for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=radius*.76+def[i]*.45,x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
  ctx.closePath();ctx.fillStyle="rgba(5,5,5,.9)";ctx.fill();
@@ -393,7 +400,7 @@ function drawHex(radius,rot,audio){
  const edgeWidth=(1.2+hexVolume*136)*scale;
  ctx.strokeStyle=`rgba(255,255,255,${.2+hexVolume*.55})`;ctx.lineWidth=edgeWidth;ctx.stroke();
  const core=(3+energy*7+audio.high/255*2)*scale;
- ctx.beginPath();ctx.arc(0,0,core,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${.35+energy*.65})`;ctx.shadowBlur=10*scale;ctx.shadowColor="rgba(255,255,255,.8)";ctx.fill();
+ ctx.beginPath();ctx.arc(0,0,core,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${.35+energy*.65})`;ctx.shadowBlur=10*scale*graphicGlowScale;ctx.shadowColor="rgba(255,255,255,.8)";ctx.fill();
  ctx.restore();
 }
 
@@ -403,13 +410,15 @@ function drawOuterHex(radius,rot,audio){
  const outerDef=(audio.low/255)**2*8*scale;
  ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.beginPath();
  for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=outerRadius+outerDef,x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
- ctx.closePath();ctx.strokeStyle=`rgba(255,255,255,${.16+energy*.30})`;ctx.lineWidth=(1.1+energy*3.2)*scale;ctx.shadowBlur=(7+energy*12)*scale;ctx.shadowColor="rgba(255,255,255,.65)";ctx.stroke();ctx.restore();
+ ctx.closePath();ctx.strokeStyle=`rgba(255,255,255,${.16+energy*.30})`;ctx.lineWidth=(1.1+energy*3.2)*scale;ctx.shadowBlur=(7+energy*12)*scale*graphicGlowScale;ctx.shadowColor="rgba(255,255,255,.65)";ctx.stroke();ctx.restore();
 }
 
-function drawParticles(audio){
+function drawParticles(audio,radiusLimit=null){
  for(const p of particles){
   if(!audioElement.paused&&!audioElement.ended)p.a+=p.s*16;
-  const r=p.r+energy*42*scale+audio.high/255*16*scale,x=cx+Math.cos(p.a)*r,y=cy+Math.sin(p.a)*r;
+  const r=radiusLimit===null?p.r+energy*42*scale+audio.high/255*16*scale:
+   Math.min(radiusLimit-3*scale,p.r/(Math.min(w,h)*.47)*radiusLimit);
+  const x=cx+Math.cos(p.a)*r,y=cy+Math.sin(p.a)*r;
   ctx.beginPath();ctx.arc(x,y,p.size+(audio.high/255)*.6,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${Math.min(.5,p.alpha*(.3+energy*2.1))})`;ctx.fill();
  }
 }
@@ -498,19 +507,41 @@ function draw(){
  const visualX=w*idle.x+(cx-w*idle.x)*expansion;
  const visualY=h*idle.y+(cy-h*idle.y)*expansion;
  const timerRadius=Math.min(w,h)*.23;
- ctx.save();ctx.translate(visualX,visualY);ctx.scale(visualScale,visualScale);ctx.translate(-cx,-cy);
  const morph=frame.clock;
  const graphicOpacity=frame.ai*(1-easeInOutCubic(Math.min(1,morph/.55)));
  const clockOpacity=easeInOutCubic(Math.max(0,Math.min(1,(morph-.55)/.45)));
- ctx.globalAlpha=graphicOpacity;
  if(graphicOpacity>0){
-  drawParticles(a);drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
+  const coils=createCoils(waveBase,now*.00045);
+  const bass=Math.pow(Math.min(1,a.low/255),2);
+  // Use the actual waveform envelope, including strokes and a glow margin.
+  // Faint particles follow this envelope instead of shrinking the main figure.
+  const outlineRadius=Math.max(ringR+8*scale,ringR+(8+bass*18)*scale,
+   ...coils.map(coil=>coil.radius),hexR*(1.52+energy*energy*.48)+bass*8*scale);
+  const radius=Math.max(ringR+8*scale+.5+energy*10*scale,
+   ringR+(8+bass*18+1.3+2*(5+bass*15))*scale,
+   ...coils.map(coil=>coil.radius+coil.line/2+coil.blur*2),
+   hexR+18*scale+(1.2+energy*136)*scale/2+2*(18+energy*24)*scale,
+   hexR*(1.52+energy*energy*.48)+bass*8*scale+(1.1+energy*3.2)*scale/2+2*(7+energy*12)*scale);
+  let pose={x:visualX,y:visualY,scale:visualScale},clip=null;
+  if(frame.background!=="memory"){
+   const screen=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
+   pose=StageLayout.fitRadialGraphic(screen,radius,config.roomScreen.inset*screen.width/config.roomScreen.width,.96+.04*expansion);
+   clip=pose.clip;
+  }
+  ctx.save();
+  if(clip){ctx.beginPath();ctx.rect(clip.x,clip.y,clip.width,clip.height);ctx.clip();}
+  ctx.translate(pose.x,pose.y);ctx.scale(pose.scale,pose.scale);ctx.translate(-cx,-cy);
+  ctx.globalAlpha=graphicOpacity;graphicGlowScale=clip?pose.scale*dpr:1;
+  drawParticles(a,clip?outlineRadius:null);drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
   drawSymmetricRing(ringR+8*scale,1,.025+energy*.065,energy*5*scale);
-  drawBassArcs(ringR+3*scale,a,now*.00065);drawCoilGlow(waveBase,now*.00045);
+  drawBassArcs(ringR+3*scale,a,now*.00065);for(const coil of coils)drawCoil(coil);
   drawOuterHex(hexR,rotation,a);drawHex(hexR,rotation,a);
+  ctx.restore();graphicGlowScale=1;
  }
- if(clockOpacity>0){ctx.globalAlpha=clockOpacity;drawTimerFace(timerRadius);}
- ctx.restore();
+ if(clockOpacity>0){
+  ctx.save();ctx.translate(visualX,visualY);ctx.scale(visualScale,visualScale);ctx.translate(-cx,-cy);
+  ctx.globalAlpha=clockOpacity;drawTimerFace(timerRadius);ctx.restore();
+ }
  if(cardReady&&frame.card>0){
   const width=Math.min(w*.8,h*.6),height=width*cardImage.naturalHeight/cardImage.naturalWidth;
   ctx.save();ctx.globalAlpha=frame.card;ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=24;
