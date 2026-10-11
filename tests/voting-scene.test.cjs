@@ -37,16 +37,18 @@ test("only genuine selection prompt end starts its deadline, never a premature o
  assert.equal(c.scene.advance(),false);c.prompt.dispatchEvent(new Event('ended'));assert.equal(c.scene.deadline,null);
  c.tick(2000);c.prompt.end();const deadline=c.scene.deadline;assert.equal(c.scene.state,'vote-prompt');
  c.tick(500);c.prompt.end();assert.equal(c.scene.deadline,deadline);assert.equal(c.scene.getRemainingMs(),59500);
- c.scene.advance();assert.equal(c.scene.state,'vote-clock');assert.equal(c.scene.deadline,deadline);
+ assert.equal(c.scene.advance(),false,'Shrinking must finish before the next cue');
+ c.tick(100);c.scene.advance();assert.equal(c.scene.state,'vote-clock');assert.equal(c.scene.deadline,deadline);
 });
 test("each vote recording gates the next cue and cannot alter the selection deadline",async()=>{
- const c=setup({withMedia:true});await prompt(c);c.prompt.end();c.scene.advance();const deadline=c.scene.deadline;
+ const c=setup({withMedia:true});await prompt(c);c.prompt.end();c.tick(700);c.scene.advance();const deadline=c.scene.deadline;
  for(const [kind,state] of [['one','vote-one'],['two','vote-two'],['final','vote-final']]){
   c.tick(700);await c.scene.advance();assert.equal(c.scene.state,state);assert.equal(c[kind].calls,1);
   c.tick(1000);assert.equal(c.scene.advance(),false);c[kind].end();assert.equal(c.scene.state,state);
+  assert.equal(c.scene.advance(),false,'Real voice end must still complete its shrink');
   assert.equal(c.scene.deadline,deadline);
  }
- c.scene.advance();assert.equal(c.scene.state,'vote-blackout');
+ c.tick(700);c.scene.advance();assert.equal(c.scene.state,'vote-blackout');
 });
 test("all four failed voices retry only their own recording and retain the actor cue",async()=>{
  const c=setup({withMedia:true});c.prompt.result=Promise.reject(new Error('Blocked'));await prompt(c);
@@ -55,7 +57,7 @@ test("all four failed voices retry only their own recording and retain the actor
   assert.equal(c.scene.state,state);assert.equal(c.scene.mediaStates[key],'error');
   c.tick(700);c[kind].result=Promise.resolve();await c.scene.advance();assert.equal(c.scene.state,state);
   assert.equal(c[kind].calls,2);c[kind].end();
-  if(kind==='prompt'){c.scene.advance();assert.equal(c.scene.state,'vote-clock');}
+  if(kind==='prompt'){c.tick(700);c.scene.advance();assert.equal(c.scene.state,'vote-clock');}
  }
  assert.equal(c.errors.length,4);assert.equal(c.prompt.calls,2);assert.equal(c.one.calls,2);
 });
@@ -93,6 +95,21 @@ test("selection time uses an absolute deadline, stops exactly at zero and never 
  const c=setup();await prompt(c);c.scene.advance();c.tick(59999);assert.equal(c.scene.getRemainingMs(),1);
  c.tick(1);assert.equal(c.scene.getRemainingMs(),0);c.tick(900000);assert.equal(c.scene.getRemainingMs(),0);
  assert.equal(c.scene.state,'vote-clock');assert.equal(c.cues.length,3);
+});
+test("real prompt completion locks the shrink while its minute runs and never consumes the next cue",async()=>{
+ const c=setup({withMedia:true});await prompt(c);c.tick(2000);c.prompt.end();
+ const deadline=c.scene.deadline;
+ assert.equal(c.scene.advance(),false);c.tick(599);assert.equal(c.scene.advance(),false);
+ assert.equal(c.scene.state,'vote-prompt');assert.equal(c.scene.getRemainingMs(),59401);
+ c.tick(1);assert.equal(c.scene.state,'vote-prompt');assert.equal(c.scene.advance(),true);
+ assert.equal(c.scene.state,'vote-clock');assert.equal(c.scene.deadline,deadline);
+});
+test("a live voice error waits for its shrink before retrying without starting a false minute",async()=>{
+ const c=setup({withMedia:true});await prompt(c);c.tick(2000);
+ c.prompt.dispatchEvent(new Event('error'));assert.equal(c.scene.mediaStates.selectionPrompt,'error');
+ assert.equal(c.scene.advance(),false);c.tick(599);assert.equal(c.scene.advance(),false);
+ c.tick(1);await c.scene.advance();assert.equal(c.prompt.calls,2);
+ assert.equal(c.scene.state,'vote-prompt');assert.equal(c.scene.deadline,null);
 });
 test("all twenty-five cues keep the opening deadline while selection receives its own minute",async()=>{
  let time=0;const video=new Media(),audio=new Media();

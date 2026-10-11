@@ -142,9 +142,10 @@
   class MemorySceneController {
     constructor({ voice = null, click = null, isReady = () => true,
       now = () => performance.now(), fadeMs = 1000, aiFadeMs = 600,
+      voiceExpandMs = aiFadeMs,
       blackoutMs = 1200, onCue = () => {}, onMediaState = () => {},
       onLock = () => {}, onVoiceEnd = () => {}, onError = () => {} }) {
-      Object.assign(this, { isReady, now, fadeMs, aiFadeMs, blackoutMs,
+      Object.assign(this, { isReady, now, fadeMs, aiFadeMs, voiceExpandMs, blackoutMs,
         onCue, onMediaState, onLock, onVoiceEnd, onError });
       this.state = "waiting";
       this.busyUntil = 0;
@@ -178,6 +179,7 @@
         // Keep actual playback in the operator's click/key activation.
         await media.play();
         if (this.destroyed || run !== this.runs[kind] || this.mediaStates[kind] !== "starting") return false;
+        if (kind === "memoryVoice") this.lock(this.voiceExpandMs);
         this.setMediaState(kind, "playing");
         return true;
       } catch (error) {
@@ -200,6 +202,7 @@
 
     fail(kind, error) {
       if (this.destroyed || this.mediaStates[kind] === "finished") return;
+      if (kind === "memoryVoice" && this.mediaStates[kind] === "playing") this.lock(this.aiFadeMs);
       ++this.runs[kind];
       this.media[kind]?.pause();
       this.setMediaState(kind, "error");
@@ -331,8 +334,9 @@
     constructor({ prompt = null, one = null, two = null, final = null,
       isReady = () => true, now = () => performance.now(), durationMs = 60000,
       fadeMs = 600, blackoutMs = 1200, onCue = () => {},
+      voiceExpandMs = fadeMs, voiceSettleMs = fadeMs,
       onMediaState = () => {}, onLock = () => {}, onError = () => {} }) {
-      Object.assign(this, { isReady, now, durationMs, fadeMs, blackoutMs,
+      Object.assign(this, { isReady, now, durationMs, fadeMs, blackoutMs, voiceExpandMs, voiceSettleMs,
         onCue, onMediaState, onLock, onError });
       this.state = "waiting"; this.busyUntil = 0; this.deadline = null; this.destroyed = false;
       this.media = { selectionPrompt: prompt, selectionOne: one, selectionTwo: two, selectionFinal: final };
@@ -365,6 +369,7 @@
         if (media.error) media.load();
         media.currentTime = 0; await media.play();
         if (this.destroyed || run !== this.runs[kind] || this.mediaStates[kind] !== "starting") return false;
+        this.lock(this.voiceExpandMs);
         this.setMediaState(kind, "playing"); return true;
       } catch (error) {
         if (!this.destroyed && run === this.runs[kind]) this.fail(kind, error);
@@ -374,12 +379,14 @@
 
     finish(kind) {
       if (this.destroyed || !this.media[kind]?.ended || !["starting", "playing"].includes(this.mediaStates[kind])) return;
-      ++this.runs[kind]; this.setMediaState(kind, "finished");
+      ++this.runs[kind]; this.lock(this.voiceSettleMs);
       if (kind === "selectionPrompt" && this.deadline === null) this.deadline = this.now() + this.durationMs;
+      this.setMediaState(kind, "finished");
     }
 
     fail(kind, error) {
       if (this.destroyed || this.mediaStates[kind] === "finished") return;
+      if (this.mediaStates[kind] === "playing") this.lock(this.voiceSettleMs);
       ++this.runs[kind]; this.media[kind]?.pause();
       this.setMediaState(kind, "error"); this.onError(kind, error);
     }

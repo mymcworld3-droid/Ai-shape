@@ -16,7 +16,8 @@ window.OPENING_CONFIG = Object.freeze({
     narration: null,
     lightClick: null,
     fadeMs: 1000,
-    aiFadeMs: 600
+    aiFadeMs: 600,
+    voiceExpandMs: 900
   }),
   office: Object.freeze({
     background: "assets/backgrounds/office-memory.png",
@@ -33,6 +34,8 @@ window.OPENING_CONFIG = Object.freeze({
     final: null,
     durationMs: 60 * 1000,
     fadeMs: 600,
+    voiceExpandMs: 900,
+    voiceSettleMs: 600,
     discussionDim: 0.2
   }),
   countdownMs: 15 * 60 * 1000,

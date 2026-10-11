@@ -50,7 +50,7 @@
     "card-hidden": { room: true, ai: 1, scene: 0, clock: 1, card: 0, blackout: 0 },
     blackout: { room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     "memory-light": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
-    "memory-welcome": { background: "memory", room: true, ai: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
+    "memory-welcome": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
     "memory-room": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     "memory-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     "past-intro": { background: "memory", room: true, ai: 0, scene: 0.35, clock: 0, card: 0, blackout: 0 },
@@ -60,11 +60,11 @@
     "past-reflection": { background: "office", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     "memory-return": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     discussion: { background: "memory", room: true, ai: 0, scene: 0.2, clock: 0, card: 0, blackout: 0 },
-    "vote-prompt": { background: "memory", room: true, ai: 0, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1 },
+    "vote-prompt": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1 },
     "vote-clock": { background: "memory", room: true, ai: 0, scene: 0.2, clock: 1, card: 0, blackout: 0, vote: 1, timer: "selection" },
-    "vote-one": { background: "memory", room: true, ai: 0, scene: 0.2, clock: 1, card: 0, blackout: 0, vote: 1, timer: "selection" },
-    "vote-two": { background: "memory", room: true, ai: 0, scene: 0.2, clock: 1, card: 0, blackout: 0, vote: 1, timer: "selection" },
-    "vote-final": { background: "memory", room: true, ai: 0, scene: 0.2, clock: 1, card: 0, blackout: 0, vote: 1, timer: "selection" },
+    "vote-one": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1, timer: "selection" },
+    "vote-two": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1, timer: "selection" },
+    "vote-final": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1, timer: "selection" },
     "vote-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 }
   });
   for (const frame of Object.values(previews)) Object.freeze(frame);

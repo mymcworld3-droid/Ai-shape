@@ -8,6 +8,7 @@ const officeBangAudio=document.getElementById("officeBangAudio");
 const selectionAudio={prompt:document.getElementById("selectionPromptAudio"),
  one:document.getElementById("selectionOneAudio"),two:document.getElementById("selectionTwoAudio"),
  final:document.getElementById("selectionFinalAudio")};
+const narrationMedia=[audioElement,memoryAudio,...Object.values(selectionAudio)];
 const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
@@ -29,7 +30,7 @@ let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
 const ROTATE_INTERVAL=500,ROTATE_DURATION=1400,ROTATE_STEP=Math.PI/3;
 const particles=[],PARTICLES=90;
 const freqMin=20,freqMax=20000;
-const transitions=Object.fromEntries(["scene","ai","clock","card","blackout","vote"].map(name=>
+const transitions=Object.fromEntries(["scene","ai","clock","card","blackout","vote","aiExpansion"].map(name=>
  [name,{value:0,from:0,target:0,start:0,duration:0}]));
 
 function easeInOutCubic(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
@@ -53,11 +54,12 @@ const stage=new StageOpening.StageCueController({
  cardFadeMs:config.cardFadeMs,blackoutMs:config.blackoutMs,
  memoryScene:{voice:config.memory.narration?memoryAudio:null,
   click:config.memory.lightClick?memoryLightAudio:null,isReady:()=>memoryBackgroundReady,
-  fadeMs:config.memory.fadeMs,aiFadeMs:config.memory.aiFadeMs},
+  fadeMs:config.memory.fadeMs,aiFadeMs:config.memory.aiFadeMs,voiceExpandMs:config.memory.voiceExpandMs},
  officeScene:{bang:config.office.bang?officeBangAudio:null,
   isReady:()=>officeBackgroundReady&&memoryBackgroundReady,fadeMs:config.office.fadeMs},
  votingScene:{...Object.fromEntries(Object.entries(selectionAudio).map(([kind,media])=>[kind,config.voting[kind]?media:null])),
-  isReady:()=>memoryBackgroundReady,durationMs:config.voting.durationMs,fadeMs:config.voting.fadeMs},
+  isReady:()=>memoryBackgroundReady,durationMs:config.voting.durationMs,fadeMs:config.voting.fadeMs,
+  voiceExpandMs:config.voting.voiceExpandMs,voiceSettleMs:config.voting.voiceSettleMs},
  onCue(cue){
   document.body.dataset.cue=cue;
   if(cue==="bright")roomReadyAt=performance.now();
@@ -73,7 +75,7 @@ const stage=new StageOpening.StageCueController({
   if(cue==="memory-light"){
    // Change rooms underneath the completed blackout. Never flash the old clock.
    document.body.dataset.scene="memory";
-   for(const name of ["scene","ai","clock","card"])animate(name,0,0);
+   for(const name of ["scene","ai","clock","card","aiExpansion"])animate(name,0,0);
    animate("blackout",0,config.memory.fadeMs);
   }
   if(cue==="memory-welcome")animate("ai",1,config.memory.aiFadeMs);
@@ -86,14 +88,16 @@ const stage=new StageOpening.StageCueController({
   if(cue==="past-isolate"||cue==="past-reflection")animate("blackout",1,config.blackoutMs);
   if(cue==="office-light"||cue==="memory-return"){
    document.body.dataset.scene=cue==="office-light"?"office":"memory";
-   for(const name of ["scene","ai","clock","card"])animate(name,0,0);
+   for(const name of ["scene","ai","clock","card","aiExpansion"])animate(name,0,0);
    animate("blackout",0,config.office.fadeMs);
   }
   if(cue==="discussion"){
-   for(const name of ["ai","clock","card","vote"])animate(name,0,0);
+   for(const name of ["ai","clock","card","vote","aiExpansion"])animate(name,0,0);
    animate("scene",config.voting.discussionDim,config.voting.fadeMs);
   }
-  if(cue==="vote-prompt")animate("vote",1,config.voting.fadeMs);
+  if(cue==="vote-prompt"){
+   animate("vote",1,config.voting.fadeMs);animate("ai",1,config.voting.fadeMs);
+  }
   if(cue==="vote-clock")animate("clock",1,config.voting.fadeMs);
   if(cue==="vote-blackout")animate("blackout",1,config.blackoutMs);
  },
@@ -103,6 +107,22 @@ const stage=new StageOpening.StageCueController({
    selectionPrompt:"selectionPromptState",selectionOne:"selectionOneState",
    selectionTwo:"selectionTwoState",selectionFinal:"selectionFinalState"}[kind];
   document.body.dataset[key]=state;
+  if(kind==="memoryVoice"){
+   if(state==="playing")animate("aiExpansion",1,config.memory.voiceExpandMs);
+   if(state==="finished"||state==="error")animate("aiExpansion",0,config.memory.aiFadeMs);
+  }
+  if(kind.startsWith("selection")){
+   if(state==="playing"){
+    document.body.dataset.aiVoiceActive=kind;
+    animate("ai",1,config.voting.fadeMs);animate("clock",0,config.voting.fadeMs);
+    animate("aiExpansion",1,config.voting.voiceExpandMs);
+   }
+   if(["finished","error","missing"].includes(state)){
+    document.body.dataset.aiVoiceActive="none";
+    animate("aiExpansion",0,config.voting.voiceSettleMs);
+    if(kind!=="selectionPrompt")animate("clock",1,config.voting.voiceSettleMs);
+   }
+  }
  },
  onNarrationEnd(){animate("scene",0,config.settleDurationMs);},
  onMemoryNarrationEnd(){animate("ai",0,config.memory.aiFadeMs);},
@@ -142,6 +162,7 @@ document.body.dataset.memoryVoiceAvailable=String(Boolean(config.memory.narratio
 document.body.dataset.memoryClickAvailable=String(Boolean(config.memory.lightClick));
 document.body.dataset.officeBangState="idle";
 document.body.dataset.officeBangAvailable=String(Boolean(config.office.bang));
+document.body.dataset.aiVoiceActive="none";
 for(const kind of ["Prompt","One","Two","Final"]){
  document.body.dataset["selection"+kind+"State"]="idle";
  document.body.dataset["selection"+kind+"Available"]=String(Boolean(config.voting[kind.toLowerCase()]));
@@ -279,6 +300,9 @@ function advanceStage(){
  }
  if(stage.state==="blackout"||stage.state==="memory-light")document.body.dataset.memoryClickError="false";
  if(stage.state==="office-light"||stage.state==="office-bang")document.body.dataset.officeBangError="false";
+ if(stage.state==="discussion"||stage.state.startsWith("vote-")){
+  for(const [kind,media] of Object.entries(selectionAudio))if(config.voting[kind])prepareAudio(media);
+ }
  for(const kind of ["Prompt","One","Two","Final"])document.body.dataset["selection"+kind+"Error"]="false";
  stage.advance();requestStageFullscreen();
 }
@@ -344,7 +368,7 @@ function selectedBins(){
 
 function analyze(){
  if(!analyser||!dataArray)return{avg:0,low:0,mid:0,high:0};
- if((audioElement.paused||audioElement.ended)&&(memoryAudio.paused||memoryAudio.ended)){
+ if(narrationMedia.every(media=>media.paused||media.ended)){
   for(let i=0;i<smooth.length;i++)smooth[i]*=.86;
   return{avg:0,low:0,mid:0,high:0};
  }
@@ -553,7 +577,7 @@ function drawVoteCue(cue,opacity){
   "vote-final":["PLEASE MAKE YOUR FINAL SELECTION.",""]}[cue];
  if(!lines)return;
  ctx.save();ctx.globalAlpha=opacity;
- const bw=w*.66,bh=h*.15,x=(w-bw)/2,y=h*.64;
+ const bw=w*.66,bh=h*.12,x=(w-bw)/2,y=h*.83;
  ctx.fillStyle="rgba(8,10,13,.9)";ctx.fillRect(x,y,bw,bh);
  ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle="#f5f7fa";
  let font=Math.min(w*.027,h*.043);
@@ -605,6 +629,16 @@ function draw(){
    const screen=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
    pose=StageLayout.fitRadialGraphic(screen,radius,config.roomScreen.inset*screen.width/config.roomScreen.width,.98+.02*expansion);
    clip=pose.clip;
+  }else{
+   // Keep the voice graphic independent from the background dim and clock.
+   const selection=frame.timer==="selection"||frame.caption?.startsWith("vote-");
+   const expansion=frame.aiExpansion||0;
+   const y=selection?h*idle.y:h*idle.y+(cy-h*idle.y)*expansion;
+   const area={x:2,y:2,width:w-4,height:h*(selection ? .8 : 1)-4};
+   const available=Math.max(0,Math.min(w*idle.x-area.x,area.x+area.width-w*idle.x,
+    y-area.y,area.y+area.height-y));
+   pose={x:w*idle.x,y,scale:Math.min(idle.size+(1-idle.size)*expansion,available/radius)};
+   clip=area;
   }
   ctx.save();
   if(clip){ctx.beginPath();ctx.rect(clip.x,clip.y,clip.width,clip.height);ctx.clip();}
