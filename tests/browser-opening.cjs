@@ -144,7 +144,8 @@ async function fixedFrame(page) {
 async function noControls(page) {
   assert.equal(await page.locator('button:visible,input:visible,select:visible,[role="button"]:visible,audio[controls]:visible,video[controls]:visible').count(),0);
   assert.equal(await page.getByRole('button').count(),0,"Hidden review buttons must also leave the accessibility tree");
-  for(const id of ['openingAudio','roomRevealVideo','doorKickAudio','memoryWelcomeAudio','memoryLightAudio','officeBangAudio'])assert.equal(await page.locator('#'+id).isVisible(),false);
+  for(const id of ['openingAudio','roomRevealVideo','doorKickAudio','memoryWelcomeAudio','memoryLightAudio','officeBangAudio',
+    'selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio'])assert.equal(await page.locator('#'+id).isVisible(),false);
   await fixedFrame(page);
 }
 async function naturalAudioEnd(page) {
@@ -196,6 +197,13 @@ async function fastMemory(page){
 async function fastOffice(page){
  await fastMemory(page);
  for(const next of ['memory-welcome','memory-room','memory-blackout','past-intro','past-isolate','office-light']){
+  await page.keyboard.press('Space');await cue(page,next);
+  await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
+ }
+}
+async function fastVoting(page){
+ await fastOffice(page);
+ for(const next of ['office-bang','past-reflection','memory-return','discussion','vote-prompt']){
   await page.keyboard.press('Space');await cue(page,next);
   await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
  }
@@ -373,8 +381,60 @@ async function fastOffice(page){
       await matchesStill(page,'assets/backgrounds/memory-room.png');await noControls(page);
     }
     await page.setViewportSize({width:1280,height:720});await page.waitForTimeout(100);
-    await page.keyboard.press('Space');await page.waitForTimeout(500);await cue(page,'memory-return');
+    await cue(page,'memory-return');
     await page.screenshot({path:path.join(output,'18-memory-return.png')});
+    await page.keyboard.press('Space');await cue(page,'discussion');await page.waitForTimeout(700);
+    const discussion=await expectedDifference(page,'assets/backgrounds/memory-room.png',null,15,.2);
+    assert.ok(discussion.mean<1,'Act III discussion retains the slightly dimmed Memory Room');
+    assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
+    await page.waitForTimeout(1200);await cue(page,'discussion');
+    await page.keyboard.press('Space');await cue(page,'vote-prompt');await page.waitForTimeout(700);
+    await flag(page,'selectionPromptState','missing');assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
+    const promptPanel=await expectedDifference(page,'assets/backgrounds/memory-room.png',[.1,.6,.9,.85],15,.2);
+    assert.ok(promptPanel.width>700&&promptPanel.height>90,'Selection prompt must visibly render');
+    for(const id of ['selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio']){
+      assert.equal(await page.locator('#'+id).getAttribute('src'),null);
+    }
+    await page.keyboard.press('Space');await cue(page,'vote-clock');await page.waitForTimeout(700);
+    const selectionDeadline=await page.evaluate(()=>stage.voting.deadline);
+    assert.ok(await page.evaluate(()=>stage.voting.getRemainingMs())<=60000);
+    assert.ok(await page.evaluate(()=>stage.voting.getRemainingMs())>58000);
+    await page.keyboard.press('Space');await cue(page,'vote-one');await page.waitForTimeout(700);
+    const voteOne=await page.locator('#visualizer').evaluate(c=>{
+      const d=c.getContext('2d').getImageData(0,Math.round(c.height*.64),c.width,Math.round(c.height*.15)).data;
+      let hash=0;for(const v of d)hash=(hash*31+v)>>>0;return hash;
+    });
+    await flag(page,'selectionOneState','missing');
+    await page.keyboard.press('Space');await cue(page,'vote-two');await page.waitForTimeout(700);
+    const voteTwo=await page.locator('#visualizer').evaluate(c=>{
+      const d=c.getContext('2d').getImageData(0,Math.round(c.height*.64),c.width,Math.round(c.height*.15)).data;
+      let hash=0;for(const v of d)hash=(hash*31+v)>>>0;return hash;
+    });
+    assert.notEqual(voteOne,voteTwo,'One vote and two votes must have distinct visible text');
+    await flag(page,'selectionTwoState','missing');
+    for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
+      await page.setViewportSize(viewport);await page.waitForTimeout(100);await noControls(page);
+      const room=await expectedDifference(page,'assets/backgrounds/memory-room.png',[0,0,1,.2],15,.2);
+      assert.ok(room.mean<1,'Voting retains the correct background and cover crop');
+      const box=await page.locator('#visualizer').boundingBox();
+      const clock=await expectedDifference(page,'assets/backgrounds/memory-room.png',[.1,.2,.9,.55],15,.2);
+      assert.ok(Math.abs(clock.centerY-box.height*.4)<6,'Selection clock retains Y=40%');
+      assert.ok(Math.abs(clock.width-Math.min(box.width,box.height)*.23*.012*236*.37)<12,'Selection clock retains size=37%');
+      const text=await expectedDifference(page,'assets/backgrounds/memory-room.png',[0,.6,1,.9],15,.2);
+      assert.ok(text.x>0&&text.x+text.width<box.width,'Vote panel stays inside the stage at every ratio');
+    }
+    await page.setViewportSize({width:1280,height:720});await page.waitForTimeout(100);
+    await page.screenshot({path:path.join(output,'20-vote-two.png')});
+    await page.keyboard.press('Space');await cue(page,'vote-final');await page.waitForTimeout(700);
+    await flag(page,'selectionFinalState','missing');
+    assert.equal(await page.evaluate(()=>stage.voting.deadline),selectionDeadline);
+    await page.keyboard.press('Space');await cue(page,'vote-blackout');await page.waitForTimeout(1300);
+    assert.equal(await page.locator('#visualizer').evaluate(c=>{
+      const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.every((v,i)=>i%4===3||v===0);
+    }),true);
+    await page.keyboard.press('Space');await cue(page,'vote-blackout');await noControls(page);
+    assert.equal(await page.evaluate(()=>stage.voting.deadline),selectionDeadline);
+    await page.screenshot({path:path.join(output,'21-vote-blackout.png')});
     assert.equal(await page.evaluate(()=>opening.deadline),deadline);
     assert.equal(errors.length,0,errors.join("\n"));
     assert.ok(requests.every(request=>request.startsWith(url)),"Show assets must be local");
@@ -382,17 +442,19 @@ async function fastOffice(page){
     results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; clock Y=40%, size=37%, card show/hide and exact blackout pixels");
     results.push("natural opening continues into Memory Room, held presses cannot skip the room fade, previous overlays disappear, local background fills three ratios, dialogue holds and the original deadline never resets");
     results.push('all eighteen cues follow Act II monologue, office flashback, BANG, reflection and Memory Room return; independent pixels verify dim room, exact blackouts and clean backgrounds at three ratios; held cues never skip fades or reset the deadline');
+    results.push('all twenty-five cues continue into actor-paced discussion and selection; four silent voice slots remain explicit, the separate minute starts only at the clock cue, vote text changes visibly, three ratios retain clock placement and every blackout pixel is zero');
 
     const review=await browser.newPage({viewport:{width:1440,height:900}});
     const reviewErrors=[];review.on('pageerror',error=>reviewErrors.push(String(error)));
     await ready(review,url);
     await review.locator('#stepsViewButton').click(); await flag(review,'view','steps');
     await review.waitForTimeout(100);await fixedFrame(review);
-    assert.equal(await review.locator('#stepList button').count(),18);
+    assert.equal(await review.locator('#stepList button').count(),25);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
     for(const preview of ['welcome','clock','card','card-hidden','blackout','ai','door-kick','bright',
       'memory-light','memory-welcome','memory-room','memory-blackout',
-      'past-intro','past-isolate','office-light','office-bang','past-reflection','memory-return']){
+      'past-intro','past-isolate','office-light','office-bang','past-reflection','memory-return',
+      'discussion','vote-prompt','vote-clock','vote-one','vote-two','vote-final','vote-blackout']){
       await review.locator(`[data-preview="${preview}"]`).click();await flag(review,'previewCue',preview);
       await review.waitForTimeout(60);
       assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
@@ -400,7 +462,11 @@ async function fastOffice(page){
       assert.equal(await review.locator('#memoryWelcomeAudio').evaluate(a=>a.currentTime),0);
       assert.equal(await review.locator('#memoryLightAudio').evaluate(a=>a.currentTime),0);
       assert.equal(await review.locator('#officeBangAudio').evaluate(a=>a.currentTime),0);
+      for(const id of ['selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio']){
+        assert.equal(await review.locator('#'+id).evaluate(a=>a.currentTime),0);
+      }
       assert.equal(await review.evaluate(()=>opening.deadline),null);
+      assert.equal(await review.evaluate(()=>stage.voting.deadline),null);
       assert.equal(await review.evaluate(()=>stageOpening.started),false);
     }
     await review.locator('[data-preview="card"]').click();await review.waitForTimeout(100);
@@ -413,10 +479,12 @@ async function fastOffice(page){
     await review.locator('[data-preview="office-light"]').click();await review.waitForTimeout(100);
     await matchesStill(review,'assets/backgrounds/office-memory.png');await fixedFrame(review);
     await review.screenshot({path:path.join(output,'19-office-step-review.png')});
+    await review.locator('[data-preview="vote-two"]').click();await review.waitForTimeout(100);await fixedFrame(review);
+    await review.screenshot({path:path.join(output,'22-voting-step-review.png')});
     await review.locator('#pageViewButton').click();await flag(review,'view','page');await review.waitForTimeout(100);
     await matchesStill(review,'assets/backgrounds/Start_dark.PNG');await fixedFrame(review);
-    await review.locator('#stepsViewButton').click();await review.locator('[data-preview="memory-return"]').click();
-    await flag(review,'previewCue','memory-return');
+    await review.locator('#stepsViewButton').click();await review.locator('[data-preview="vote-blackout"]').click();
+    await flag(review,'previewCue','vote-blackout');
     // Starting after inspecting the last cue must still play the first clip.
     await review.locator('#startButton').click();await roomState(review,'playing');await noControls(review);
     await flag(review,'view','page');
@@ -455,7 +523,7 @@ async function fastOffice(page){
     }
     await screenFit.close();
     results.push('AI fills and stays centered on the actual TV interior after cover cropping; idle, real speech and maximum-spectrum particles, waves and glow never escape, in full-page/review and three viewport ratios');
-    results.push("full-page and eighteen silent step previews; no audio/video or timer before Start; Start from the final memory return preview resets to first cue and hides every button");
+    results.push("full-page and twenty-five silent step previews; no audio/video or either timer before Start; Start from the final selection blackout preview resets to first cue and hides every button");
 
     const slow=await browser.newPage();
     let releaseAudio;
@@ -615,6 +683,44 @@ async function fastOffice(page){
     assert.equal(await officeMissing.locator('#startStatus').textContent(),'素材未載入，請重新整理');
     await officeMissing.close();
     results.push('office background loading gates Start, loading completion never auto-starts playback and failed loading exposes the existing material status');
+
+    const votingMedia=await browser.newPage();
+    await votingMedia.route('**/opening-config.js',route=>{
+      let body=fs.readFileSync(path.join(root,'opening-config.js'),'utf8');
+      for(const kind of ['prompt','one','two','final'])body=body.replace(kind+': null',kind+': "test-fixtures/memory-welcome.wav"');
+      return route.fulfill({contentType:'text/javascript',body});
+    });
+    await votingMedia.addInitScript(()=>{
+      const play=HTMLMediaElement.prototype.play;
+      const blocked=new Set(['selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio']);
+      HTMLMediaElement.prototype.play=function(){
+        if(blocked.delete(this.id))return Promise.reject(new DOMException('Blocked','NotAllowedError'));
+        return play.call(this);
+      };
+    });
+    await ready(votingMedia,url);await fastVoting(votingMedia);
+    const votingOpeningDeadline=await votingMedia.evaluate(()=>opening.deadline);let votingDeadline;
+    for(const [kind,current,next] of [['Prompt','vote-prompt','vote-clock'],['One','vote-one','vote-two'],['Two','vote-two','vote-final'],['Final','vote-final','vote-blackout']]){
+      await flag(votingMedia,'selection'+kind+'State','error');await cue(votingMedia,current);
+      if(kind==='Prompt')assert.equal(await votingMedia.evaluate(()=>stage.voting.deadline),null);
+      await votingMedia.waitForFunction(()=>performance.now()>=stage.busyUntil);
+      await votingMedia.keyboard.press('Space');await flag(votingMedia,'selection'+kind+'State','playing');
+      await votingMedia.keyboard.down('Space');await cue(votingMedia,current);
+      await flag(votingMedia,'selection'+kind+'State','finished');
+      assert.equal(await votingMedia.locator('#selection'+kind+'Audio').evaluate(a=>a.ended),true);
+      if(kind==='Prompt')votingDeadline=await votingMedia.evaluate(()=>stage.voting.deadline);
+      assert.equal(await votingMedia.evaluate(()=>stage.voting.deadline),votingDeadline);
+      await votingMedia.keyboard.down('Space');await cue(votingMedia,current);
+      await votingMedia.keyboard.up('Space');await votingMedia.keyboard.press('Space');await cue(votingMedia,next);
+      if(kind==='Prompt'){
+        await votingMedia.waitForFunction(()=>performance.now()>=stage.busyUntil);
+        await votingMedia.keyboard.press('Space');await cue(votingMedia,'vote-one');
+      }
+    }
+    await votingMedia.waitForFunction(()=>performance.now()>=stage.busyUntil);
+    assert.equal(await votingMedia.evaluate(()=>opening.deadline),votingOpeningDeadline);
+    await noControls(votingMedia);await votingMedia.close();
+    results.push('all four selection voices use real PCM playback, retry only their own failures and wait for genuine end plus a released key; only the prompt owns the minute and the original opening deadline remains unchanged');
 
     const touch=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
     await ready(touch,url); await fixedFrame(touch);

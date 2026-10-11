@@ -54,7 +54,8 @@ test("a radial graphic uses the largest circle that stays inside either screen o
 test("silent step frames cover every cue and cannot mutate the playback transition data",()=>{
  const expected=["bright","ai","door-kick","welcome","clock","card","card-hidden","blackout",
   "memory-light","memory-welcome","memory-room","memory-blackout",
-  "past-intro","past-isolate","office-light","office-bang","past-reflection","memory-return"];
+  "past-intro","past-isolate","office-light","office-bang","past-reflection","memory-return",
+  "discussion","vote-prompt","vote-clock","vote-one","vote-two","vote-final","vote-blackout"];
  for(const cue of expected){const frame=previewFrame(cue);assert.ok(frame);assert.equal(Object.isFrozen(frame),true);}
  assert.equal(previewFrame("clock").clock,1);
  assert.equal(previewFrame("clock").scene,1);
@@ -64,7 +65,7 @@ test("silent step frames cover every cue and cannot mutate the playback transiti
  assert.equal(previewFrame("memory-room").background,"memory");
  assert.equal(previewFrame("memory-room").clock,0);
  assert.equal(previewFrame("memory-room").card,0);
- for(const cue of expected.slice(12)){
+ for(const cue of expected.slice(12,18)){
   const frame=previewFrame(cue);assert.equal(frame.ai+frame.clock+frame.card,0);
  }
  assert.equal(previewFrame("past-intro").scene,0.35);
@@ -72,6 +73,11 @@ test("silent step frames cover every cue and cannot mutate the playback transiti
  assert.equal(previewFrame("office-light").background,"office");
  assert.equal(previewFrame("past-reflection").blackout,1);
  assert.equal(previewFrame("memory-return").background,"memory");
+ for(const cue of expected.slice(18)){
+  const frame=previewFrame(cue);assert.equal(frame.ai+frame.card,0);assert.equal(frame.background,"memory");
+ }
+ assert.equal(previewFrame("vote-two").timer,"selection");assert.equal(previewFrame("vote-two").vote,1);
+ assert.equal(previewFrame("vote-blackout").blackout,1);
  assert.equal(previewFrame("unknown"),null);assert.equal(previewFrame("__proto__"),null);
 });
 test("merely creating a Start gate or checking readiness never begins playback",()=>{

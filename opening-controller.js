@@ -325,6 +325,102 @@
     }
   }
 
+  // Act III's one-minute selection deadline is separate from the opening
+  // deadline. Voice completion never consumes an actor's next manual cue.
+  class VotingSceneController {
+    constructor({ prompt = null, one = null, two = null, final = null,
+      isReady = () => true, now = () => performance.now(), durationMs = 60000,
+      fadeMs = 600, blackoutMs = 1200, onCue = () => {},
+      onMediaState = () => {}, onLock = () => {}, onError = () => {} }) {
+      Object.assign(this, { isReady, now, durationMs, fadeMs, blackoutMs,
+        onCue, onMediaState, onLock, onError });
+      this.state = "waiting"; this.busyUntil = 0; this.deadline = null; this.destroyed = false;
+      this.media = { selectionPrompt: prompt, selectionOne: one, selectionTwo: two, selectionFinal: final };
+      this.mediaStates = {}; this.runs = {}; this.listeners = [];
+      for (const [kind, media] of Object.entries(this.media)) {
+        this.mediaStates[kind] = "idle"; this.runs[kind] = 0;
+        if (!media) continue;
+        const ended = () => this.finish(kind);
+        const failed = () => this.fail(kind, new Error("Selection audio could not be played."));
+        media.addEventListener("ended", ended); media.addEventListener("error", failed);
+        this.listeners.push({ media, ended, failed });
+      }
+    }
+
+    setCue(state) { this.state = state; this.onCue(state); }
+    setMediaState(kind, state) { this.mediaStates[kind] = state; this.onMediaState(kind, state); }
+    lock(ms) { this.busyUntil = Math.max(this.busyUntil, this.now() + ms); this.onLock(ms); }
+    getRemainingMs() { return this.deadline === null ? this.durationMs : Math.max(0, this.deadline - this.now()); }
+
+    enter() {
+      if (this.destroyed || this.state !== "waiting" || !this.isReady()) return false;
+      this.lock(this.fadeMs); this.setCue("discussion"); return true;
+    }
+
+    async play(kind) {
+      const media = this.media[kind];
+      if (!media) { this.setMediaState(kind, "missing"); return true; }
+      const run = ++this.runs[kind]; this.setMediaState(kind, "starting");
+      try {
+        if (media.error) media.load();
+        media.currentTime = 0; await media.play();
+        if (this.destroyed || run !== this.runs[kind] || this.mediaStates[kind] !== "starting") return false;
+        this.setMediaState(kind, "playing"); return true;
+      } catch (error) {
+        if (!this.destroyed && run === this.runs[kind]) this.fail(kind, error);
+        return false;
+      }
+    }
+
+    finish(kind) {
+      if (this.destroyed || !this.media[kind]?.ended || !["starting", "playing"].includes(this.mediaStates[kind])) return;
+      ++this.runs[kind]; this.setMediaState(kind, "finished");
+      if (kind === "selectionPrompt" && this.deadline === null) this.deadline = this.now() + this.durationMs;
+    }
+
+    fail(kind, error) {
+      if (this.destroyed || this.mediaStates[kind] === "finished") return;
+      ++this.runs[kind]; this.media[kind]?.pause();
+      this.setMediaState(kind, "error"); this.onError(kind, error);
+    }
+
+    advance() {
+      if (this.destroyed || this.now() < this.busyUntil) return false;
+      const current = { "vote-prompt": "selectionPrompt", "vote-one": "selectionOne",
+        "vote-two": "selectionTwo", "vote-final": "selectionFinal" }[this.state];
+      if (current) {
+        if (["starting", "playing"].includes(this.mediaStates[current])) return false;
+        if (this.mediaStates[current] === "error") return this.play(current);
+      }
+      switch (this.state) {
+        case "discussion":
+          this.lock(this.fadeMs); this.setCue("vote-prompt"); return this.play("selectionPrompt");
+        case "vote-prompt":
+          // Without a recording, this explicit operator cue starts the minute.
+          // No synthetic ended event or guessed narration length is used.
+          if (this.deadline === null && this.mediaStates.selectionPrompt === "missing") this.deadline = this.now() + this.durationMs;
+          this.lock(this.fadeMs); this.setCue("vote-clock"); return true;
+        case "vote-clock":
+          this.lock(this.fadeMs); this.setCue("vote-one"); return this.play("selectionOne");
+        case "vote-one":
+          this.lock(this.fadeMs); this.setCue("vote-two"); return this.play("selectionTwo");
+        case "vote-two":
+          this.lock(this.fadeMs); this.setCue("vote-final"); return this.play("selectionFinal");
+        case "vote-final":
+          this.lock(this.blackoutMs); this.setCue("vote-blackout"); return true;
+        default: return false;
+      }
+    }
+
+    destroy() {
+      this.destroyed = true;
+      for (const kind of Object.keys(this.runs)) ++this.runs[kind];
+      for (const { media, ended, failed } of this.listeners) {
+        media.removeEventListener("ended", ended); media.removeEventListener("error", failed); media.pause();
+      }
+    }
+  }
+
   // Operator cues and media completion are separate. The clock may replace the
   // graphic during narration, while its deadline still belongs to audio.ended.
   class StageCueController {
@@ -333,7 +429,7 @@
       expandMs = 1600, morphMs = 1200, settleMs = 1000,
       cardFadeMs = 400, blackoutMs = 1200,
       onCue = () => {}, onMediaState = () => {},
-      onNarrationEnd = () => {}, onError = () => {}, memoryScene = null, officeScene = null,
+      onNarrationEnd = () => {}, onError = () => {}, memoryScene = null, officeScene = null, votingScene = null,
       onMemoryNarrationEnd = () => {} }) {
       Object.assign(this, { now, effect, revealFadeMs, aiFadeMs, expandMs,
         morphMs, settleMs, cardFadeMs, blackoutMs, onCue, onMediaState,
@@ -347,6 +443,8 @@
         onCue: state => this.setCue(state), onMediaState,
         onLock: ms => this.lock(ms), onVoiceEnd: onMemoryNarrationEnd, onError }) : null;
       this.office = officeScene ? new OfficeSceneController({ ...officeScene, now, blackoutMs,
+        onCue: state => this.setCue(state), onMediaState, onLock: ms => this.lock(ms), onError }) : null;
+      this.voting = votingScene ? new VotingSceneController({ ...votingScene, now, blackoutMs,
         onCue: state => this.setCue(state), onMediaState, onLock: ms => this.lock(ms), onError }) : null;
       this.room = new RoomRevealController({ video,
         onStateChange: state => {
@@ -438,8 +536,15 @@
         case "past-isolate":
         case "office-light":
         case "office-bang":
-        case "past-reflection":
-        case "memory-return": return this.office ? this.office.advance() : false;
+        case "past-reflection": return this.office ? this.office.advance() : false;
+        case "memory-return": return this.voting ? this.voting.enter() : false;
+        case "discussion":
+        case "vote-prompt":
+        case "vote-clock":
+        case "vote-one":
+        case "vote-two":
+        case "vote-final":
+        case "vote-blackout": return this.voting ? this.voting.advance() : false;
         default: return false;
       }
     }
@@ -450,6 +555,7 @@
       this.room.destroy(); this.opening.destroy();
       this.memory?.destroy();
       this.office?.destroy();
+      this.voting?.destroy();
       if (this.effect) {
         this.effect.removeEventListener("ended", this.effectEnded);
         this.effect.removeEventListener("error", this.effectFailed);
@@ -513,5 +619,5 @@
     return () => target.removeEventListener("click", click);
   }
 
-  return { RoomRevealController, OpeningController, MemorySceneController, OfficeSceneController, StageCueController, StartGate, formatTime, bindAdvanceKey, bindAdvanceClick };
+  return { RoomRevealController, OpeningController, MemorySceneController, OfficeSceneController, VotingSceneController, StageCueController, StartGate, formatTime, bindAdvanceKey, bindAdvanceClick };
 });

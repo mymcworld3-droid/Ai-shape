@@ -5,6 +5,9 @@ const effectElement=document.getElementById("doorKickAudio");
 const memoryAudio=document.getElementById("memoryWelcomeAudio");
 const memoryLightAudio=document.getElementById("memoryLightAudio");
 const officeBangAudio=document.getElementById("officeBangAudio");
+const selectionAudio={prompt:document.getElementById("selectionPromptAudio"),
+ one:document.getElementById("selectionOneAudio"),two:document.getElementById("selectionTwoAudio"),
+ final:document.getElementById("selectionFinalAudio")};
 const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
@@ -26,7 +29,7 @@ let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
 const ROTATE_INTERVAL=500,ROTATE_DURATION=1400,ROTATE_STEP=Math.PI/3;
 const particles=[],PARTICLES=90;
 const freqMin=20,freqMax=20000;
-const transitions=Object.fromEntries(["scene","ai","clock","card","blackout"].map(name=>
+const transitions=Object.fromEntries(["scene","ai","clock","card","blackout","vote"].map(name=>
  [name,{value:0,from:0,target:0,start:0,duration:0}]));
 
 function easeInOutCubic(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
@@ -53,6 +56,8 @@ const stage=new StageOpening.StageCueController({
   fadeMs:config.memory.fadeMs,aiFadeMs:config.memory.aiFadeMs},
  officeScene:{bang:config.office.bang?officeBangAudio:null,
   isReady:()=>officeBackgroundReady&&memoryBackgroundReady,fadeMs:config.office.fadeMs},
+ votingScene:{...Object.fromEntries(Object.entries(selectionAudio).map(([kind,media])=>[kind,config.voting[kind]?media:null])),
+  isReady:()=>memoryBackgroundReady,durationMs:config.voting.durationMs,fadeMs:config.voting.fadeMs},
  onCue(cue){
   document.body.dataset.cue=cue;
   if(cue==="bright")roomReadyAt=performance.now();
@@ -84,17 +89,28 @@ const stage=new StageOpening.StageCueController({
    for(const name of ["scene","ai","clock","card"])animate(name,0,0);
    animate("blackout",0,config.office.fadeMs);
   }
+  if(cue==="discussion"){
+   for(const name of ["ai","clock","card","vote"])animate(name,0,0);
+   animate("scene",config.voting.discussionDim,config.voting.fadeMs);
+  }
+  if(cue==="vote-prompt")animate("vote",1,config.voting.fadeMs);
+  if(cue==="vote-clock")animate("clock",1,config.voting.fadeMs);
+  if(cue==="vote-blackout")animate("blackout",1,config.blackoutMs);
  },
  onMediaState(kind,state){
   const key={room:"roomState",narration:"openingState",effect:"effectState",
-   memoryVoice:"memoryVoiceState",memoryClick:"memoryClickState",officeBang:"officeBangState"}[kind];
+   memoryVoice:"memoryVoiceState",memoryClick:"memoryClickState",officeBang:"officeBangState",
+   selectionPrompt:"selectionPromptState",selectionOne:"selectionOneState",
+   selectionTwo:"selectionTwoState",selectionFinal:"selectionFinalState"}[kind];
   document.body.dataset[key]=state;
  },
  onNarrationEnd(){animate("scene",0,config.settleDurationMs);},
  onMemoryNarrationEnd(){animate("ai",0,config.memory.aiFadeMs);},
  onError(kind,error){
   document.body.dataset[{room:"videoError",narration:"audioError",effect:"effectError",
-   memoryVoice:"memoryVoiceError",memoryClick:"memoryClickError",officeBang:"officeBangError"}[kind]]="true";
+   memoryVoice:"memoryVoiceError",memoryClick:"memoryClickError",officeBang:"officeBangError",
+   selectionPrompt:"selectionPromptError",selectionOne:"selectionOneError",
+   selectionTwo:"selectionTwoError",selectionFinal:"selectionFinalError"}[kind]]="true";
   notifyAssetsChange();
   console.error("[Opening]",error);
  }
@@ -126,6 +142,10 @@ document.body.dataset.memoryVoiceAvailable=String(Boolean(config.memory.narratio
 document.body.dataset.memoryClickAvailable=String(Boolean(config.memory.lightClick));
 document.body.dataset.officeBangState="idle";
 document.body.dataset.officeBangAvailable=String(Boolean(config.office.bang));
+for(const kind of ["Prompt","One","Two","Final"]){
+ document.body.dataset["selection"+kind+"State"]="idle";
+ document.body.dataset["selection"+kind+"Available"]=String(Boolean(config.voting[kind.toLowerCase()]));
+}
 // Read-only diagnostics for rehearsals; no control UI appears on the projection.
 window.stageOpening=Object.freeze({
  get started(){return startGate.started;},
@@ -135,6 +155,8 @@ window.stageOpening=Object.freeze({
  get effectAvailable(){return Boolean(config.doorKick);},
  get memoryState(){return stage.memory.state;},
  get officeState(){return stage.office.state;},
+ get selectionState(){return stage.voting.state;},
+ get selectionRemainingMs(){return stage.voting.getRemainingMs();},
  get remainingMs(){return opening.getRemainingMs();}
 });
 
@@ -151,10 +173,13 @@ function projectionFrame(){
  if(!startGate.started&&previewCue){
   const frame={...StageLayout.previewFrame(previewCue),preview:true};
   if(previewCue==="past-intro")frame.scene=config.office.introDim;
+  if(previewCue==="discussion"||previewCue.startsWith("vote-")&&previewCue!=="vote-blackout")frame.scene=config.voting.discussionDim;
+  frame.caption=previewCue;
   return frame;
  }
  const background=document.body.dataset.scene;
  return {background,
+  caption:stage.state,timer:stage.state.startsWith("vote-")?"selection":"opening",
   room:background==="office"?officeBackgroundReady:background==="memory"?memoryBackgroundReady:roomReveal.state==="ready"&&backgroundReady,preview:false,
   ...Object.fromEntries(Object.entries(transitions).map(([key,t])=>[key,t.value]))};
 }
@@ -208,6 +233,9 @@ if(config.doorKick){effectElement.src=config.doorKick;effectElement.load();}
 if(config.memory.narration){memoryAudio.src=config.memory.narration;memoryAudio.load();}
 if(config.memory.lightClick){memoryLightAudio.src=config.memory.lightClick;memoryLightAudio.load();}
 if(config.office.bang){officeBangAudio.src=config.office.bang;officeBangAudio.load();}
+for(const [kind,media] of Object.entries(selectionAudio)){
+ if(config.voting[kind]){media.src=config.voting[kind];media.load();}
+}
 
 function prepareAudio(media=audioElement){
  try{
@@ -251,6 +279,7 @@ function advanceStage(){
  }
  if(stage.state==="blackout"||stage.state==="memory-light")document.body.dataset.memoryClickError="false";
  if(stage.state==="office-light"||stage.state==="office-bang")document.body.dataset.officeBangError="false";
+ for(const kind of ["Prompt","One","Two","Final"])document.body.dataset["selection"+kind+"Error"]="false";
  stage.advance();requestStageFullscreen();
 }
 StageOpening.bindAdvanceKey(window,advanceStage,{isEnabled:()=>startGate.started});
@@ -491,8 +520,8 @@ function drawDigitalDigit(character,x){
  }
  ctx.restore();
 }
-function drawTimerFace(radius){
- const time=StageOpening.formatTime(opening.getRemainingMs());
+function drawTimerFace(radius,remainingMs){
+ const time=StageOpening.formatTime(remainingMs);
  // Clock coordinates are 236 wide by 84 high, with the colon between digits.
  const unit=radius*.012;
  ctx.save();
@@ -516,6 +545,24 @@ function drawTimerFace(radius){
  }
  ctx.restore();
 }
+function drawVoteCue(cue,opacity){
+ if(!opacity)return;
+ const lines={"vote-prompt":["PLEASE MAKE YOUR SELECTION.","1 MINUTE REMAINING"],
+  "vote-clock":["PLEASE MAKE YOUR SELECTION.","1 MINUTE REMAINING"],
+  "vote-one":["SUBJECT ETHAN","ONE VOTE"],"vote-two":["SUBJECT ETHAN","TWO VOTES"],
+  "vote-final":["PLEASE MAKE YOUR FINAL SELECTION.",""]}[cue];
+ if(!lines)return;
+ ctx.save();ctx.globalAlpha=opacity;
+ const bw=w*.66,bh=h*.15,x=(w-bw)/2,y=h*.64;
+ ctx.fillStyle="rgba(8,10,13,.9)";ctx.fillRect(x,y,bw,bh);
+ ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle="#f5f7fa";
+ let font=Math.min(w*.027,h*.043);
+ ctx.font=`500 ${font}px sans-serif`;
+ if(ctx.measureText(lines[0]).width>bw*.9){font*=bw*.9/ctx.measureText(lines[0]).width;ctx.font=`500 ${font}px sans-serif`;}
+ ctx.fillText(lines[0],w/2,y+bh*(lines[1] ? .34 : .5));
+ if(lines[1]){ctx.font=`400 ${Math.min(w*.022,h*.033)}px sans-serif`;ctx.fillText(lines[1],w/2,y+bh*.73);}
+ ctx.restore();
+}
 function draw(){
  requestAnimationFrame(draw);
  const now=performance.now();opening.getRemainingMs();updateTransitions(now);
@@ -533,7 +580,7 @@ function draw(){
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=frame.background==="memory"?waveBase+Math.min(w,h)*.075:waveBase-4*scale;
- const idle=config.idleShape,expansion=frame.scene;
+ const idle=config.idleShape,expansion=frame.timer==="selection"?0:frame.scene;
  const visualScale=idle.size+(1-idle.size)*expansion;
  const visualX=w*idle.x+(cx-w*idle.x)*expansion;
  const visualY=h*idle.y+(cy-h*idle.y)*expansion;
@@ -571,13 +618,15 @@ function draw(){
  }
  if(clockOpacity>0){
   ctx.save();ctx.translate(visualX,visualY);ctx.scale(visualScale,visualScale);ctx.translate(-cx,-cy);
-  ctx.globalAlpha=clockOpacity;drawTimerFace(timerRadius);ctx.restore();
+  const remaining=frame.timer==="selection"?(frame.preview?config.voting.durationMs:stage.voting.getRemainingMs()):opening.getRemainingMs();
+  ctx.globalAlpha=clockOpacity;drawTimerFace(timerRadius,remaining);ctx.restore();
  }
  if(cardReady&&frame.card>0){
   const width=Math.min(w*.8,h*.6),height=width*cardImage.naturalHeight/cardImage.naturalWidth;
   ctx.save();ctx.globalAlpha=frame.card;ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=24;
   ctx.drawImage(cardImage,(w-width)/2,h*.72-height/2,width,height);ctx.restore();
  }
+ drawVoteCue(frame.caption,frame.vote||0);
  if(frame.blackout>0){
   ctx.fillStyle=`rgba(0,0,0,${frame.blackout})`;ctx.fillRect(0,0,w,h);
  }

@@ -25,6 +25,16 @@ window.OPENING_CONFIG = Object.freeze({
     fadeMs: 1000,
     introDim: 0.35
   }),
+  voting: Object.freeze({
+    // Four distinct script recordings; null preserves manual silent cues.
+    prompt: null,
+    one: null,
+    two: null,
+    final: null,
+    durationMs: 60 * 1000,
+    fadeMs: 600,
+    discussionDim: 0.2
+  }),
   countdownMs: 15 * 60 * 1000,
   // Black display interior in IMG_0165.png's source pixels; excludes its bezel.
   roomScreen: Object.freeze({ x: 552, y: 310, width: 430, height: 195, inset: 2 }),

@@ -22,10 +22,14 @@
       <audio id="memoryWelcomeAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
       <audio id="memoryLightAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
       <audio id="officeBangAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="selectionPromptAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="selectionOneAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="selectionTwoAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="selectionFinalAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
     </div>
   </div>
   <aside id="stepsPanel" aria-label="演出步驟檢視" hidden>
-    <header><h1>演出步驟<span>18</span></h1><p>點選預覽，不播放影音</p></header>
+    <header><h1>演出步驟<span>25</span></h1><p>點選預覽，不播放影音</p></header>
     <ol id="stepList">
       <li><button type="button" data-preview="bright" aria-pressed="true"><span class="step-number">01</span><span>暗 → 亮<small>影片播完，接回原本房間</small></span></button></li>
       <li><button type="button" data-preview="ai" aria-pressed="false"><span class="step-number">02</span><span>AI 漸顯<small>電視正中央 · 填滿內框</small></span></button></li>
@@ -49,6 +53,14 @@
       <li class="scene-divider">第二幕 · 第三場</li>
       <li><button type="button" data-preview="past-reflection" aria-pressed="false"><span class="step-number">17</span><span>回憶退場 · 自白<small>Liam 離場後，投影全暗</small></span></button></li>
       <li><button type="button" data-preview="memory-return" aria-pressed="false"><span class="step-number">18</span><span>回到記憶室<small>自白結束，等待第三幕</small></span></button></li>
+      <li class="scene-divider">第三幕 · 討論與選擇</li>
+      <li><button type="button" data-preview="discussion" aria-pressed="false"><span class="step-number">19</span><span>演員討論<small>房間稍暗，保留對話時間</small></span></button></li>
+      <li><button type="button" data-preview="vote-prompt" aria-pressed="false"><span class="step-number">20</span><span>AI 要求選擇<small>Christopher 按下實體按鈕</small></span></button></li>
+      <li><button type="button" data-preview="vote-clock" aria-pressed="false"><span class="step-number">21</span><span>一分鐘倒數<small>語音待補，這一按開始計時</small></span></button></li>
+      <li><button type="button" data-preview="vote-one" aria-pressed="false"><span class="step-number">22</span><span>Ethan · 一票<small>Christopher 說 Ethan.</small></span></button></li>
+      <li><button type="button" data-preview="vote-two" aria-pressed="false"><span class="step-number">23</span><span>Ethan · 兩票<small>Megan 說 Ethan.</small></span></button></li>
+      <li><button type="button" data-preview="vote-final" aria-pressed="false"><span class="step-number">24</span><span>最後選擇<small>Rachel 沒有回答之後</small></span></button></li>
+      <li><button type="button" data-preview="vote-blackout" aria-pressed="false"><span class="step-number">25</span><span>第三幕全暗<small>最後提示結束，等待第四幕</small></span></button></li>
     </ol>
   </aside>
 </main>
