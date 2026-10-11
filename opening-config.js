@@ -3,7 +3,7 @@
 window.OPENING_CONFIG = Object.freeze({
   background: "assets/backgrounds/IMG_0165.png",
   darkBackground: "assets/backgrounds/Start_dark.PNG",
-  roomReveal: "assets/videos/Start_animation.MP4",
+  roomReveal: "assets/videos/Start_animation.mp4",
   revealFadeMs: 240,
   narration: "assets/audio/ai-opening.mp3",
   // Supply the final effect, then set this to "assets/audio/door-kick.mp3".

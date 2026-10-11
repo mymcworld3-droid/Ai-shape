@@ -41,13 +41,14 @@ lightClick: "assets/audio/memory-light-click.mp3",
 ## 背景
 
 已用內建生圖工具，以原本 `IMG_0165.png` 為參考，製作
-`assets/backgrounds/memory-room.png`。保留冷灰金屬材質、同視角及空曠中央；
-左後方只有一座小台與空相框。實際使用時等比例填滿 16:9，超出置中裁切。
+`assets/backgrounds/memory-room.png`。照明與原本亮房間一致，使用明亮白光、
+淺灰牆面與清楚可辨的地板；只保留左側一扇門，右側是完整牆面。
+左後方仍是一座小台與空相框。實際使用時等比例填滿 16:9，超出置中裁切。
 
 最終使用的提示詞：
 
 ```text
-Use case: precise-object-edit. Asset type: 16:9 theater projection background, 2048 x 1152 landscape. Edit the provided empty science-fiction room into the adjacent Memory Room in the same play. The input is the reference for photorealistic cinematic materials, straight verticals, front-facing level fixed wide camera, and restrained gray metal wall panels; preserve this visual language and perspective. Replace the original giant black display with plain gray paneling; remove the door numbers, lettering, and large screen. Make the room a little darker and cooler, but the floor and sparse furnishings must remain clearly visible when projected. Use quiet ice-blue perimeter illumination and soft overhead light. At the left upstage near the back wall, put one small dark stand with a single upright photo frame under a subtle pool of light. The photo frame interior is blank neutral gray; no invented people or portraits. Keep the middle, foreground and entire lower central area open for four live actors. Matte dark-gray floor, low reflection, restrained surface detail, spacious symmetrical architecture. Do not add robots, people, silhouettes, countdown clocks, futuristic control panels, logos, readable text, room numbers, watermarks, fish-eye distortion, dramatic fog or extra props. Render a finished photographic background only, not a UI screenshot. Use the full 16:9 image.
+Use case: lighting-weather and precise-object-edit. Edit Image 1, the Memory Room stage projection background. Image 2 is a lighting reference only, the original brightly lit room. Make Image 1 just as bright and evenly illuminated as Image 2: high overall room exposure, neutral white daylight-like overhead lighting, light-gray walls and a clearly visible light-gray floor, no dim blue mood and no dark vignette. Match Image 2's brightness in the whole room, not only its light fixtures. There must be exactly ONE door: KEEP THE LEFT WALL DOOR, and REMOVE THE RIGHT WALL DOOR completely including its window, handle, access panel and frame; replace that right door area with continuous plain light-gray wall panels matching the adjacent right wall. Preserve Image 1's level front-facing camera, fixed wide perspective, composition, left upstage small stand and upright blank photo frame, restrained metal architecture, and generous empty center and foreground for live actors. Keep the photo frame empty, with no invented portrait. The back wall remains plain and empty with no giant screen. Use full 16:9 landscape framing, crisp photorealistic theater background. No people, robots, text, room numbers, logos, watermarks, extra doorways, extra doors, hallways or windows. Change only the lighting/exposure and the removal of the right door, preserving the other scene elements.
 ```
 
 辦公室回憶的素材提示詞仍在 `background-prompts.md`，本次只接入記憶室。

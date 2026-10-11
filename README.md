@@ -31,7 +31,7 @@
 
 | 次數 | Cue | 行為 |
 | --- | --- | --- |
-| 1 | 暗 → 亮 | 播放完整 `Start_animation.MP4`；自然播完後回到原本的 `IMG_0165.png`，先不顯示 AI。 |
+| 1 | 暗 → 亮 | 播放完整 `Start_animation.mp4`；自然播完後回到原本的 `IMG_0165.png`，先不顯示 AI。 |
 | 2 | AI 漸顯 | 900 ms 漸顯。初始 X＝50%、Y＝40%、大小＝37%。 |
 | 3 | 踢門音效 | 播放設定的音效；音效播完後等待下一個 cue。目前音效尚未提供，此 cue 保留但無聲。 |
 | 4 | 歡迎語音 | AI 放大到中央、房間漸暗，播放現有 23.7 秒語音。播完後自動縮小並恢復房間。 |
@@ -68,11 +68,11 @@ Y＝40% 指**整個投影畫面高度**；大小＝37% 是原本大小滑桿的�
 | --- | --- |
 | 原本亮房間 | `assets/backgrounds/IMG_0165.png`，原檔未修改。 |
 | 初始暗房間 | `assets/backgrounds/Start_dark.PNG`，原檔未修改。 |
-| 暗亮轉場影片 | `assets/videos/Start_animation.MP4`，完整播放且靜音，原檔未修改。 |
+| 暗亮轉場影片 | `assets/videos/Start_animation.mp4`，使用最新上傳的 4.27 秒版本，完整播放且靜音，原檔未修改。檔名大小寫須與設定一致。 |
 | 歡迎語音 | `assets/audio/ai-opening.mp3`，使用現有版本。 |
 | 踢門音效 | **待提供**。放到 `assets/audio/door-kick.mp3` 後，把設定的 `doorKick: null` 改成 `doorKick: "assets/audio/door-kick.mp3"`。 |
 | 卡片圖片 | 已有暫用 `assets/cards/memory-access-card.svg`。若提供正式 PNG/JPG，可放在 `assets/cards/`，並更新設定的 `card` 路徑。 |
-| 記憶室背景 | 已有 `assets/backgrounds/memory-room.png`，以原房間為參考生成。左後方相框留白。 |
+| 記憶室背景 | 已有 `assets/backgrounds/memory-room.png`，和原亮房間一樣明亮，只保留左側一扇門；左後方相框留白。 |
 | 記憶室歡迎語音 | **待提供**：Welcome to the Memory Room. 設定在 `memory.narration`。 |
 | 記憶室開燈音效 | **待提供**：短 click。設定在 `memory.lightClick`。 |
 | 相框道具 | Christopher 與 Liam 合照及背面題字由演員道具提供；背景內不虛構角色照片。 |
