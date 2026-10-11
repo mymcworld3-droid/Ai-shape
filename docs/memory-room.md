@@ -52,3 +52,19 @@ Use case: lighting-weather and precise-object-edit. Edit Image 1, the Memory Roo
 ```
 
 辦公室回憶的素材提示詞仍在 `background-prompts.md`，本次只接入記憶室。
+
+## 驗證紀錄
+
+2026-10-11：版本 `6d5984d` 使用最新上傳的 `Start_animation.mp4`
+（H.264／AAC、910×512、4.27 秒），實播至自然結束後回到原亮房間。
+51 項單元與控制測試通過；[Chrome 完整測試](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/38135684529)
+通過，包含 12 個靜態預覽、三種畫面比例、長按／雙擊、影音失敗重試、
+真實媒體結束事件及跨場後維持原倒數期限。
+
+另以公開預覽完整操作 12 個步驟，確認開始後所有按鈕隱藏，
+新影片與開場語音各播放一次，明亮背景只保留左門，AI 退場後可停留對話。
+語音與音效尚未提供的記憶室欄位仍留空，未冒充已完成配音。
+
+![步驟檢視中的單門亮房間](memory-room-preview.jpg)
+
+![開始後的實際投影，所有按鈕已隱藏](memory-room-live.jpg)
