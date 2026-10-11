@@ -501,7 +501,7 @@ function draw(){
  if(!frame.room||(!frame.preview&&frame.background!=="memory"&&roomHandoffProgress(now)<1))return;
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
- const ringR=waveBase+Math.min(w,h)*.075;
+ const ringR=frame.background==="memory"?waveBase+Math.min(w,h)*.075:waveBase-4*scale;
  const idle=config.idleShape,expansion=frame.scene;
  const visualScale=idle.size+(1-idle.size)*expansion;
  const visualX=w*idle.x+(cx-w*idle.x)*expansion;
@@ -513,19 +513,19 @@ function draw(){
  if(graphicOpacity>0){
   const coils=createCoils(waveBase,now*.00045);
   const bass=Math.pow(Math.min(1,a.low/255),2);
-  // Use the actual waveform envelope, including strokes and a glow margin.
-  // Faint particles follow this envelope instead of shrinking the main figure.
+  // Fit the actual strokes at their largest radius. Soft glow is clipped to
+  // the display interior, so a faint halo cannot shrink the main figure.
   const outlineRadius=Math.max(ringR+8*scale,ringR+(8+bass*18)*scale,
    ...coils.map(coil=>coil.radius),hexR*(1.52+energy*energy*.48)+bass*8*scale);
-  const radius=Math.max(ringR+8*scale+.5+energy*10*scale,
-   ringR+(8+bass*18+1.3+2*(5+bass*15))*scale,
-   ...coils.map(coil=>coil.radius+coil.line/2+coil.blur*2),
-   hexR+18*scale+(1.2+energy*136)*scale/2+2*(18+energy*24)*scale,
-   hexR*(1.52+energy*energy*.48)+bass*8*scale+(1.1+energy*3.2)*scale/2+2*(7+energy*12)*scale);
+  const radius=Math.max(ringR+8*scale+.5,
+   ringR+(8+bass*18+1.3)*scale,
+   ...coils.map(coil=>coil.radius+coil.line/2),
+   hexR+(bass*18+(1.2+energy*136)/2)*scale,
+   hexR*(1.52+energy*energy*.48)+bass*8*scale+(1.1+energy*3.2)*scale/2)+2*scale;
   let pose={x:visualX,y:visualY,scale:visualScale},clip=null;
   if(frame.background!=="memory"){
    const screen=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
-   pose=StageLayout.fitRadialGraphic(screen,radius,config.roomScreen.inset*screen.width/config.roomScreen.width,.96+.04*expansion);
+   pose=StageLayout.fitRadialGraphic(screen,radius,config.roomScreen.inset*screen.width/config.roomScreen.width,.98+.02*expansion);
    clip=pose.clip;
   }
   ctx.save();
