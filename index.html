@@ -1,677 +1,81 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Voice Assistant Visualizer</title>
-<style>
-*{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050505;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
-body{display:grid;grid-template-rows:auto minmax(0,1fr) auto}
-#controls{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:10px;padding:9px 12px;background:rgba(10,10,10,.96);border-bottom:1px solid rgba(255,255,255,.1);flex-wrap:wrap}
-#audioUpload{max-width:220px;color:#fff;font-size:12px}
-#audioUpload::file-selector-button{margin-right:7px;padding:6px 10px;border:0;border-radius:7px;background:#fff;color:#000;cursor:pointer;font-weight:600}
-#audioElement{width:240px;height:32px}
-#timerToggle{padding:8px 14px;border:1px solid rgba(255,255,255,.35);border-radius:8px;background:rgba(255,255,255,.09);color:#fff;font:600 12px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;cursor:pointer;white-space:nowrap;transition:background .2s,border-color .2s}
-#timerToggle:hover{background:rgba(255,255,255,.19)}
-#timerToggle[aria-pressed="true"]{background:rgba(255,255,255,.23);border-color:#fff}
-#timerToggle:focus-visible{outline:2px solid #fff;outline-offset:3px}
-#fullscreenToggle,#fullscreenTimerToggle,#fullscreenExit{padding:8px 12px;border:1px solid rgba(255,255,255,.35);border-radius:8px;background:rgba(15,15,18,.78);color:#fff;font:600 12px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;cursor:pointer}
-#fullscreenToggle:hover,#fullscreenTimerToggle:hover,#fullscreenExit:hover{background:rgba(65,65,70,.9)}
-#fullscreenToggle:focus-visible,#fullscreenTimerToggle:focus-visible,#fullscreenExit:focus-visible{outline:2px solid white;outline-offset:2px}
-#fullscreenActions{display:none;position:absolute;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:5;gap:8px;align-items:center}
-#visualizerWrap:fullscreen{width:100vw;height:100vh;min-height:100vh;background:#050505}
-#visualizerWrap:fullscreen #fullscreenActions{display:flex}
-#visualizerWrap:fullscreen #visualizer{width:100%;height:100%}
-#freqControls,#shapeControls,#timerControls{display:flex;align-items:center;gap:7px;font-size:11px;color:rgba(255,255,255,.75);white-space:nowrap}
-#freqControls label,#shapeControls label,#timerControls label{display:flex;align-items:center;gap:5px}
-#freqControls input[type=range],#shapeControls input[type=range],#timerControls input[type=range]{width:105px;accent-color:#fff}
-#freqMinValue,#freqMaxValue,#shapeXValue,#shapeYValue,#shapeSizeValue,#timerSizeValue{display:inline-block;min-width:48px;text-align:right;color:#fff;font-variant-numeric:tabular-nums}
-#shapeControls{padding-left:10px;border-left:1px solid rgba(255,255,255,.12)}
-#shapeControls input:disabled{opacity:.35;cursor:not-allowed}
-#shapeControls.disabled{opacity:.48}
-#visualizerWrap{position:relative;min-height:0;overflow:hidden;background:#050505}
-#visualizer{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:zoom-in}
-#visualizerWrap:fullscreen #visualizer{cursor:zoom-out}
-#status{position:relative;z-index:2;text-align:center;padding:7px 12px;background:rgba(10,10,10,.96);border-top:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.55);font-size:10px;letter-spacing:2px;pointer-events:none}
-@media(max-width:900px){#shapeControls{width:100%;justify-content:center;border-left:0;padding-left:0;flex-wrap:wrap}}
-@media(max-width:700px){body{grid-template-rows:auto minmax(0,1fr) auto}#controls{flex-direction:column;gap:6px;padding:7px 10px}#audioUpload,#audioElement{width:100%;max-width:none}#audioElement{height:30px}#freqControls,#shapeControls,#timerControls{width:100%;justify-content:center;flex-wrap:wrap}#freqControls input[type=range],#shapeControls input[type=range],#timerControls input[type=range]{width:120px}}
-</style>
+<meta name="theme-color" content="#000000">
+<title>Human Verification Test #67 - Stage Projection</title>
+<link rel="preload" href="assets/backgrounds/Start_dark.PNG" as="image">
+<link rel="preload" href="assets/backgrounds/IMG_0165.png" as="image">
+<link rel="preload" href="assets/backgrounds/memory-room.png" as="image">
+<link rel="preload" href="assets/backgrounds/office-memory.png" as="image">
+<link rel="stylesheet" href="stage.css">
 </head>
-<body>
-<div id="controls">
-<input type="file" id="audioUpload" accept=".mp3,.wav,.ogg,audio/*">
-<audio id="audioElement" controls></audio>
-<button id="timerToggle" type="button" aria-pressed="false">計時器 · 15:00</button>
-<button id="fullscreenToggle" type="button" aria-label="進入全螢幕">全螢幕</button>
-<div id="timerControls" aria-label="計時器大小設定">
- <label for="timerSize">計時器大小 <input id="timerSize" type="range" min="50" max="300" step="5" value="100"><span id="timerSizeValue">100%</span></label>
+<body data-started="false" data-view="page" data-preview-cue="dark">
+<main id="showShell">
+  <div id="projectionViewport">
+    <div id="visualizerWrap" tabindex="-1">
+      <canvas id="visualizer" aria-label="16:9 劇場投影；開始後按空白鍵或點一下畫面推進"></canvas>
+      <video id="roomRevealVideo" preload="auto" muted playsinline disablepictureinpicture aria-hidden="true" tabindex="-1"></video>
+      <audio id="openingAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="doorKickAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="memoryWelcomeAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="memoryLightAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="officeBangAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="selectionPromptAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="selectionOneAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="selectionTwoAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="selectionFinalAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+    </div>
+  </div>
+  <aside id="stepsPanel" aria-label="演出步驟檢視" hidden>
+    <header><h1>演出步驟<span>25</span></h1><p>點選預覽，不播放影音</p></header>
+    <ol id="stepList">
+      <li><button type="button" data-preview="bright" aria-pressed="true"><span class="step-number">01</span><span>暗 → 亮<small>影片播完，接回原本房間</small></span></button></li>
+      <li><button type="button" data-preview="ai" aria-pressed="false"><span class="step-number">02</span><span>AI 漸顯<small>電視正中央 · 填滿內框</small></span></button></li>
+      <li><button type="button" data-preview="door-kick" aria-pressed="false"><span class="step-number">03</span><span>踢門音效<small>音效待補</small></span></button></li>
+      <li><button type="button" data-preview="welcome" aria-pressed="false"><span class="step-number">04</span><span>歡迎語音<small>放大，播完自動縮小</small></span></button></li>
+      <li><button type="button" data-preview="clock" aria-pressed="false"><span class="step-number">05</span><span>顯示碼錶<small>語音播完才開始倒數</small></span></button></li>
+      <li><button type="button" data-preview="card" aria-pressed="false"><span class="step-number">06</span><span>顯示卡片<small>MEMORY ACCESS</small></span></button></li>
+      <li><button type="button" data-preview="card-hidden" aria-pressed="false"><span class="step-number">07</span><span>隱藏卡片<small>倒數繼續</small></span></button></li>
+      <li><button type="button" data-preview="blackout" aria-pressed="false"><span class="step-number">08</span><span>全暗<small>記憶室進場，等待台詞</small></span></button></li>
+      <li class="scene-divider">第一幕 · 第二場</li>
+      <li><button type="button" data-preview="memory-light" aria-pressed="false"><span class="step-number">09</span><span>記憶室亮起<small>Where’s the light?</small></span></button></li>
+      <li><button type="button" data-preview="memory-welcome" aria-pressed="false"><span class="step-number">10</span><span>記憶室 AI<small>語音播放時放大，播完縮小</small></span></button></li>
+      <li><button type="button" data-preview="memory-room" aria-pressed="false"><span class="step-number">11</span><span>演員對話<small>AI 退場，保留房間</small></span></button></li>
+      <li><button type="button" data-preview="memory-blackout" aria-pressed="false"><span class="step-number">12</span><span>記憶室全暗<small>Go ahead. → 獨白進場</small></span></button></li>
+      <li class="scene-divider">第二幕 · 第一場</li>
+      <li><button type="button" data-preview="past-intro" aria-pressed="false"><span class="step-number">13</span><span>Christopher 獨白<small>房間稍暗，演員走到中央</small></span></button></li>
+      <li><button type="button" data-preview="past-isolate" aria-pressed="false"><span class="step-number">14</span><span>只留中央追光<small>投影全暗 · There was this guy.</small></span></button></li>
+      <li class="scene-divider">第二幕 · 第二場</li>
+      <li><button type="button" data-preview="office-light" aria-pressed="false"><span class="step-number">15</span><span>辦公室回憶<small>Liam 進場，保留演員對話</small></span></button></li>
+      <li><button type="button" data-preview="office-bang" aria-pressed="false"><span class="step-number">16</span><span>BANG · Ben 進場<small>音效待補，背景停留</small></span></button></li>
+      <li class="scene-divider">第二幕 · 第三場</li>
+      <li><button type="button" data-preview="past-reflection" aria-pressed="false"><span class="step-number">17</span><span>回憶退場 · 自白<small>Liam 離場後，投影全暗</small></span></button></li>
+      <li><button type="button" data-preview="memory-return" aria-pressed="false"><span class="step-number">18</span><span>回到記憶室<small>自白結束，等待第三幕</small></span></button></li>
+      <li class="scene-divider">第三幕 · 討論與選擇</li>
+      <li><button type="button" data-preview="discussion" aria-pressed="false"><span class="step-number">19</span><span>演員討論<small>房間稍暗，保留對話時間</small></span></button></li>
+      <li><button type="button" data-preview="vote-prompt" aria-pressed="false"><span class="step-number">20</span><span>AI 要求選擇<small>Christopher 按下實體按鈕</small></span></button></li>
+      <li><button type="button" data-preview="vote-clock" aria-pressed="false"><span class="step-number">21</span><span>一分鐘倒數<small>語音待補，這一按開始計時</small></span></button></li>
+      <li><button type="button" data-preview="vote-one" aria-pressed="false"><span class="step-number">22</span><span>Ethan · 一票<small>Christopher 說 Ethan.</small></span></button></li>
+      <li><button type="button" data-preview="vote-two" aria-pressed="false"><span class="step-number">23</span><span>Ethan · 兩票<small>Megan 說 Ethan.</small></span></button></li>
+      <li><button type="button" data-preview="vote-final" aria-pressed="false"><span class="step-number">24</span><span>最後選擇<small>Rachel 沒有回答之後</small></span></button></li>
+      <li><button type="button" data-preview="vote-blackout" aria-pressed="false"><span class="step-number">25</span><span>第三幕全暗<small>最後提示結束，等待第四幕</small></span></button></li>
+    </ol>
+  </aside>
+</main>
+<nav id="reviewControls" aria-label="檢視模式">
+  <button type="button" id="pageViewButton" aria-pressed="true">全頁</button>
+  <button type="button" id="stepsViewButton" aria-pressed="false">步驟檢視</button>
+</nav>
+<div id="startDock">
+  <button type="button" id="startButton" disabled><span class="play-mark" aria-hidden="true"></span><span id="startLabel">載入中…</span></button>
+  <p id="startStatus" role="status" aria-live="polite"></p>
 </div>
-<div id="freqControls" aria-label="音頻顯示範圍">
- <span>頻率範圍</span>
- <label>低 <input id="freqMin" type="range" min="20" max="20000" step="10" value="20"><span id="freqMinValue">20 Hz</span></label>
- <label>高 <input id="freqMax" type="range" min="20" max="20000" step="10" value="20000"><span id="freqMaxValue">20 kHz</span></label>
-</div>
-<div id="shapeControls" aria-label="播放前初始圖形設定">
- <span>初始圖形</span>
- <label>X <input id="shapeX" type="range" min="0" max="100" step="1" value="50"><span id="shapeXValue">50%</span></label>
- <label>Y <input id="shapeY" type="range" min="0" max="100" step="1" value="50"><span id="shapeYValue">50%</span></label>
- <label>大小 <input id="shapeSize" type="range" min="30" max="220" step="1" value="100"><span id="shapeSizeValue">100%</span></label>
-</div>
-</div>
-<div id="visualizerWrap"><canvas id="visualizer" aria-label="點擊畫面切換全螢幕"></canvas>
- <div id="fullscreenActions" aria-label="全螢幕控制">
-  <button id="fullscreenTimerToggle" type="button" aria-pressed="false">計時器 · 15:00</button>
-  <button id="fullscreenExit" type="button" aria-label="退出全螢幕">退出全螢幕</button>
- </div>
-</div>
-<div id="status">SET INITIAL SHAPE / CHOOSE AUDIO</div>
-<script>
-"use strict";
-const audioUpload=document.getElementById("audioUpload");
-const audioElement=document.getElementById("audioElement");
-const canvas=document.getElementById("visualizer");
-const ctx=canvas.getContext("2d");
-const status=document.getElementById("status");
-const timerToggle=document.getElementById("timerToggle");
-const fullscreenTimerToggle=document.getElementById("fullscreenTimerToggle");
-const fullscreenToggle=document.getElementById("fullscreenToggle");
-const fullscreenExit=document.getElementById("fullscreenExit");
-const visualizerWrap=document.getElementById("visualizerWrap");
-const timerSizeInput=document.getElementById("timerSize");
-const timerSizeValue=document.getElementById("timerSizeValue");
-const freqMinInput=document.getElementById("freqMin");
-const freqMaxInput=document.getElementById("freqMax");
-const freqMinValue=document.getElementById("freqMinValue");
-const freqMaxValue=document.getElementById("freqMaxValue");
-const shapeControls=document.getElementById("shapeControls");
-const shapeXInput=document.getElementById("shapeX");
-const shapeYInput=document.getElementById("shapeY");
-const shapeSizeInput=document.getElementById("shapeSize");
-const shapeXValue=document.getElementById("shapeXValue");
-const shapeYValue=document.getElementById("shapeYValue");
-const shapeSizeValue=document.getElementById("shapeSizeValue");
-const backgroundImage=new Image();
-let backgroundReady=false;
-backgroundImage.src="IMG_0165.png";
-backgroundImage.addEventListener("load",()=>{backgroundReady=true});
-backgroundImage.addEventListener("error",()=>{backgroundReady=false});
-let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
-let dpr=1,w=0,h=0,cx=0,cy=0,scale=1;
-let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0,lastTime=0;
-let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
-const ROTATE_INTERVAL=500;
-const ROTATE_DURATION=1400;
-const ROTATE_STEP=Math.PI/3;
-const SCENE_DURATION=1600;
-const TIMER_DURATION_MS=15*60*1000;
-const TIMER_MORPH_DURATION=1200;
-const TIMER_SETTLE_DURATION=1000;
-const particles=[];
-const PARTICLES=90;
-let freqMin=20,freqMax=20000;
-let idleXPercent=50,idleYPercent=50,idleSizePercent=100,timerSizePercent=100;
-let sceneProgress=0,sceneTarget=0,sceneFrom=0,sceneStart=0,sceneTransitioning=false;
-let timerActive=false,timerMorph=0,timerMorphFrom=0,timerMorphTo=0,timerMorphStart=0;
-let timerSettle=0,timerSettleFrom=0,timerSettleTo=0,timerSettleStart=0;
-let timerRemainingMs=TIMER_DURATION_MS,timerDeadline=null,timerState="idle",timerLastSecond=-1;
-
-function formatFreq(v){return v>=1000?(v/1000).toFixed(v%1000===0?0:1)+" kHz":Math.round(v)+" Hz"}
-function updateFreqLabels(){
- freqMinValue.textContent=formatFreq(freqMin);
- freqMaxValue.textContent=formatFreq(freqMax);
-}
-function clampFreqRange(){
- freqMin=Math.max(20,Math.min(20000,Number(freqMinInput.value)));
- freqMax=Math.max(20,Math.min(20000,Number(freqMaxInput.value)));
- if(freqMin>=freqMax){
-  if(document.activeElement===freqMinInput) freqMax=Math.min(20000,freqMin+10);
-  else freqMin=Math.max(20,freqMax-10);
-  freqMinInput.value=freqMin;
-  freqMaxInput.value=freqMax;
- }
- updateFreqLabels();
-}
-freqMinInput.addEventListener("input",clampFreqRange);
-freqMaxInput.addEventListener("input",clampFreqRange);
-updateFreqLabels();
-
-// Keep the last manually selected shape position and size on this browser.
-const SHAPE_STORAGE_KEY="ai-shape:initial-shape:v1";
-function restoreShapeSettings(){
- let saved;
- try{
-  saved=JSON.parse(window.localStorage.getItem(SHAPE_STORAGE_KEY));
- }catch(_){return;} // Private mode / disabled storage / invalid saved data.
- if(!saved||typeof saved!=="object"||Array.isArray(saved))return;
- for(const [input,key] of [[shapeXInput,"x"],[shapeYInput,"y"],[shapeSizeInput,"size"]]){
-  const value=saved[key];
-  if(typeof value!=="number"||!Number.isFinite(value))continue;
-  const min=Number(input.min),max=Number(input.max);
-  // Reject out-of-range or obsolete values rather than silently changing settings.
-  if(value>=min&&value<=max)input.value=String(value);
- }
-}
-function updateShapeSettings(){
- idleXPercent=Number(shapeXInput.value);
- idleYPercent=Number(shapeYInput.value);
- idleSizePercent=Number(shapeSizeInput.value);
- shapeXValue.textContent=Math.round(idleXPercent)+"%";
- shapeYValue.textContent=Math.round(idleYPercent)+"%";
- shapeSizeValue.textContent=Math.round(idleSizePercent)+"%";
- try{
-  window.localStorage.setItem(SHAPE_STORAGE_KEY,JSON.stringify({
-   x:idleXPercent,y:idleYPercent,size:idleSizePercent
-  }));
- }catch(_){} // Rendering must continue if the browser blocks local storage.
-}
-function setShapeControlsEnabled(enabled){
- shapeXInput.disabled=!enabled;
- shapeYInput.disabled=!enabled;
- shapeSizeInput.disabled=!enabled;
- shapeControls.classList.toggle("disabled",!enabled);
-}
-restoreShapeSettings();
-shapeXInput.addEventListener("input",updateShapeSettings);
-shapeYInput.addEventListener("input",updateShapeSettings);
-shapeSizeInput.addEventListener("input",updateShapeSettings);
-updateShapeSettings();
-
-// Independent size, editable before and during the countdown.
-const TIMER_SIZE_STORAGE_KEY="ai-shape:timer-size:v1";
-function restoreTimerSize(){
- try{
-  const value=JSON.parse(window.localStorage.getItem(TIMER_SIZE_STORAGE_KEY));
-  if(typeof value==="number"&&Number.isFinite(value)&&
-     value>=Number(timerSizeInput.min)&&value<=Number(timerSizeInput.max)){
-   timerSizeInput.value=String(value);
-  }
- }catch(_){} // Use default if storage is unavailable or invalid.
-}
-function updateTimerSize(){
- timerSizePercent=Number(timerSizeInput.value);
- timerSizeValue.textContent=Math.round(timerSizePercent)+"%";
- try{
-  window.localStorage.setItem(TIMER_SIZE_STORAGE_KEY,JSON.stringify(timerSizePercent));
- }catch(_){}
-}
-restoreTimerSize();
-timerSizeInput.addEventListener("input",updateTimerSize);
-updateTimerSize();
-
-function easeInOutCubic(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
-function setSceneTarget(target){
- target=Math.max(0,Math.min(1,target));
- if(target===sceneTarget&&!sceneTransitioning)return;
- sceneFrom=sceneProgress;
- sceneTarget=target;
- sceneStart=performance.now();
- sceneTransitioning=true;
- setShapeControlsEnabled(false);
-}
-function updateScene(now){
- if(!sceneTransitioning)return;
- const p=Math.max(0,Math.min(1,(now-sceneStart)/SCENE_DURATION));
- const eased=easeInOutCubic(p);
- sceneProgress=sceneFrom+(sceneTarget-sceneFrom)*eased;
- if(p>=1){
-  sceneProgress=sceneTarget;
-  sceneTransitioning=false;
-  if(sceneTarget===0&&!timerActive)setShapeControlsEnabled(true);
- }
-}
-
-// A timer can be armed at any time; only the media "ended" event starts it.
-function resetTimer(){
- timerRemainingMs=TIMER_DURATION_MS;
- timerDeadline=null;
- timerState=timerActive?"waiting":"idle";
- timerLastSecond=-1;
-}
-function startTimerAfterAudio(){
- if(!timerActive||!audioElement.ended||!audioElement.src)return;
- timerDeadline=performance.now()+TIMER_DURATION_MS;
- timerState="running";
- timerRemainingMs=TIMER_DURATION_MS;
- timerLastSecond=-1;
- status.textContent="倒數中 · 15:00";
-}
-function updateTimer(now){
- if(timerMorph!==timerMorphTo){
-  const p=Math.min(1,Math.max(0,(now-timerMorphStart)/TIMER_MORPH_DURATION));
-  timerMorph=timerMorphFrom+(timerMorphTo-timerMorphFrom)*easeInOutCubic(p);
- }
- // Transform the original graphic into the clock first. Do not return or
- // shrink until the audio has actually ended and the morph is complete.
- if(timerActive&&audioElement.ended&&audioElement.src&&timerMorph===1&&timerSettleTo===0){
-  timerSettleFrom=timerSettle;
-  timerSettleTo=1;
-  timerSettleStart=now;
-  setSceneTarget(0);
- }
- if(timerSettle!==timerSettleTo){
-  const p=Math.min(1,Math.max(0,(now-timerSettleStart)/TIMER_SETTLE_DURATION));
-  timerSettle=timerSettleFrom+(timerSettleTo-timerSettleFrom)*easeInOutCubic(p);
- }
- if(timerState!=="running")return;
- timerRemainingMs=Math.max(0,timerDeadline-now);
- if(timerRemainingMs===0){
-  timerDeadline=null;
-  timerState="done";
-  status.textContent="計時結束 · 00:00";
-  return;
- }
- const seconds=Math.ceil(timerRemainingMs/1000);
- if(seconds!==timerLastSecond){
-  timerLastSecond=seconds;
-  status.textContent="倒數中 · "+formatTimer(timerRemainingMs);
- }
-}
-function formatTimer(ms){
- const seconds=Math.ceil(Math.max(0,ms)/1000);
- return String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");
-}
-function toggleTimerMode(){
- const now=performance.now();
- updateTimer(now);
- timerActive=!timerActive;
- timerMorphFrom=timerMorph;
- timerMorphTo=timerActive?1:0;
- timerMorphStart=now;
- if(!timerActive){
-  timerSettleFrom=timerSettle;
-  timerSettleTo=0;
-  timerSettleStart=now;
- }
- resetTimer();
- for(const button of [timerToggle,fullscreenTimerToggle]){
-  button.setAttribute("aria-pressed",String(timerActive));
-  button.textContent=timerActive?"還原圖形":"計時器 · 15:00";
- }
- if(timerActive){
-  // Keep the current graphic's size and position until the track finishes.
-  setShapeControlsEnabled(false);
-  if(audioElement.ended&&audioElement.src)startTimerAfterAudio();
-  else status.textContent="計時器待命 · 等待音訊播放完畢";
- }else{
-  setSceneTarget(!audioElement.paused&&!audioElement.ended?1:0);
-  if(audioElement.paused&&!sceneTransitioning)setShapeControlsEnabled(true);
-  status.textContent=audioElement.ended?"AUDIO COMPLETE":audioElement.paused?"READY - SET INITIAL SHAPE / PRESS PLAY":"LISTENING";
- }
-}
-timerToggle.addEventListener("click",toggleTimerMode);
-fullscreenTimerToggle.addEventListener("click",toggleTimerMode);
-
-// Fullscreen requires a real click. Only clicks on the visual canvas/background
-// toggle it, so timer/exit buttons stay clickable in fullscreen.
-async function setFullscreen(enter){
- try{
-  if(enter){
-   if(document.fullscreenElement===visualizerWrap)return;
-   if(!visualizerWrap.requestFullscreen)throw new Error("unsupported");
-   await visualizerWrap.requestFullscreen();
-  }else if(document.fullscreenElement&&document.exitFullscreen){
-   await document.exitFullscreen();
-  }
- }catch(_){
-  status.textContent="此瀏覽器無法切換全螢幕";
- }
-}
-fullscreenToggle.addEventListener("click",()=>setFullscreen(document.fullscreenElement!==visualizerWrap));
-fullscreenExit.addEventListener("click",()=>setFullscreen(false));
-visualizerWrap.addEventListener("click",event=>{
- if(event.target!==visualizerWrap&&event.target!==canvas)return;
- setFullscreen(document.fullscreenElement!==visualizerWrap);
-});
-document.addEventListener("fullscreenchange",()=>{
- const active=document.fullscreenElement===visualizerWrap;
- fullscreenToggle.textContent=active?"退出全螢幕":"全螢幕";
- fullscreenToggle.setAttribute("aria-label",active?"退出全螢幕":"進入全螢幕");
- resizeCanvas();
-});
-// Keep the toolbar button usable after leaving fullscreen with Escape.
-function drawBackground(){
- ctx.clearRect(0,0,w,h);
- ctx.fillStyle="#050505";
- ctx.fillRect(0,0,w,h);
- if(backgroundReady&&backgroundImage.naturalWidth&&backgroundImage.naturalHeight){
-  const imageScale=Math.min(w/backgroundImage.naturalWidth,h/backgroundImage.naturalHeight);
-  const drawW=backgroundImage.naturalWidth*imageScale;
-  const drawH=backgroundImage.naturalHeight*imageScale;
-  const drawX=(w-drawW)/2;
-  const drawY=(h-drawH)/2;
-  ctx.drawImage(backgroundImage,drawX,drawY,drawW,drawH);
- }
- if(sceneProgress>0){
-  ctx.fillStyle=`rgba(0,0,0,${Math.min(1,sceneProgress)})`;
-  ctx.fillRect(0,0,w,h);
- }
-}
-
-function resizeCanvas(){
- dpr=Math.min(window.devicePixelRatio||1,2);
- w=canvas.clientWidth;h=canvas.clientHeight;
- canvas.width=Math.max(1,Math.floor(w*dpr));canvas.height=Math.max(1,Math.floor(h*dpr));
- ctx.setTransform(dpr,0,0,dpr,0,0);
- cx=w/2;cy=h/2;
- scale=Math.min(w,h)/760;
- scale=Math.max(.48,Math.min(scale,1));
- initParticles();
-}
-window.addEventListener("resize",resizeCanvas);
-function initParticles(){
- particles.length=0;
- const maxR=Math.min(w,h)*.47;
- for(let i=0;i<PARTICLES;i++) particles.push({a:Math.random()*Math.PI*2,r:maxR*(.55+Math.random()*.44),s:.00012+Math.random()*.00065,size:.45+Math.random()*1.5,alpha:.035+Math.random()*.19});
-}
-resizeCanvas();
-
-function freqToBin(freq){
- if(!analyser||!audioCtx)return 0;
- const nyquist=audioCtx.sampleRate/2;
- return Math.max(0,Math.min(analyser.frequencyBinCount-1,Math.round(freq/nyquist*analyser.frequencyBinCount)));
-}
-function selectedBins(){
- const lo=freqToBin(freqMin),hi=Math.max(lo+1,freqToBin(freqMax));
- return{lo,hi:Math.min(analyser?analyser.frequencyBinCount-1:hi,hi)};
-}
-
-let objectURL=null;
-audioUpload.addEventListener("change",async function(){
- const file=this.files[0];if(!file)return;
- audioElement.pause();
- resetTimer();
- setSceneTarget(0);
- if(objectURL)URL.revokeObjectURL(objectURL);
- objectURL=URL.createObjectURL(file);audioElement.src=objectURL;
- if(!audioCtx){
-  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  analyser=audioCtx.createAnalyser();
-  analyser.fftSize=1024;
-  analyser.minDecibels=-90;
-  analyser.maxDecibels=-10;
-  analyser.smoothingTimeConstant=.22;
-  source=audioCtx.createMediaElementSource(audioElement);source.connect(analyser);analyser.connect(audioCtx.destination);
-  dataArray=new Uint8Array(analyser.frequencyBinCount);smooth=new Float32Array(analyser.frequencyBinCount);
- }
- smooth.fill(0);
- energy=bassEnergy=midEnergy=highEnergy=pulse=0;
- status.textContent=timerActive?"計時器待命 · 等待音訊播放完畢":"READY - SET INITIAL SHAPE / PRESS PLAY";
-});
-audioElement.addEventListener("play",async()=>{
- // Replaying cancels the previous countdown and expands the clock while music plays.
- if(timerActive){
-  resetTimer();
-  timerSettleFrom=timerSettle;
-  timerSettleTo=0;
-  timerSettleStart=performance.now();
- }
- if(audioCtx&&audioCtx.state==="suspended")await audioCtx.resume();
- setSceneTarget(1);
- if(timerActive)setShapeControlsEnabled(false);
- status.textContent=timerActive?"計時器待命 · 等待音訊播放完畢":"LISTENING";
-});
-audioElement.addEventListener("pause",()=>{
- if(!audioElement.ended)status.textContent=timerActive?"計時器待命 · 等待音訊播放完畢":"PAUSED";
-});
-audioElement.addEventListener("ended",()=>{
- if(timerActive)startTimerAfterAudio();
- else{
-  setSceneTarget(0);
-  status.textContent="AUDIO COMPLETE";
- }
-});
-
-function analyze(){
- if(!analyser||!dataArray)return{avg:0,low:0,mid:0,high:0};
- if(audioElement.paused||audioElement.ended){
-  for(let i=0;i<smooth.length;i++)smooth[i]*=.86;
-  return{avg:0,low:0,mid:0,high:0};
- }
- analyser.getByteFrequencyData(dataArray);
- let sum=0,low=0,mid=0,high=0,n=dataArray.length;
- const range=selectedBins(),lo=range.lo,hi=range.hi;
- const span=Math.max(1,hi-lo);
- for(let i=0;i<n;i++){
-  const raw=dataArray[i];
-  const k=raw>smooth[i] ? .42 : .12;
-  smooth[i]+=(raw-smooth[i])*k;
-  if(i<lo||i>hi)continue;
-  const v=smooth[i];
-  sum+=v;
-  const p=(i-lo)/span;
-  if(p<.30)low+=v;
-  else if(p<.65)mid+=v;
-  else high+=v;
- }
- const count=Math.max(1,hi-lo+1);
- return{avg:sum/count,low:low/Math.max(1,span*.30),mid:mid/Math.max(1,span*.35),high:high/Math.max(1,span*.35)};
-}
-
-function radialPoint(r,a){return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}}
-function drawSymmetricRing(r,thickness,alpha,glow){
- ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
- ctx.strokeStyle=`rgba(255,255,255,${alpha})`;ctx.lineWidth=thickness;
- ctx.shadowBlur=glow;ctx.shadowColor=`rgba(255,255,255,${Math.min(.9,alpha+.16)})`;ctx.stroke();ctx.restore();
-}
-
-// Audio coil: every point is mirrored from the left/right partner. Amplitude is proportional to volume^2 * 10.
-function drawCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd,shape){
- const points=300,arr=[];
- const range=selectedBins(),lo=range.lo,hi=range.hi;
- for(let i=0;i<points;i++){
-  const t=i/points;
-  const u=t<.5?t*2:(1-t)*2;
-  const idx=Math.min(hi,Math.max(lo,Math.floor(lo+(hi-lo)*(bandStart+(bandEnd-bandStart)*u))));
-  const idx2=Math.min(hi,Math.max(lo,Math.floor(lo+(hi-lo)*(bandStart+(bandEnd-bandStart)*Math.min(1,u+.018)))));
-  const v=Math.max(0,Math.min(1,(smooth[idx]||0)/255));
-  const v2=Math.max(0,Math.min(1,(smooth[idx2]||0)/255));
-  const volumeSquared=v*v;
-  const volumeSquared2=v2*v2;
-  const harmonic=volumeSquared*.72+volumeSquared2*.28;
-  const detail=.88+.12*Math.sin(u*Math.PI*22+phase);
-  const ripple=harmonic*amp*scale*10*detail;
-  const fine=(highEnergy/255)**2*3.2*scale*Math.sin(u*Math.PI*54+phase*2.1);
-  const bassBend=(bassEnergy/255)**2*amp*.16*scale*Math.sin(u*Math.PI*6+phase*.55);
-  const a=t*Math.PI*2-Math.PI/2;
-  arr.push(radialPoint(base+ripple+fine+bassBend,a));
- }
- ctx.save();ctx.beginPath();ctx.moveTo(arr[0].x,arr[0].y);
- for(let i=0;i<points;i++){const p=arr[i],q=arr[(i+1)%points];ctx.quadraticCurveTo(p.x,p.y,(p.x+q.x)/2,(p.y+q.y)/2)}
- ctx.closePath();ctx.strokeStyle=`rgba(255,255,255,${alpha})`;ctx.lineWidth=line;ctx.shadowBlur=blur;ctx.shadowColor=`rgba(255,255,255,${Math.min(1,alpha+.22)})`;ctx.stroke();ctx.restore();
-}
-function drawCoilGlow(base,phase){
- drawCoil(base,52,.045,8,28,phase,.00,.72,"halo");
- drawCoil(base+2*scale,45,.075,5,20,phase*1.08+.8,.04,.78,"outer");
- drawCoil(base-1*scale,39,.18,3,13,phase*1.22+1.5,.08,.84,"mid");
- drawCoil(base-4*scale,34,.72,1.7,7,phase*1.45+2.7,.02,.90,"core");
-}
-
-function drawBassArcs(radius,audio,phase){
- const bass=Math.pow(Math.min(1,audio.low/255),2);
- ctx.save();ctx.lineCap="round";
- for(let j=0;j<3;j++){
-  ctx.beginPath();
-  const arcRadius=radius+(j-1)*5*scale+bass*18*scale;
-  const start=phase*.55+j*Math.PI*2/3;
-  const span=.55+bass*1.05;
-  ctx.arc(cx,cy,arcRadius,start,start+span);
-  ctx.strokeStyle=`rgba(255,255,255,${.08+bass*.16-j*.018})`;
-  ctx.lineWidth=(1.2+j*.7)*scale;ctx.shadowBlur=(5+bass*15)*scale;ctx.shadowColor="rgba(255,255,255,.55)";ctx.stroke();
- }
- ctx.restore();
-}
-
-function updateHexRotation(now){
- if(!rotationMoving&&now-rotationMoveStart>=ROTATE_INTERVAL){rotationMoving=true;rotationStart=rotation;rotationTarget=rotation+ROTATE_STEP;rotationMoveStart=now}
- if(rotationMoving){
-  const p=Math.max(0,Math.min(1,(now-rotationMoveStart)/ROTATE_DURATION));
-  const eased=1-Math.pow(1-p,5);
-  rotation=rotationStart+(rotationTarget-rotationStart)*eased;
-  if(p>=1){rotation=rotationTarget;rotationMoving=false;rotationMoveStart=now}
- }
-}
-
-function drawHex(radius,rot,audio){
- ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
- const def=[];
- const range=selectedBins(),lo=range.lo,hi=range.hi;
- for(let i=0;i<6;i++){
-  const band=Math.floor(lo+(i/6)*Math.max(1,(hi-lo)*.30));
-  const v=Math.max(0,Math.min(1,(smooth[Math.min(hi,band)]||0)/255));
-  def[i]=(v*v)*12*scale*(.7+(audio.low/255)**2*.8);
- }
- ctx.beginPath();
- for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=radius+def[i],x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
- ctx.closePath();
- const bright=Math.min(1,.24+energy*.76);
- ctx.shadowBlur=(18+energy*24)*scale;ctx.shadowColor=`rgba(255,255,255,${bright})`;ctx.fillStyle=`rgba(255,255,255,${bright})`;ctx.fill();ctx.shadowBlur=0;
- ctx.beginPath();
- for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=radius*.76+def[i]*.45,x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
- ctx.closePath();ctx.fillStyle="rgba(5,5,5,.9)";ctx.fill();
- const hexVolume=Math.max(0,Math.min(1,energy));
- const edgeWidth=(1.2+hexVolume*136)*scale;
- ctx.strokeStyle=`rgba(255,255,255,${.2+hexVolume*.55})`;ctx.lineWidth=edgeWidth;ctx.stroke();
- const core=(3+energy*7+audio.high/255*2)*scale;
- ctx.beginPath();ctx.arc(0,0,core,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${.35+energy*.65})`;ctx.shadowBlur=10*scale;ctx.shadowColor="rgba(255,255,255,.8)";ctx.fill();
- ctx.restore();
-}
-
-function drawOuterHex(radius,rot,audio){
- const outerScale=1.52+Math.pow(Math.min(1,energy),2)*.48;
- const outerRadius=radius*outerScale;
- const outerDef=(audio.low/255)**2*8*scale;
- ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.beginPath();
- for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=outerRadius+outerDef,x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
- ctx.closePath();ctx.strokeStyle=`rgba(255,255,255,${.16+energy*.30})`;ctx.lineWidth=(1.1+energy*3.2)*scale;ctx.shadowBlur=(7+energy*12)*scale;ctx.shadowColor="rgba(255,255,255,.65)";ctx.stroke();ctx.restore();
-}
-
-function drawParticles(audio){
- for(const p of particles){
-  if(!audioElement.paused&&!audioElement.ended)p.a+=p.s*16;
-  const r=p.r+energy*42*scale+audio.high/255*16*scale,x=cx+Math.cos(p.a)*r,y=cy+Math.sin(p.a)*r;
-  ctx.beginPath();ctx.arc(x,y,p.size+(audio.high/255)*.6,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${Math.min(.5,p.alpha*(.3+energy*2.1))})`;ctx.fill();
- }
-}
-// Draw the original visualizer as a circular timer during the morph.
-// Seven-segment electronic clock: no circular frame or caption below the digits.
-const DIGITAL_SEGMENTS=[
- // a, b, c, d, e, f, g
- [[8,2],[40,2],[34,9],[14,9]],
- [[42,5],[46,9],[46,36],[41,40],[38,35],[38,14]],
- [[41,44],[46,48],[46,75],[42,79],[38,70],[38,49]],
- [[14,75],[34,75],[40,82],[8,82]],
- [[6,44],[10,49],[10,70],[6,79],[2,75],[2,48]],
- [[6,5],[10,14],[10,35],[6,40],[2,36],[2,9]],
- [[12,38],[36,38],[40,42],[36,46],[12,46],[8,42]]
-];
-const DIGITAL_DIGITS={
- "0":[0,1,2,3,4,5],"1":[1,2],"2":[0,1,6,4,3],
- "3":[0,1,6,2,3],"4":[5,6,1,2],"5":[0,5,6,2,3],
- "6":[0,5,6,4,2,3],"7":[0,1,2],"8":[0,1,2,3,4,5,6],
- "9":[0,1,2,3,5,6]
-};
-function drawDigitalDigit(character,x){
- const enabled=DIGITAL_DIGITS[character]||[];
- ctx.save();
- ctx.translate(x,0);
- // An unlit grey "8" remains underneath each illuminated numeral.
- for(let pass=0;pass<2;pass++){
-  for(let i=0;i<DIGITAL_SEGMENTS.length;i++){
-   if(pass===1&&!enabled.includes(i))continue;
-   const vertices=DIGITAL_SEGMENTS[i];
-   ctx.beginPath();
-   ctx.moveTo(vertices[0][0],vertices[0][1]);
-   for(let j=1;j<vertices.length;j++)ctx.lineTo(vertices[j][0],vertices[j][1]);
-   ctx.closePath();
-   ctx.fillStyle=pass===0?"rgba(125,130,136,.28)":"rgba(241,250,255,.97)";
-   ctx.shadowBlur=pass===0?0:6;
-   ctx.shadowColor="rgba(190,231,255,.58)";
-   ctx.fill();
-  }
- }
- ctx.restore();
-}
-function drawTimerFace(radius){
- const displayMs=timerState==="done"?0:timerState==="running"?timerRemainingMs:TIMER_DURATION_MS;
- const time=formatTimer(displayMs);
- // Clock coordinates are 236 wide by 84 high, with the colon between digits.
- const unit=radius*.012;
- ctx.save();
- ctx.translate(cx,cy);
- ctx.scale(unit,unit);
- ctx.translate(-118,-42);
- drawDigitalDigit(time[0],0);
- drawDigitalDigit(time[1],56);
- drawDigitalDigit(time[3],132);
- drawDigitalDigit(time[4],188);
- for(const y of [28,56]){
-  ctx.beginPath();ctx.arc(118,y,3.7,0,Math.PI*2);
-  ctx.fillStyle="rgba(125,130,136,.28)";
-  ctx.shadowBlur=0;
-  ctx.fill();
-  ctx.beginPath();ctx.arc(118,y,3.7,0,Math.PI*2);
-  ctx.fillStyle="rgba(241,250,255,.97)";
-  ctx.shadowBlur=6;
-  ctx.shadowColor="rgba(190,231,255,.58)";
-  ctx.fill();
- }
- ctx.restore();
-}
-function draw(){
- requestAnimationFrame(draw);
- const now=performance.now();lastTime=now;
- updateScene(now);
- updateTimer(now);
- const a=analyze(),target=Math.min(1,a.avg/68);
- energy+=(target-energy)*.15;bassEnergy+=(a.low-bassEnergy)*.20;midEnergy+=(a.mid-midEnergy)*.16;highEnergy+=(a.high-highEnergy)*.25;
- const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
- updateHexRotation(now);
- drawBackground();
- const hexR=Math.min(w,h)*.105+energy*10*scale;
- const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
- const ringR=waveBase+Math.min(w,h)*.075;
- const idleX=w*(idleXPercent/100),idleY=h*(idleYPercent/100),idleScale=idleSizePercent/100;
- const originalX=idleX+(cx-idleX)*sceneProgress;
- const originalY=idleY+(cy-idleY)*sceneProgress;
- const originalScale=idleScale+(1-idleScale)*sceneProgress;
- // Morph to a timer whose size does not depend on the hexagon size.
- const timerRadius=Math.min(w,h)*.23;
- const maxTimerScale=Math.max(.01,Math.min((w-12)/(timerRadius*2.9),(h-12)/(timerRadius*1.05)));
- const timerTargetScale=Math.min(.70*(timerSizePercent/100),maxTimerScale);
- const timerScale=originalScale+(timerTargetScale-originalScale)*timerSettle;
- const visualX=originalX+(idleX-originalX)*timerSettle;
- const visualY=originalY+(idleY-originalY)*timerSettle;
- const safePadX=timerRadius*timerScale*1.45+6;
- const safePadY=timerRadius*timerScale*.525+6;
- const clampedX=Math.max(safePadX,Math.min(w-safePadX,visualX));
- const clampedY=Math.max(safePadY,Math.min(h-safePadY,visualY));
- const timerX=visualX+(clampedX-visualX)*timerSettle;
- const timerY=visualY+(clampedY-visualY)*timerSettle;
- ctx.save();
- ctx.translate(timerX,timerY);
- ctx.scale(timerScale,timerScale);
- ctx.translate(-cx,-cy);
- // Sequential transition: graphic fades completely before LEDs turn on.
- const graphicOpacity=1-easeInOutCubic(Math.min(1,timerMorph/.55));
- const clockOpacity=easeInOutCubic(Math.max(0,Math.min(1,(timerMorph-.55)/.45)));
- ctx.globalAlpha=graphicOpacity;
- if(graphicOpacity>0){
- drawParticles(a);
- drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
- drawSymmetricRing(ringR+8*scale,1,.025+energy*.065,energy*5*scale);
- drawBassArcs(ringR+3*scale,a,now*.00065);
- drawCoilGlow(waveBase,now*.00045);
- drawOuterHex(hexR,rotation,a);
- drawHex(hexR,rotation,a);
- }
- if(clockOpacity>0){
-  ctx.globalAlpha=clockOpacity;
-  drawTimerFace(timerRadius);
- }
- ctx.restore();
-}
-requestAnimationFrame(draw);
-</script>
+<script src="opening-config.js"></script>
+<script src="stage-layout.js"></script>
+<script src="opening-controller.js"></script>
+<script src="visualizer.js"></script>
+<script src="stage-review.js"></script>
 </body>
 </html>

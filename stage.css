@@ -1,0 +1,43 @@
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+button{font:inherit;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button:focus-visible{outline:2px solid #dbeafe;outline-offset:4px}
+#showShell{position:fixed;inset:0;display:grid;grid-template-columns:minmax(0,1fr);background:#000}
+#showShell:fullscreen{width:100vw;height:100vh;background:#000}
+#projectionViewport{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;overflow:hidden}
+#visualizerWrap{position:relative;flex:none;aspect-ratio:16/9;overflow:hidden;background:#000;outline:none}
+#visualizer{position:absolute;inset:0;width:100%;height:100%;display:block}
+audio,video{display:none}
+#reviewControls{position:fixed;z-index:3;top:max(22px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:5px;border:1px solid #ffffff24;border-radius:999px;background:#11151bcc;backdrop-filter:blur(16px)}
+#reviewControls button{border:0;border-radius:999px;padding:10px 19px;background:transparent;color:#aeb8c4;font-size:14px;white-space:nowrap;cursor:pointer}
+#reviewControls button[aria-pressed=true]{background:#f1f4f8;color:#11161d}
+#startDock{position:fixed;z-index:4;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px}
+#startButton{display:flex;align-items:center;justify-content:center;gap:12px;min-width:176px;height:54px;padding:0 28px;border:1px solid #ffffff66;border-radius:999px;background:#f1f5f9e8;color:#111827;box-shadow:0 8px 32px #0008;backdrop-filter:blur(12px);font-size:17px;font-weight:600;cursor:pointer}
+#startButton:hover:not(:disabled){background:#fff}
+#startButton:disabled{opacity:.55;cursor:wait}
+.play-mark{width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid currentColor}
+#startStatus{margin:0;max-width:300px;font-size:12px;color:#f8fafc;text-align:center;text-shadow:0 1px 6px #000}
+#startStatus:empty{display:none}
+body[data-view=steps]:not([data-started=true]) #showShell{grid-template-columns:minmax(0,1fr) 320px;gap:28px;padding:88px 32px 110px}
+#stepsPanel{min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);border-left:1px solid #ffffff18;padding-left:22px}
+#stepsPanel h1{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 10px;font-size:21px;font-weight:500;letter-spacing:.04em}
+#stepsPanel h1 span{color:#616d7b;font-size:13px;letter-spacing:.15em;font-variant-numeric:tabular-nums}
+#stepsPanel header p{margin:0 0 20px;color:#7e8a98;font-size:12px}
+#stepList{list-style:none;overflow:auto;margin:0;padding:0 4px 0 0;scrollbar-width:thin;scrollbar-color:#4b5563 transparent}
+#stepList li+li{margin-top:5px}
+#stepList .scene-divider{margin-top:20px;padding:12px 12px 8px;border-top:1px solid #ffffff18;color:#8797a9;font-size:12px;letter-spacing:.06em}
+#stepList button{display:flex;align-items:center;gap:15px;width:100%;padding:13px 12px;text-align:left;border:1px solid transparent;border-radius:9px;background:transparent;color:#a2afbe;cursor:pointer;font-size:15px}
+#stepList button:hover{background:#ffffff08}
+#stepList button[aria-pressed=true]{border-color:#ffffff24;background:#ffffff0b;color:#f3f6fb}
+.step-number{font-size:12px;color:#637182;font-variant-numeric:tabular-nums;letter-spacing:.1em}
+#stepList small{display:block;margin-top:6px;color:#677584;font-size:11px;font-weight:400}
+body[data-started=true]{cursor:none}
+body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[data-started=true] #stepsPanel{display:none!important}
+@media(max-width:800px){
+ body[data-view=steps]:not([data-started=true]) #showShell{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,.7fr) minmax(0,1fr);gap:20px;padding:78px 16px 105px}
+ #stepsPanel{border-left:0;border-top:1px solid #ffffff18;padding:14px 0 0}
+ #stepsPanel h1{font-size:18px;margin-bottom:8px}
+ #stepsPanel header p{margin-bottom:12px}
+ #stepList button{padding:10px 12px}
+}
