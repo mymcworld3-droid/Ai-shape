@@ -52,7 +52,13 @@
     "memory-light": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     "memory-welcome": { background: "memory", room: true, ai: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
     "memory-room": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
-    "memory-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 }
+    "memory-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
+    "past-intro": { background: "memory", room: true, ai: 0, scene: 0.35, clock: 0, card: 0, blackout: 0 },
+    "past-isolate": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
+    "office-light": { background: "office", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
+    "office-bang": { background: "office", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
+    "past-reflection": { background: "office", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
+    "memory-return": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 }
   });
   for (const frame of Object.values(previews)) Object.freeze(frame);
   function previewFrame(cue) {

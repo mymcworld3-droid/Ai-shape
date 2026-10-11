@@ -93,8 +93,8 @@ async function prepareWelcome(page) {
   await page.keyboard.press("Space"); await cue(page,"ai"); await page.waitForTimeout(1000);
   await page.keyboard.press("Space"); await cue(page,"door-kick"); await page.waitForTimeout(200);
 }
-async function expectedDifference(page, sourcePath, region=null, threshold=15) {
-  return page.evaluate(async ({sourcePath,region,threshold})=>{
+async function expectedDifference(page, sourcePath, region=null, threshold=15, dim=0) {
+  return page.evaluate(async ({sourcePath,region,threshold,dim})=>{
     let img=null;
     if(sourcePath){img=new Image();img.src=sourcePath;await img.decode();}
     const actual=document.getElementById("visualizer"),expected=document.createElement("canvas");
@@ -107,6 +107,7 @@ async function expectedDifference(page, sourcePath, region=null, threshold=15) {
       const width=img.naturalWidth*scale,height=img.naturalHeight*scale;
       context.drawImage(img,(expected.width-width)/2,(expected.height-height)/2,width,height);
     }
+    if(dim){context.fillStyle=`rgba(0,0,0,${dim})`;context.fillRect(0,0,expected.width,expected.height);}
     const a=actual.getContext("2d").getImageData(0,0,actual.width,actual.height).data;
     const b=context.getImageData(0,0,expected.width,expected.height).data;
     let difference=0,samples=0,minX=actual.width,maxX=-1,minY=actual.height,maxY=-1;
@@ -124,7 +125,7 @@ async function expectedDifference(page, sourcePath, region=null, threshold=15) {
     const dpr=actual.width/actual.clientWidth;
     return {mean:difference/samples,x:minX/dpr,y:minY/dpr,width:(maxX-minX+1)/dpr,
       height:(maxY-minY+1)/dpr,centerX:(minX+maxX)/2/dpr,centerY:(minY+maxY)/2/dpr};
-  },{sourcePath,region,threshold});
+  },{sourcePath,region,threshold,dim});
 }
 async function matchesStill(page, sourcePath, region=null) {
   const comparison=await expectedDifference(page,sourcePath,region);
@@ -143,7 +144,7 @@ async function fixedFrame(page) {
 async function noControls(page) {
   assert.equal(await page.locator('button:visible,input:visible,select:visible,[role="button"]:visible,audio[controls]:visible,video[controls]:visible').count(),0);
   assert.equal(await page.getByRole('button').count(),0,"Hidden review buttons must also leave the accessibility tree");
-  for(const id of ['openingAudio','roomRevealVideo','doorKickAudio','memoryWelcomeAudio','memoryLightAudio'])assert.equal(await page.locator('#'+id).isVisible(),false);
+  for(const id of ['openingAudio','roomRevealVideo','doorKickAudio','memoryWelcomeAudio','memoryLightAudio','officeBangAudio'])assert.equal(await page.locator('#'+id).isVisible(),false);
   await fixedFrame(page);
 }
 async function naturalAudioEnd(page) {
@@ -191,6 +192,13 @@ async function fastMemory(page){
  await page.keyboard.press('Space');await cue(page,'blackout');await page.waitForTimeout(1300);
  await page.keyboard.press('Space');await cue(page,'memory-light');
  await page.waitForFunction(()=>transitions.blackout.value===0&&performance.now()>=stage.busyUntil);
+}
+async function fastOffice(page){
+ await fastMemory(page);
+ for(const next of ['memory-welcome','memory-room','memory-blackout','past-intro','past-isolate','office-light']){
+  await page.keyboard.press('Space');await cue(page,next);
+  await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
+ }
 }
 
 (async () => {
@@ -329,29 +337,69 @@ async function fastMemory(page){
       const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
       return d.every((v,i)=>i%4===3||v===0);
     }),true);
-    await page.keyboard.press('Space');await cue(page,'memory-blackout');await noControls(page);
+    await page.keyboard.press('Space');await cue(page,'past-intro');
+    await page.keyboard.down('Space');await cue(page,'past-intro');
+    await page.waitForTimeout(1100);await page.keyboard.down('Space');await cue(page,'past-intro');
+    const dimRoom=await expectedDifference(page,'assets/backgrounds/memory-room.png',null,15,.35);
+    assert.ok(dimRoom.mean<1,'The opening monologue must show the dimmed Memory Room without old graphics');
+    await noControls(page);
+    await page.screenshot({path:path.join(output,'15-past-intro.png')});
+    await page.keyboard.up('Space');await page.keyboard.press('Space');await cue(page,'past-isolate');
+    await page.keyboard.press('Space');await cue(page,'past-isolate');await page.waitForTimeout(1300);
+    await matchesStill(page,null);
+    await page.keyboard.press('Space');await cue(page,'office-light');
+    await page.keyboard.press('Space');await cue(page,'office-light');await page.waitForTimeout(1100);
+    assert.equal(await page.evaluate(()=>transitions.ai.value+transitions.clock.value+transitions.card.value+transitions.scene.value),0);
+    for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
+      await page.setViewportSize(viewport);await page.waitForTimeout(100);
+      await matchesStill(page,'assets/backgrounds/office-memory.png');await noControls(page);
+    }
+    await page.setViewportSize({width:1280,height:720});await page.waitForTimeout(1200);
+    await cue(page,'office-light');await matchesStill(page,'assets/backgrounds/office-memory.png');
+    assert.equal(await page.locator('#officeBangAudio').getAttribute('src'),null);
+    await flag(page,'officeBangAvailable','false');
+    await page.screenshot({path:path.join(output,'16-office-light.png')});
+    await page.keyboard.press('Space');await cue(page,'office-bang');await flag(page,'officeBangState','missing');
+    await page.waitForTimeout(300);await cue(page,'office-bang');await matchesStill(page,'assets/backgrounds/office-memory.png');
+    await page.keyboard.press('Space');await cue(page,'past-reflection');await page.waitForTimeout(1300);
+    assert.equal(await page.locator('#visualizer').evaluate(c=>{
+      const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.every((v,i)=>i%4===3||v===0);
+    }),true);
+    await page.waitForTimeout(1000);await cue(page,'past-reflection');
+    await page.screenshot({path:path.join(output,'17-past-reflection.png')});
+    await page.keyboard.press('Space');await cue(page,'memory-return');await page.waitForTimeout(1100);
+    for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
+      await page.setViewportSize(viewport);await page.waitForTimeout(100);
+      await matchesStill(page,'assets/backgrounds/memory-room.png');await noControls(page);
+    }
+    await page.setViewportSize({width:1280,height:720});await page.waitForTimeout(100);
+    await page.keyboard.press('Space');await page.waitForTimeout(500);await cue(page,'memory-return');
+    await page.screenshot({path:path.join(output,'18-memory-return.png')});
     assert.equal(await page.evaluate(()=>opening.deadline),deadline);
     assert.equal(errors.length,0,errors.join("\n"));
     assert.ok(requests.every(request=>request.startsWith(url)),"Show assets must be local");
     await page.close();
     results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; clock Y=40%, size=37%, card show/hide and exact blackout pixels");
     results.push("natural opening continues into Memory Room, held presses cannot skip the room fade, previous overlays disappear, local background fills three ratios, dialogue holds and the original deadline never resets");
+    results.push('all eighteen cues follow Act II monologue, office flashback, BANG, reflection and Memory Room return; independent pixels verify dim room, exact blackouts and clean backgrounds at three ratios; held cues never skip fades or reset the deadline');
 
     const review=await browser.newPage({viewport:{width:1440,height:900}});
     const reviewErrors=[];review.on('pageerror',error=>reviewErrors.push(String(error)));
     await ready(review,url);
     await review.locator('#stepsViewButton').click(); await flag(review,'view','steps');
     await review.waitForTimeout(100);await fixedFrame(review);
-    assert.equal(await review.locator('#stepList button').count(),12);
+    assert.equal(await review.locator('#stepList button').count(),18);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
     for(const preview of ['welcome','clock','card','card-hidden','blackout','ai','door-kick','bright',
-      'memory-light','memory-welcome','memory-room','memory-blackout']){
+      'memory-light','memory-welcome','memory-room','memory-blackout',
+      'past-intro','past-isolate','office-light','office-bang','past-reflection','memory-return']){
       await review.locator(`[data-preview="${preview}"]`).click();await flag(review,'previewCue',preview);
       await review.waitForTimeout(60);
       assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
       assert.equal(await review.locator('#openingAudio').evaluate(a=>a.currentTime),0);
       assert.equal(await review.locator('#memoryWelcomeAudio').evaluate(a=>a.currentTime),0);
       assert.equal(await review.locator('#memoryLightAudio').evaluate(a=>a.currentTime),0);
+      assert.equal(await review.locator('#officeBangAudio').evaluate(a=>a.currentTime),0);
       assert.equal(await review.evaluate(()=>opening.deadline),null);
       assert.equal(await review.evaluate(()=>stageOpening.started),false);
     }
@@ -362,10 +410,13 @@ async function fastMemory(page){
     await review.locator('[data-preview="memory-room"]').click();await review.waitForTimeout(100);
     await matchesStill(review,'assets/backgrounds/memory-room.png');
     await review.screenshot({path:path.join(output,'14-memory-step-review.png')});
+    await review.locator('[data-preview="office-light"]').click();await review.waitForTimeout(100);
+    await matchesStill(review,'assets/backgrounds/office-memory.png');await fixedFrame(review);
+    await review.screenshot({path:path.join(output,'19-office-step-review.png')});
     await review.locator('#pageViewButton').click();await flag(review,'view','page');await review.waitForTimeout(100);
     await matchesStill(review,'assets/backgrounds/Start_dark.PNG');await fixedFrame(review);
-    await review.locator('#stepsViewButton').click();await review.locator('[data-preview="memory-blackout"]').click();
-    await flag(review,'previewCue','memory-blackout');
+    await review.locator('#stepsViewButton').click();await review.locator('[data-preview="memory-return"]').click();
+    await flag(review,'previewCue','memory-return');
     // Starting after inspecting the last cue must still play the first clip.
     await review.locator('#startButton').click();await roomState(review,'playing');await noControls(review);
     await flag(review,'view','page');
@@ -404,7 +455,7 @@ async function fastMemory(page){
     }
     await screenFit.close();
     results.push('AI fills and stays centered on the actual TV interior after cover cropping; idle, real speech and maximum-spectrum particles, waves and glow never escape, in full-page/review and three viewport ratios');
-    results.push("full-page and twelve silent step previews; no audio/video or timer before Start; Start from the final memory preview resets to first cue and hides every button");
+    results.push("full-page and eighteen silent step previews; no audio/video or timer before Start; Start from the final memory return preview resets to first cue and hides every button");
 
     const slow=await browser.newPage();
     let releaseAudio;
@@ -515,6 +566,55 @@ async function fastMemory(page){
     await memoryMedia.keyboard.up('Space');await memoryMedia.keyboard.press('Space');await cue(memoryMedia,'memory-room');
     await noControls(memoryMedia);await memoryMedia.close();
     results.push('Memory click and welcome slots play real PCM fixtures, retry their own failures, block premature/held cues, fade AI only at real voice end and preserve the original opening deadline');
+
+    const officeMedia=await browser.newPage();
+    await officeMedia.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:
+      fs.readFileSync(path.join(root,'opening-config.js'),'utf8').replace('bang: null','bang: "test-fixtures/memory-welcome.wav"')}));
+    await officeMedia.addInitScript(()=>{
+      const play=HTMLMediaElement.prototype.play;let blocked=true;
+      HTMLMediaElement.prototype.play=function(){
+        if(this.id==='officeBangAudio'&&blocked){blocked=false;return Promise.reject(new DOMException('Blocked','NotAllowedError'));}
+        return play.call(this);
+      };
+    });
+    await ready(officeMedia,url);await fastOffice(officeMedia);
+    const officeDeadline=await officeMedia.evaluate(()=>opening.deadline);
+    await officeMedia.keyboard.press('Space');await flag(officeMedia,'officeBangState','error');await cue(officeMedia,'office-bang');
+    await officeMedia.keyboard.press('Space');await flag(officeMedia,'officeBangState','playing');
+    await officeMedia.keyboard.down('Space');await cue(officeMedia,'office-bang');
+    await flag(officeMedia,'officeBangState','finished');
+    assert.equal(await officeMedia.locator('#officeBangAudio').evaluate(a=>a.ended),true);
+    await officeMedia.keyboard.down('Space');await cue(officeMedia,'office-bang');
+    await matchesStill(officeMedia,'assets/backgrounds/office-memory.png');
+    await officeMedia.keyboard.up('Space');await officeMedia.keyboard.press('Space');await cue(officeMedia,'past-reflection');
+    await officeMedia.waitForFunction(()=>performance.now()>=stage.busyUntil);
+    await officeMedia.keyboard.press('Space');await cue(officeMedia,'memory-return');
+    await officeMedia.waitForFunction(()=>performance.now()>=stage.busyUntil);
+    await matchesStill(officeMedia,'assets/backgrounds/memory-room.png');await noControls(officeMedia);
+    assert.equal(await officeMedia.evaluate(()=>opening.deadline),officeDeadline);
+    await officeMedia.close();
+    results.push('office BANG uses real PCM fixture playback, retries only its own failure and requires genuine end plus a released operator key before reflection; production sound stays null');
+
+    const officeLoad=await browser.newPage();let releaseOffice;
+    const officePending=new Promise(done=>releaseOffice=done);
+    await officeLoad.route('**/assets/backgrounds/office-memory.png',async route=>{await officePending;await route.continue();});
+    await officeLoad.goto(url,{waitUntil:'domcontentloaded'});
+    await officeLoad.waitForSelector('body[data-memory-background-ready="true"][data-audio-ready="true"][data-video-ready="true"]');
+    assert.equal(await officeLoad.locator('#startButton').isDisabled(),true);
+    await officeLoad.locator('#stepsViewButton').click();await officeLoad.locator('[data-preview="office-light"]').click();
+    await officeLoad.keyboard.press('Space');assert.equal(await officeLoad.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
+    releaseOffice();await flag(officeLoad,'officeBackgroundReady','true');
+    await officeLoad.waitForFunction(()=>!document.getElementById('startButton').disabled);
+    assert.equal(await officeLoad.evaluate(()=>document.body.dataset.started),'false');
+    await officeLoad.locator('[data-preview="office-light"]').click();await officeLoad.waitForTimeout(100);
+    await matchesStill(officeLoad,'assets/backgrounds/office-memory.png');await officeLoad.close();
+    const officeMissing=await browser.newPage();
+    await officeMissing.route('**/assets/backgrounds/office-memory.png',route=>route.abort());
+    await officeMissing.goto(url);await flag(officeMissing,'officeBackgroundReady','false');
+    assert.equal(await officeMissing.locator('#startButton').isDisabled(),true);
+    assert.equal(await officeMissing.locator('#startStatus').textContent(),'素材未載入，請重新整理');
+    await officeMissing.close();
+    results.push('office background loading gates Start, loading completion never auto-starts playback and failed loading exposes the existing material status');
 
     const touch=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
     await ready(touch,url); await fixedFrame(touch);

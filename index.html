@@ -8,6 +8,7 @@
 <link rel="preload" href="assets/backgrounds/Start_dark.PNG" as="image">
 <link rel="preload" href="assets/backgrounds/IMG_0165.png" as="image">
 <link rel="preload" href="assets/backgrounds/memory-room.png" as="image">
+<link rel="preload" href="assets/backgrounds/office-memory.png" as="image">
 <link rel="stylesheet" href="stage.css">
 </head>
 <body data-started="false" data-view="page" data-preview-cue="dark">
@@ -20,10 +21,11 @@
       <audio id="doorKickAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
       <audio id="memoryWelcomeAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
       <audio id="memoryLightAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="officeBangAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
     </div>
   </div>
   <aside id="stepsPanel" aria-label="演出步驟檢視" hidden>
-    <header><h1>演出步驟<span>12</span></h1><p>點選預覽，不播放影音</p></header>
+    <header><h1>演出步驟<span>18</span></h1><p>點選預覽，不播放影音</p></header>
     <ol id="stepList">
       <li><button type="button" data-preview="bright" aria-pressed="true"><span class="step-number">01</span><span>暗 → 亮<small>影片播完，接回原本房間</small></span></button></li>
       <li><button type="button" data-preview="ai" aria-pressed="false"><span class="step-number">02</span><span>AI 漸顯<small>電視正中央 · 填滿內框</small></span></button></li>
@@ -37,7 +39,16 @@
       <li><button type="button" data-preview="memory-light" aria-pressed="false"><span class="step-number">09</span><span>記憶室亮起<small>Where’s the light?</small></span></button></li>
       <li><button type="button" data-preview="memory-welcome" aria-pressed="false"><span class="step-number">10</span><span>記憶室 AI<small>Welcome to the Memory Room.</small></span></button></li>
       <li><button type="button" data-preview="memory-room" aria-pressed="false"><span class="step-number">11</span><span>演員對話<small>AI 退場，保留房間</small></span></button></li>
-      <li><button type="button" data-preview="memory-blackout" aria-pressed="false"><span class="step-number">12</span><span>記憶室全暗<small>第二場結束，等待下一幕</small></span></button></li>
+      <li><button type="button" data-preview="memory-blackout" aria-pressed="false"><span class="step-number">12</span><span>記憶室全暗<small>Go ahead. → 獨白進場</small></span></button></li>
+      <li class="scene-divider">第二幕 · 第一場</li>
+      <li><button type="button" data-preview="past-intro" aria-pressed="false"><span class="step-number">13</span><span>Christopher 獨白<small>房間稍暗，演員走到中央</small></span></button></li>
+      <li><button type="button" data-preview="past-isolate" aria-pressed="false"><span class="step-number">14</span><span>只留中央追光<small>投影全暗 · There was this guy.</small></span></button></li>
+      <li class="scene-divider">第二幕 · 第二場</li>
+      <li><button type="button" data-preview="office-light" aria-pressed="false"><span class="step-number">15</span><span>辦公室回憶<small>Liam 進場，保留演員對話</small></span></button></li>
+      <li><button type="button" data-preview="office-bang" aria-pressed="false"><span class="step-number">16</span><span>BANG · Ben 進場<small>音效待補，背景停留</small></span></button></li>
+      <li class="scene-divider">第二幕 · 第三場</li>
+      <li><button type="button" data-preview="past-reflection" aria-pressed="false"><span class="step-number">17</span><span>回憶退場 · 自白<small>Liam 離場後，投影全暗</small></span></button></li>
+      <li><button type="button" data-preview="memory-return" aria-pressed="false"><span class="step-number">18</span><span>回到記憶室<small>自白結束，等待第三幕</small></span></button></li>
     </ol>
   </aside>
 </main>

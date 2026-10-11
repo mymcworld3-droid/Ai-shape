@@ -242,6 +242,89 @@
     }
   }
 
+  // Act II remains actor-paced. Only the office BANG owns media; stage
+  // spotlights are physical lighting cues, never drawn onto the projection.
+  class OfficeSceneController {
+    constructor({ bang = null, isReady = () => true, now = () => performance.now(),
+      fadeMs = 1000, blackoutMs = 1200, onCue = () => {},
+      onMediaState = () => {}, onLock = () => {}, onError = () => {} }) {
+      Object.assign(this, { bang, isReady, now, fadeMs, blackoutMs,
+        onCue, onMediaState, onLock, onError });
+      this.state = "waiting";
+      this.bangState = "idle";
+      this.busyUntil = 0;
+      this.run = 0;
+      this.destroyed = false;
+      this.ended = () => {
+        if (this.destroyed || !bang?.ended || !["starting", "playing"].includes(this.bangState)) return;
+        ++this.run;
+        this.setBangState("finished");
+      };
+      this.failed = () => this.fail(new Error("Office entrance audio could not be played."));
+      bang?.addEventListener("ended", this.ended);
+      bang?.addEventListener("error", this.failed);
+    }
+
+    setCue(state) { this.state = state; this.onCue(state); }
+    setBangState(state) { this.bangState = state; this.onMediaState("officeBang", state); }
+    lock(ms) { this.busyUntil = Math.max(this.busyUntil, this.now() + ms); this.onLock(ms); }
+
+    enter() {
+      if (this.destroyed || this.state !== "waiting" || !this.isReady()) return false;
+      this.lock(this.fadeMs); this.setCue("past-intro"); return true;
+    }
+
+    async playBang() {
+      if (!this.bang) { this.setBangState("missing"); this.lock(150); return true; }
+      const run = ++this.run;
+      this.setBangState("starting");
+      try {
+        if (this.bang.error) this.bang.load();
+        this.bang.currentTime = 0;
+        await this.bang.play();
+        if (this.destroyed || run !== this.run || this.bangState !== "starting") return false;
+        this.setBangState("playing"); return true;
+      } catch (error) {
+        if (!this.destroyed && run === this.run) this.fail(error);
+        return false;
+      }
+    }
+
+    fail(error) {
+      if (this.destroyed || this.bangState === "finished") return;
+      ++this.run;
+      this.bang?.pause(); this.setBangState("error"); this.onError("officeBang", error);
+    }
+
+    advance() {
+      if (this.destroyed || this.now() < this.busyUntil) return false;
+      switch (this.state) {
+        case "past-intro":
+          this.lock(this.blackoutMs); this.setCue("past-isolate"); return true;
+        case "past-isolate":
+          if (!this.isReady()) return false;
+          this.lock(this.fadeMs); this.setCue("office-light"); return true;
+        case "office-light":
+          this.setCue("office-bang"); return this.playBang();
+        case "office-bang":
+          if (["starting", "playing"].includes(this.bangState)) return false;
+          if (this.bangState === "error") return this.playBang();
+          this.lock(this.blackoutMs); this.setCue("past-reflection"); return true;
+        case "past-reflection":
+          if (!this.isReady()) return false;
+          this.lock(this.fadeMs); this.setCue("memory-return"); return true;
+        default: return false;
+      }
+    }
+
+    destroy() {
+      this.destroyed = true; ++this.run;
+      this.bang?.removeEventListener("ended", this.ended);
+      this.bang?.removeEventListener("error", this.failed);
+      this.bang?.pause();
+    }
+  }
+
   // Operator cues and media completion are separate. The clock may replace the
   // graphic during narration, while its deadline still belongs to audio.ended.
   class StageCueController {
@@ -250,7 +333,7 @@
       expandMs = 1600, morphMs = 1200, settleMs = 1000,
       cardFadeMs = 400, blackoutMs = 1200,
       onCue = () => {}, onMediaState = () => {},
-      onNarrationEnd = () => {}, onError = () => {}, memoryScene = null,
+      onNarrationEnd = () => {}, onError = () => {}, memoryScene = null, officeScene = null,
       onMemoryNarrationEnd = () => {} }) {
       Object.assign(this, { now, effect, revealFadeMs, aiFadeMs, expandMs,
         morphMs, settleMs, cardFadeMs, blackoutMs, onCue, onMediaState,
@@ -263,6 +346,8 @@
       this.memory = memoryScene ? new MemorySceneController({ ...memoryScene, now, blackoutMs,
         onCue: state => this.setCue(state), onMediaState,
         onLock: ms => this.lock(ms), onVoiceEnd: onMemoryNarrationEnd, onError }) : null;
+      this.office = officeScene ? new OfficeSceneController({ ...officeScene, now, blackoutMs,
+        onCue: state => this.setCue(state), onMediaState, onLock: ms => this.lock(ms), onError }) : null;
       this.room = new RoomRevealController({ video,
         onStateChange: state => {
           if (state === "starting") this.setCue("room-reveal");
@@ -347,8 +432,14 @@
         case "blackout": return this.memory ? this.memory.enter() : false;
         case "memory-light":
         case "memory-welcome":
-        case "memory-room":
-        case "memory-blackout": return this.memory ? this.memory.advance() : false;
+        case "memory-room": return this.memory ? this.memory.advance() : false;
+        case "memory-blackout": return this.office ? this.office.enter() : false;
+        case "past-intro":
+        case "past-isolate":
+        case "office-light":
+        case "office-bang":
+        case "past-reflection":
+        case "memory-return": return this.office ? this.office.advance() : false;
         default: return false;
       }
     }
@@ -358,6 +449,7 @@
       ++this.effectRun;
       this.room.destroy(); this.opening.destroy();
       this.memory?.destroy();
+      this.office?.destroy();
       if (this.effect) {
         this.effect.removeEventListener("ended", this.effectEnded);
         this.effect.removeEventListener("error", this.effectFailed);
@@ -421,5 +513,5 @@
     return () => target.removeEventListener("click", click);
   }
 
-  return { RoomRevealController, OpeningController, MemorySceneController, StageCueController, StartGate, formatTime, bindAdvanceKey, bindAdvanceClick };
+  return { RoomRevealController, OpeningController, MemorySceneController, OfficeSceneController, StageCueController, StartGate, formatTime, bindAdvanceKey, bindAdvanceClick };
 });

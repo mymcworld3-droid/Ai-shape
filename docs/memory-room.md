@@ -51,7 +51,7 @@ lightClick: "assets/audio/memory-light-click.mp3",
 Use case: lighting-weather and precise-object-edit. Edit Image 1, the Memory Room stage projection background. Image 2 is a lighting reference only, the original brightly lit room. Make Image 1 just as bright and evenly illuminated as Image 2: high overall room exposure, neutral white daylight-like overhead lighting, light-gray walls and a clearly visible light-gray floor, no dim blue mood and no dark vignette. Match Image 2's brightness in the whole room, not only its light fixtures. There must be exactly ONE door: KEEP THE LEFT WALL DOOR, and REMOVE THE RIGHT WALL DOOR completely including its window, handle, access panel and frame; replace that right door area with continuous plain light-gray wall panels matching the adjacent right wall. Preserve Image 1's level front-facing camera, fixed wide perspective, composition, left upstage small stand and upright blank photo frame, restrained metal architecture, and generous empty center and foreground for live actors. Keep the photo frame empty, with no invented portrait. The back wall remains plain and empty with no giant screen. Use full 16:9 landscape framing, crisp photorealistic theater background. No people, robots, text, room numbers, logos, watermarks, extra doorways, extra doors, hallways or windows. Change only the lighting/exposure and the removal of the right door, preserving the other scene elements.
 ```
 
-辦公室回憶的素材提示詞仍在 `background-prompts.md`，本次只接入記憶室。
+記憶室之後已接入第二幕；[辦公室回憶的操作時機與素材](office-memory.md)。
 
 ## 驗證紀錄
 

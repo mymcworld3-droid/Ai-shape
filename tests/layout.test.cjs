@@ -53,7 +53,8 @@ test("a radial graphic uses the largest circle that stays inside either screen o
 });
 test("silent step frames cover every cue and cannot mutate the playback transition data",()=>{
  const expected=["bright","ai","door-kick","welcome","clock","card","card-hidden","blackout",
-  "memory-light","memory-welcome","memory-room","memory-blackout"];
+  "memory-light","memory-welcome","memory-room","memory-blackout",
+  "past-intro","past-isolate","office-light","office-bang","past-reflection","memory-return"];
  for(const cue of expected){const frame=previewFrame(cue);assert.ok(frame);assert.equal(Object.isFrozen(frame),true);}
  assert.equal(previewFrame("clock").clock,1);
  assert.equal(previewFrame("clock").scene,1);
@@ -63,6 +64,14 @@ test("silent step frames cover every cue and cannot mutate the playback transiti
  assert.equal(previewFrame("memory-room").background,"memory");
  assert.equal(previewFrame("memory-room").clock,0);
  assert.equal(previewFrame("memory-room").card,0);
+ for(const cue of expected.slice(12)){
+  const frame=previewFrame(cue);assert.equal(frame.ai+frame.clock+frame.card,0);
+ }
+ assert.equal(previewFrame("past-intro").scene,0.35);
+ assert.equal(previewFrame("past-isolate").blackout,1);
+ assert.equal(previewFrame("office-light").background,"office");
+ assert.equal(previewFrame("past-reflection").blackout,1);
+ assert.equal(previewFrame("memory-return").background,"memory");
  assert.equal(previewFrame("unknown"),null);assert.equal(previewFrame("__proto__"),null);
 });
 test("merely creating a Start gate or checking readiness never begins playback",()=>{

@@ -4,6 +4,7 @@ const audioElement=document.getElementById("openingAudio");
 const effectElement=document.getElementById("doorKickAudio");
 const memoryAudio=document.getElementById("memoryWelcomeAudio");
 const memoryLightAudio=document.getElementById("memoryLightAudio");
+const officeBangAudio=document.getElementById("officeBangAudio");
 const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
@@ -14,7 +15,8 @@ const backgroundImage=new Image();
 const darkBackgroundImage=new Image();
 const cardImage=new Image();
 const memoryBackgroundImage=new Image();
-let backgroundReady=false,darkBackgroundReady=false,cardReady=false,memoryBackgroundReady=false,roomReadyAt=null;
+const officeBackgroundImage=new Image();
+let backgroundReady=false,darkBackgroundReady=false,cardReady=false,memoryBackgroundReady=false,officeBackgroundReady=false,roomReadyAt=null;
 let previewCue=null;
 let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
 const audioSources=new Map();
@@ -49,6 +51,8 @@ const stage=new StageOpening.StageCueController({
  memoryScene:{voice:config.memory.narration?memoryAudio:null,
   click:config.memory.lightClick?memoryLightAudio:null,isReady:()=>memoryBackgroundReady,
   fadeMs:config.memory.fadeMs,aiFadeMs:config.memory.aiFadeMs},
+ officeScene:{bang:config.office.bang?officeBangAudio:null,
+  isReady:()=>officeBackgroundReady&&memoryBackgroundReady,fadeMs:config.office.fadeMs},
  onCue(cue){
   document.body.dataset.cue=cue;
   if(cue==="bright")roomReadyAt=performance.now();
@@ -70,17 +74,27 @@ const stage=new StageOpening.StageCueController({
   if(cue==="memory-welcome")animate("ai",1,config.memory.aiFadeMs);
   if(cue==="memory-room")animate("ai",0,config.memory.aiFadeMs);
   if(cue==="memory-blackout")animate("blackout",1,config.blackoutMs);
+  if(cue==="past-intro"){
+   animate("scene",config.office.introDim,0);
+   animate("blackout",0,config.office.fadeMs);
+  }
+  if(cue==="past-isolate"||cue==="past-reflection")animate("blackout",1,config.blackoutMs);
+  if(cue==="office-light"||cue==="memory-return"){
+   document.body.dataset.scene=cue==="office-light"?"office":"memory";
+   for(const name of ["scene","ai","clock","card"])animate(name,0,0);
+   animate("blackout",0,config.office.fadeMs);
+  }
  },
  onMediaState(kind,state){
   const key={room:"roomState",narration:"openingState",effect:"effectState",
-   memoryVoice:"memoryVoiceState",memoryClick:"memoryClickState"}[kind];
+   memoryVoice:"memoryVoiceState",memoryClick:"memoryClickState",officeBang:"officeBangState"}[kind];
   document.body.dataset[key]=state;
  },
  onNarrationEnd(){animate("scene",0,config.settleDurationMs);},
  onMemoryNarrationEnd(){animate("ai",0,config.memory.aiFadeMs);},
  onError(kind,error){
   document.body.dataset[{room:"videoError",narration:"audioError",effect:"effectError",
-   memoryVoice:"memoryVoiceError",memoryClick:"memoryClickError"}[kind]]="true";
+   memoryVoice:"memoryVoiceError",memoryClick:"memoryClickError",officeBang:"officeBangError"}[kind]]="true";
   notifyAssetsChange();
   console.error("[Opening]",error);
  }
@@ -110,6 +124,8 @@ document.body.dataset.memoryVoiceState="idle";
 document.body.dataset.memoryClickState="idle";
 document.body.dataset.memoryVoiceAvailable=String(Boolean(config.memory.narration));
 document.body.dataset.memoryClickAvailable=String(Boolean(config.memory.lightClick));
+document.body.dataset.officeBangState="idle";
+document.body.dataset.officeBangAvailable=String(Boolean(config.office.bang));
 // Read-only diagnostics for rehearsals; no control UI appears on the projection.
 window.stageOpening=Object.freeze({
  get started(){return startGate.started;},
@@ -118,11 +134,12 @@ window.stageOpening=Object.freeze({
  get narrationState(){return opening.state;},
  get effectAvailable(){return Boolean(config.doorKick);},
  get memoryState(){return stage.memory.state;},
+ get officeState(){return stage.office.state;},
  get remainingMs(){return opening.getRemainingMs();}
 });
 
 function showAssetsReady(){
- return backgroundReady&&darkBackgroundReady&&cardReady&&memoryBackgroundReady&&revealVideo.readyState>=2&&audioElement.readyState>=2;
+ return backgroundReady&&darkBackgroundReady&&cardReady&&memoryBackgroundReady&&officeBackgroundReady&&revealVideo.readyState>=2&&audioElement.readyState>=2;
 }
 function notifyAssetsChange(){window.dispatchEvent(new Event("stageassetschange"));}
 function setProjectionPreview(cue){
@@ -131,10 +148,14 @@ function setProjectionPreview(cue){
  document.body.dataset.previewCue=previewCue||"dark";
 }
 function projectionFrame(){
- if(!startGate.started&&previewCue)return {...StageLayout.previewFrame(previewCue),preview:true};
- const memory=document.body.dataset.scene==="memory";
- return {background:memory?"memory":"opening",
-  room:memory?memoryBackgroundReady:roomReveal.state==="ready"&&backgroundReady,preview:false,
+ if(!startGate.started&&previewCue){
+  const frame={...StageLayout.previewFrame(previewCue),preview:true};
+  if(previewCue==="past-intro")frame.scene=config.office.introDim;
+  return frame;
+ }
+ const background=document.body.dataset.scene;
+ return {background,
+  room:background==="office"?officeBackgroundReady:background==="memory"?memoryBackgroundReady:roomReveal.state==="ready"&&backgroundReady,preview:false,
   ...Object.fromEntries(Object.entries(transitions).map(([key,t])=>[key,t.value]))};
 }
 
@@ -169,6 +190,14 @@ memoryBackgroundImage.addEventListener("error",()=>{
  notifyAssetsChange();console.error("[Memory room] Background could not be loaded.");
 });
 memoryBackgroundImage.src=config.memory.background;
+officeBackgroundImage.addEventListener("load",()=>{
+ officeBackgroundReady=true;document.body.dataset.officeBackgroundReady="true";notifyAssetsChange();
+});
+officeBackgroundImage.addEventListener("error",()=>{
+ officeBackgroundReady=false;document.body.dataset.officeBackgroundReady="false";
+ notifyAssetsChange();console.error("[Office memory] Background could not be loaded.");
+});
+officeBackgroundImage.src=config.office.background;
 revealVideo.addEventListener("canplay",()=>{document.body.dataset.videoReady="true";notifyAssetsChange();});
 revealVideo.src=config.roomReveal;
 revealVideo.load();
@@ -178,6 +207,7 @@ audioElement.load();
 if(config.doorKick){effectElement.src=config.doorKick;effectElement.load();}
 if(config.memory.narration){memoryAudio.src=config.memory.narration;memoryAudio.load();}
 if(config.memory.lightClick){memoryLightAudio.src=config.memory.lightClick;memoryLightAudio.load();}
+if(config.office.bang){officeBangAudio.src=config.office.bang;officeBangAudio.load();}
 
 function prepareAudio(media=audioElement){
  try{
@@ -220,6 +250,7 @@ function advanceStage(){
   document.body.dataset.memoryVoiceError="false";prepareAudio(memoryAudio);
  }
  if(stage.state==="blackout"||stage.state==="memory-light")document.body.dataset.memoryClickError="false";
+ if(stage.state==="office-light"||stage.state==="office-bang")document.body.dataset.officeBangError="false";
  stage.advance();requestStageFullscreen();
 }
 StageOpening.bindAdvanceKey(window,advanceStage,{isEnabled:()=>startGate.started});
@@ -241,15 +272,15 @@ function roomHandoffProgress(now){
 }
 function drawBackground(now,frame){
  ctx.clearRect(0,0,w,h);ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
- const memory=frame.background==="memory";
- const roomReady=frame.room&&(memory?memoryBackgroundReady:backgroundReady);
- const image=memory?memoryBackgroundImage:roomReady?backgroundImage:darkBackgroundImage;
- if(memory?memoryBackgroundReady:roomReady||darkBackgroundReady){
+ const openingRoom=!frame.background||frame.background==="opening";
+ const ready=frame.background==="office"?officeBackgroundReady:frame.background==="memory"?memoryBackgroundReady:backgroundReady;
+ const image=frame.background==="office"?officeBackgroundImage:frame.background==="memory"?memoryBackgroundImage:frame.room?backgroundImage:darkBackgroundImage;
+ if(frame.room?ready:openingRoom&&darkBackgroundReady){
   const b=StageLayout.coverLayout(w,h,image.naturalWidth,image.naturalHeight);ctx.drawImage(image,b.x,b.y,b.width,b.height);
  }
- if(!memory&&!frame.preview&&roomReveal.state==="playing"){
+ if(openingRoom&&!frame.preview&&roomReveal.state==="playing"){
   drawRevealVideo(easeInOutCubic(Math.min(1,revealVideo.currentTime*1000/config.revealFadeMs)));
- }else if(!memory&&!frame.preview&&roomReveal.state==="ready"){
+ }else if(openingRoom&&!frame.preview&&roomReveal.state==="ready"){
   drawRevealVideo(1-roomHandoffProgress(now));
  }
  if(frame.scene>0){ctx.fillStyle=`rgba(0,0,0,${frame.scene})`;ctx.fillRect(0,0,w,h);}
@@ -498,7 +529,7 @@ function draw(){
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
  updateHexRotation(now);drawBackground(now,frame);
  // The bright room also remains empty until the separate AI fade-in cue.
- if(!frame.room||(!frame.preview&&frame.background!=="memory"&&roomHandoffProgress(now)<1))return;
+ if(!frame.room||(!frame.preview&&frame.background==="opening"&&roomHandoffProgress(now)<1))return;
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=frame.background==="memory"?waveBase+Math.min(w,h)*.075:waveBase-4*scale;
@@ -523,7 +554,7 @@ function draw(){
    hexR+(bass*18+(1.2+energy*136)/2)*scale,
    hexR*(1.52+energy*energy*.48)+bass*8*scale+(1.1+energy*3.2)*scale/2)+2*scale;
   let pose={x:visualX,y:visualY,scale:visualScale},clip=null;
-  if(frame.background!=="memory"){
+  if(!frame.background||frame.background==="opening"){
    const screen=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
    pose=StageLayout.fitRadialGraphic(screen,radius,config.roomScreen.inset*screen.width/config.roomScreen.width,.98+.02*expansion);
    clip=pose.clip;

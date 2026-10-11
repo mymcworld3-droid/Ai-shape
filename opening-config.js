@@ -18,6 +18,13 @@ window.OPENING_CONFIG = Object.freeze({
     fadeMs: 1000,
     aiFadeMs: 600
   }),
+  office: Object.freeze({
+    background: "assets/backgrounds/office-memory.png",
+    // Act II, Scene II: BANG before Ben enters. Add the final sound later.
+    bang: null,
+    fadeMs: 1000,
+    introDim: 0.35
+  }),
   countdownMs: 15 * 60 * 1000,
   // Black display interior in IMG_0165.png's source pixels; excludes its bezel.
   roomScreen: Object.freeze({ x: 552, y: 310, width: 430, height: 195, inset: 2 }),
