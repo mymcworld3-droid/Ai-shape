@@ -43,6 +43,8 @@ window.OPENING_CONFIG = Object.freeze({
   roomScreen: Object.freeze({ x: 552, y: 310, width: 430, height: 195, inset: 2 }),
   // Voice playback dims the original room without changing its composition.
   voiceDim: 1,
+  // Reduce the foreground graphic only; idle TV placement and clocks stay unchanged.
+  voiceGraphicScale: 0.82,
   // The selection clock and the Memory Room's resting AI use this placement.
   idleShape: Object.freeze({ x: 0.5, y: 0.4, size: 0.37 }),
   aiFadeMs: 1500,

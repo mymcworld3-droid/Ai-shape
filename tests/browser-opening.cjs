@@ -231,7 +231,7 @@ async function checkVoiceForeground(page,voting=false,opening=false,{centered=fa
   const viewport=await page.locator('#visualizer').evaluate(c=>({width:c.clientWidth,height:c.clientHeight}));
   const pixels=await expectedDifference(page,null,[0,0,1,voting ? .8 : 1],3);
   const top=viewport.height*(voting ? .02 : .05),bottom=viewport.height*(voting ? .78 : .95);
-  assert.ok(pixels.height>viewport.height*(voting ? .6 : .7),'AI itself must visibly enlarge into the foreground');
+  assert.ok(pixels.height>viewport.height*(voting ? .48 : .55),'AI itself must visibly enlarge into the foreground');
   assert.ok(pixels.x>=viewport.width*.15&&pixels.x+pixels.width<=viewport.width*.85,
     `Only the radial AI should enlarge: ${JSON.stringify(pixels)}`);
   assert.ok(pixels.y>=top-1&&pixels.y+pixels.height<=bottom+1,
@@ -619,7 +619,11 @@ async function fastVoting(page){
     const stableSize=await browser.newPage();await ready(stableSize,url);
     await stableSize.locator('#stepsViewButton').click();
     await stableSize.evaluate(()=>{
-      const place=graphicPlacement,ring=drawSymmetricRing,coils=createCoils;
+      const place=graphicPlacement,ring=drawSymmetricRing,coils=createCoils,hex=drawHex;
+      const lineTo=ctx.lineTo.bind(ctx),stroke=ctx.stroke.bind(ctx);
+      ctx.lineTo=(x,y)=>{if(window.hexProbe)window.hexProbe.vertices.push([x,y]);return lineTo(x,y);};
+      ctx.stroke=()=>{if(window.hexProbe)window.hexProbe.width=ctx.lineWidth;return stroke();};
+      drawHex=(...args)=>{window.hexProbe={vertices:[],width:0};hex(...args);window.sizeProbe.hex=window.hexProbe;window.hexProbe=null;};
       graphicPlacement=(frame,radius)=>{
         const pose=place(frame,radius);window.sizeProbe={radius,pose,rings:[],wave:window.lastWave};return pose;
       };
@@ -641,11 +645,25 @@ async function fastVoting(page){
           assert.equal(sample.radius,samples[0].radius,'The graphic envelope must be volume independent');
           assert.deepEqual(sample.rings,samples[0].rings,'Outer circle diameters must remain fixed');
         }
-        assert.ok(samples[2].wave.some((r,i)=>Math.abs(r-samples[0].wave[i])>2),'Audio must still animate waves within the fixed envelope');
+        assert.ok(samples[2].wave.some((r,i)=>r-samples[0].wave[i]>2),'Audio waves must respond outward as before');
+        assert.notDeepEqual(samples[2].hex.vertices,samples[0].hex.vertices,'The inner hex must deform with voice volume');
+        assert.ok(samples[2].hex.width>samples[0].hex.width*5,'Restore the hex volume-dependent edge thickness');
+        const size=await stableSize.evaluate(()=>{
+          const frame=projectionFrame(),radius=window.sizeProbe.radius;
+          const home=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
+          if(frame.background!=='opening'){home.x=w*.5-home.width/2;home.y=h*.4-home.height/2;}
+          const voting=frame.caption?.startsWith('vote-');
+          const previous=StageLayout.expandGraphicPose(home,{x:w*.04,y:h*(voting?.02:.05),width:w*.92,height:h*(voting?.76:.9)},radius,frame.background==='opening'?frame.scene:frame.aiExpansion,config.roomScreen.inset*home.width/config.roomScreen.width);
+          return{actual:graphicPlacement(frame,radius),previous};
+        });
+        assert.equal(size.actual.x,size.previous.x,'Keep the foreground center');
+        assert.equal(size.actual.y,size.previous.y,'Keep the foreground center');
+        if(preview==='ai')assert.deepEqual(size.actual,size.previous,'Idle TV graphic size stays unchanged');
+        else assert.ok(Math.abs(size.actual.scale/size.previous.scale-.82)<.01,'Actual foreground pose is about 18% smaller');
       }
     }
     await stableSize.close();
-    results.push('quiet, medium, maximum and returning-to-silence spectra keep identical AI scale, center, envelope and ring diameters in four cues at three ratios; waves remain audio reactive');
+    results.push('quiet, medium, maximum and returning-to-silence spectra keep identical AI scale, center, envelope and ring diameters in four cues at three ratios; outward waves and hex geometry/stroke thickness remain audio reactive; foreground size is 82%');
 
     const voicePreview=await browser.newPage();await ready(voicePreview,url);
     await voicePreview.locator('#stepsViewButton').click();
