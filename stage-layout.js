@@ -58,6 +58,13 @@
     return { x: region.x + region.width / 2, y: region.y + region.height / 2,
       scale: Math.min(clip.width / width, clip.height / height), clip };
   }
+  function fadeInProgress(elapsed, duration) {
+    if (![elapsed, duration].every(Number.isFinite) || duration < 0) {
+      throw new RangeError("Fade timing must be finite, with a nonnegative duration.");
+    }
+    const p = duration ? Math.max(0, Math.min(1, elapsed / duration)) : 1;
+    return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+  }
   const previews = Object.freeze({
     dark: { room: false, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     bright: { room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
@@ -90,5 +97,5 @@
   function previewFrame(cue) {
     return Object.prototype.hasOwnProperty.call(previews, cue) ? previews[cue] : null;
   }
-  return { fitStage, coverLayout, projectImageRegion, fitRadialGraphic, fitRectGraphic, expandGraphicPose, previewFrame };
+  return { fitStage, coverLayout, projectImageRegion, fitRadialGraphic, fitRectGraphic, expandGraphicPose, fadeInProgress, previewFrame };
 });

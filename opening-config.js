@@ -45,7 +45,7 @@ window.OPENING_CONFIG = Object.freeze({
   voiceDim: 1,
   // The selection clock and the Memory Room's resting AI use this placement.
   idleShape: Object.freeze({ x: 0.5, y: 0.4, size: 0.37 }),
-  aiFadeMs: 900,
+  aiFadeMs: 1500,
   sceneDurationMs: 1600,
   morphDurationMs: 1200,
   settleDurationMs: 1000,

@@ -21,7 +21,7 @@ const cardImage=new Image();
 const memoryBackgroundImage=new Image();
 const officeBackgroundImage=new Image();
 let backgroundReady=false,darkBackgroundReady=false,cardReady=false,memoryBackgroundReady=false,officeBackgroundReady=false,roomReadyAt=null;
-let previewCue=null;
+let previewCue=null,previewAiStartedAt=null;
 let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
 const audioSources=new Map();
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1,graphicGlowScale=1;
@@ -63,7 +63,7 @@ const stage=new StageOpening.StageCueController({
  onCue(cue){
   document.body.dataset.cue=cue;
   if(cue==="bright")roomReadyAt=performance.now();
-  if(cue==="ai")animate("ai",1,config.aiFadeMs);
+  if(cue==="ai"){animate("ai",0,0);animate("ai",1,config.aiFadeMs);}
   if(cue==="door-kick"){
    animate("clock",0,0);animate("scene",0,config.settleDurationMs);
   }
@@ -139,7 +139,7 @@ const opening=stage.opening,roomReveal=stage.room;
 const startGate=new StageOpening.StartGate({
  isReady:showAssetsReady,
  onStart(){
-  previewCue=null;
+  previewCue=null;previewAiStartedAt=null;
   document.body.dataset.started="true";
   document.body.dataset.view="page";
   document.body.dataset.previewCue="dark";
@@ -188,11 +188,17 @@ function notifyAssetsChange(){window.dispatchEvent(new Event("stageassetschange"
 function setProjectionPreview(cue){
  if(startGate.started)return;
  previewCue=StageLayout.previewFrame(cue)?cue:null;
+ previewAiStartedAt=null;
  document.body.dataset.previewCue=previewCue||"dark";
 }
 function projectionFrame(){
  if(!startGate.started&&previewCue){
   const frame={...StageLayout.previewFrame(previewCue),preview:true};
+  if(frame.ai>0&&frame.clock===0){
+   const ready=frame.background==="memory"?memoryBackgroundReady:frame.background==="office"?officeBackgroundReady:backgroundReady;
+   if(previewAiStartedAt===null&&ready)previewAiStartedAt=performance.now();
+   frame.ai*=previewAiStartedAt===null?0:StageLayout.fadeInProgress(performance.now()-previewAiStartedAt,config.aiFadeMs);
+  }
   if(previewCue==="past-intro")frame.scene=config.office.introDim;
   if(previewCue==="discussion"||previewCue.startsWith("vote-")&&previewCue!=="vote-blackout")frame.scene=config.voting.discussionDim;
   frame.caption=previewCue;

@@ -50,6 +50,44 @@ const server = http.createServer((request, response) => {
   }
 });
 
+async function settlePreview(page) {
+  await page.waitForFunction(()=>{
+    const frame=projectionFrame(),target=StageLayout.previewFrame(document.body.dataset.previewCue);
+    return !frame.preview||!target?.ai||target.clock===1||frame.ai===1;
+  });
+  await page.waitForTimeout(40);
+}
+async function settleLiveAi(page) {
+  await page.waitForFunction(()=>transitions.ai.value===1&&performance.now()>=stage.busyUntil);
+}
+async function fadePixels(page) {
+  return page.evaluate(async()=>{
+    const c=document.getElementById('visualizer'),context=c.getContext('2d');
+    const scale=Math.max(c.width/1536,c.height/1024);
+    const x=Math.ceil((c.width-1536*scale)/2+554*scale),y=Math.ceil((c.height-1024*scale)/2+312*scale);
+    const width=Math.floor(426*scale),height=Math.floor(191*scale),samples=[];
+    const read=()=>{
+      const pixels=context.getImageData(x,y,width,height).data;
+      let sum=0;for(let i=0;i<pixels.length;i+=4)sum+=pixels[i]+pixels[i+1]+pixels[i+2];
+      return sum/(width*height*3);
+    };
+    await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);
+    const start=performance.now(),duration=OPENING_CONFIG.aiFadeMs;
+    for(const fraction of [0,.2,.4,.7,1.15]){
+      while(performance.now()-start<duration*fraction)await new Promise(requestAnimationFrame);
+      samples.push({elapsed:performance.now()-start,mean:read()});
+    }
+    return samples;
+  });
+}
+function gradualPixels(samples,label) {
+  const full=samples[4].mean;
+  assert.ok(full>1,`${label}: AI must become visibly drawn`);
+  assert.ok(samples[0].mean<full*.05,`${label}: must begin fully transparent: ${JSON.stringify(samples)}`);
+  assert.ok(samples[1].mean<full*.25,`${label}: early frame cannot already be fully visible`);
+  assert.ok(samples[2].mean>full*.15&&samples[2].mean<full*.65,`${label}: an intermediate opacity must be visible`);
+  assert.ok(samples[3].mean>full*.65,`${label}: opacity must increase through the fade`);
+}
 async function ready(page, url) {
   await page.goto(url);
   try {
@@ -90,7 +128,7 @@ async function fastReveal(page) {
   await cue(page,"bright"); await page.waitForTimeout(350);
 }
 async function prepareWelcome(page) {
-  await page.keyboard.press("Space"); await cue(page,"ai"); await page.waitForTimeout(1000);
+  await page.keyboard.press("Space"); await cue(page,"ai"); await settleLiveAi(page);
   await page.keyboard.press("Space"); await cue(page,"door-kick"); await page.waitForTimeout(200);
 }
 async function expectedDifference(page, sourcePath, region=null, threshold=15, dim=0) {
@@ -273,7 +311,7 @@ async function fastVoting(page){
     await page.screenshot({path:path.join(output,"02-bright-empty.png")});
     await page.keyboard.up("Space"); await page.keyboard.press("Space"); await cue(page,"ai");
     await page.keyboard.press("Space"); await cue(page,"ai"); // Fade cannot be skipped.
-    await page.waitForTimeout(1000); await page.screenshot({path:path.join(output,"03-ai.png")});
+    await settleLiveAi(page); await page.screenshot({path:path.join(output,"03-ai.png")});
     await checkAiScreen(page,{centered:true,large:true});
     await page.keyboard.press("Space"); await cue(page,"door-kick");
     assert.equal(await page.locator('body').getAttribute('data-effect-state'),"missing");
@@ -469,6 +507,34 @@ async function fastVoting(page){
     results.push('all eighteen cues follow Act II monologue, office flashback, BANG, reflection and Memory Room return; independent pixels verify dim room, exact blackouts and clean backgrounds at three ratios; held cues never skip fades or reset the deadline');
     results.push('all twenty-five cues continue into actor-paced discussion and selection; four silent voice slots remain explicit, the separate minute starts only at the clock cue, vote text changes visibly, three ratios retain clock placement and every blackout pixel is zero');
 
+    const fadePage=await browser.newPage({viewport:{width:1280,height:720}});
+    const fadeErrors=[];fadePage.on('pageerror',error=>fadeErrors.push(String(error)));
+    let releaseFadeBackground;
+    const heldFadeBackground=new Promise(done=>releaseFadeBackground=done);
+    await fadePage.route('**/assets/backgrounds/IMG_0165.png',async route=>{await heldFadeBackground;await route.continue();});
+    await fadePage.goto(url,{waitUntil:'domcontentloaded'});
+    await fadePage.locator('#stepsViewButton').click();await fadePage.locator('[data-preview="ai"]').click();
+    await fadePage.waitForTimeout(1700);
+    assert.equal(await fadePage.locator('#startButton').isDisabled(),true);
+    assert.equal(await fadePage.evaluate(()=>projectionFrame().ai),0,'Loading must not consume the fade before the image can render');
+    releaseFadeBackground();await flag(fadePage,'backgroundReady','true');
+    gradualPixels(await fadePixels(fadePage),'preview after background loading');
+    await fadePage.locator('[data-preview="ai"]').click();
+    gradualPixels(await fadePixels(fadePage),'replaying the same second step');
+    assert.equal(await fadePage.evaluate(()=>Array.from(document.querySelectorAll('audio,video')).every(m=>m.currentTime===0&&m.paused)),true);
+    assert.equal(await fadePage.evaluate(()=>opening.deadline),null);
+    assert.equal(await fadePage.evaluate(()=>stage.voting.deadline),null);
+    await fadePage.locator('[data-preview="ai"]').click();await fadePage.waitForTimeout(200);
+    await fadePage.locator('[data-preview="bright"]').click();await fadePage.waitForTimeout(1700);
+    await matchesStill(fadePage,'assets/backgrounds/IMG_0165.png');
+    await fadePage.locator('[data-preview="ai"]').click();await fadePage.waitForTimeout(200);
+    await fastReveal(fadePage);await matchesStill(fadePage,'assets/backgrounds/IMG_0165.png');
+    await fadePage.keyboard.press('Space');await cue(fadePage,'ai');
+    gradualPixels(await fadePixels(fadePage),'live second cue');
+    await noControls(fadePage);assert.equal(fadeErrors.length,0,fadeErrors.join('\n'));
+    await fadePage.screenshot({path:path.join(output,'25-ai-fade-live.png')});await fadePage.close();
+    results.push('second-step AI fades through independently measured transparent, intermediate and complete pixels in preview and live playback; delayed loading, same-step replay, switching away and Start during a fade never leak overlays or start media or timers');
+
     const review=await browser.newPage({viewport:{width:1440,height:900}});
     const reviewErrors=[];review.on('pageerror',error=>reviewErrors.push(String(error)));
     await ready(review,url);
@@ -504,7 +570,7 @@ async function fastVoting(page){
     await review.locator('[data-preview="office-light"]').click();await review.waitForTimeout(100);
     await matchesStill(review,'assets/backgrounds/office-memory.png');await fixedFrame(review);
     await review.screenshot({path:path.join(output,'19-office-step-review.png')});
-    await review.locator('[data-preview="vote-two"]').click();await review.waitForTimeout(100);await fixedFrame(review);
+    await review.locator('[data-preview="vote-two"]').click();await settlePreview(review);await fixedFrame(review);
     await review.screenshot({path:path.join(output,'22-voting-step-review.png')});
     await review.locator('#pageViewButton').click();await flag(review,'view','page');await review.waitForTimeout(100);
     await matchesStill(review,'assets/backgrounds/Start_dark.PNG');await fixedFrame(review);
@@ -524,11 +590,11 @@ async function fastVoting(page){
     await ready(screenFit,url);await screenFit.locator('#stepsViewButton').click();
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await screenFit.setViewportSize(viewport);
-      await screenFit.locator('[data-preview="ai"]').click();await screenFit.waitForTimeout(100);
+      await screenFit.locator('[data-preview="ai"]').click();await settlePreview(screenFit);
       await fixedFrame(screenFit);await checkAiScreen(screenFit,{centered:true,large:true});
     }
     await screenFit.locator('#pageViewButton').click();await screenFit.locator('#stepsViewButton').click();
-    await screenFit.locator('[data-preview="welcome"]').click();await screenFit.waitForTimeout(100);
+    await screenFit.locator('[data-preview="welcome"]').click();await settlePreview(screenFit);
     await checkAiScreen(screenFit,{centered:true,large:true,front:true});
     // Render a maximum-range spectrum in this test page only. This verifies
     // animated coils, thick hex strokes, particles and glow at their extremes.
@@ -541,7 +607,7 @@ async function fastVoting(page){
     }
     assert.equal(await screenFit.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await fastReveal(screenFit);
-    await screenFit.keyboard.press('Space');await cue(screenFit,'ai');await screenFit.waitForTimeout(1000);
+    await screenFit.keyboard.press('Space');await cue(screenFit,'ai');await settleLiveAi(screenFit);
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await screenFit.setViewportSize(viewport);await screenFit.waitForTimeout(100);
       await noControls(screenFit);await checkAiScreen(screenFit);
@@ -556,7 +622,7 @@ async function fastVoting(page){
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await voicePreview.setViewportSize(viewport);
       for(const preview of ['memory-welcome','vote-prompt','vote-one','vote-two','vote-final']){
-        await voicePreview.locator(`[data-preview="${preview}"]`).click();await voicePreview.waitForTimeout(150);
+        await voicePreview.locator(`[data-preview="${preview}"]`).click();await settlePreview(voicePreview);
         await fixedFrame(voicePreview);const box=await voicePreview.locator('#visualizer').boundingBox();
         const voting=preview.startsWith('vote-');
         await checkVoiceForeground(voicePreview,voting);
@@ -638,7 +704,7 @@ async function fastVoting(page){
       HTMLMediaElement.prototype.play=function(){if(this.id==="doorKickAudio"&&blocked){blocked=false;return Promise.reject(new DOMException("Blocked","NotAllowedError"));}return play.call(this);};
     });
     await ready(effectPage,url); await fastReveal(effectPage);
-    await effectPage.keyboard.press("Space"); await cue(effectPage,"ai"); await effectPage.waitForTimeout(1000);
+    await effectPage.keyboard.press("Space"); await cue(effectPage,"ai"); await settleLiveAi(effectPage);
     await effectPage.keyboard.press("Space"); await flag(effectPage,"effectState","error");
     assert.equal(await effectPage.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await effectPage.keyboard.press("Space"); await flag(effectPage,"effectState","playing");
@@ -801,7 +867,7 @@ async function fastVoting(page){
     await touch.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
     await cue(touch,"bright"); await touch.waitForTimeout(400);
     await matchesStill(touch,"assets/backgrounds/IMG_0165.png");
-    await touch.touchscreen.tap(190,420); await cue(touch,"ai"); await touch.waitForTimeout(1000);
+    await touch.touchscreen.tap(190,420); await cue(touch,"ai"); await settleLiveAi(touch);
     await touch.touchscreen.tap(190,420); await cue(touch,"door-kick"); await touch.waitForTimeout(200);
     // A second tap inside Chrome's double-click interval is intentionally
     // filtered. A fresh tap, after releasing that gesture, is a new cue.

@@ -1,7 +1,7 @@
 "use strict";
 const {test}=require("node:test");
 const assert=require("node:assert/strict");
-const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,fitRectGraphic,expandGraphicPose,previewFrame}=require("../stage-layout.js");
+const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,fitRectGraphic,expandGraphicPose,fadeInProgress,previewFrame}=require("../stage-layout.js");
 const {StartGate,bindAdvanceKey}=require("../opening-controller.js");
 function close(actual,expected){assert.ok(Math.abs(actual-expected)<1e-8,`${actual} != ${expected}`);}
 
@@ -109,6 +109,22 @@ test("graphic expansion rejects invalid radius, progress and area dimensions",()
  for(const bad of [0,-1,NaN,Infinity])assert.throws(()=>expandGraphicPose(home,area,bad,1),RangeError);
  assert.throws(()=>expandGraphicPose(home,area,400,NaN),RangeError);
  assert.throws(()=>expandGraphicPose(home,{...area,height:0},400,1),RangeError);
+});
+test("AI fade starts fully transparent, increases smoothly and stays fully visible at the end",()=>{
+ for(const duration of [600,1500,3000]){
+  close(fadeInProgress(-100,duration),0);close(fadeInProgress(0,duration),0);
+  close(fadeInProgress(duration*.25,duration),.0625);
+  close(fadeInProgress(duration*.5,duration),.5);
+  close(fadeInProgress(duration*.75,duration),.9375);
+  close(fadeInProgress(duration,duration),1);close(fadeInProgress(duration*10,duration),1);
+  let previous=0;
+  for(let t=0;t<=duration;t+=duration/100){const p=fadeInProgress(t,duration);assert.ok(p>=previous&&p<=1);previous=p;}
+ }
+});
+test("a static frame has no fade delay and invalid fade timing is rejected",()=>{
+ close(fadeInProgress(0,0),1);
+ for(const bad of [NaN,Infinity,-Infinity])assert.throws(()=>fadeInProgress(bad,1500),RangeError);
+ assert.throws(()=>fadeInProgress(0,-1),RangeError);
 });
 test("silent step frames cover every cue and cannot mutate the playback transition data",()=>{
  const expected=["bright","ai","door-kick","welcome","clock","card","card-hidden","blackout",
