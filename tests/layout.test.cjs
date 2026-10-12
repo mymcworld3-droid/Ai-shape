@@ -1,7 +1,7 @@
 "use strict";
 const {test}=require("node:test");
 const assert=require("node:assert/strict");
-const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,expandGraphicPose,previewFrame}=require("../stage-layout.js");
+const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,fitRectGraphic,expandGraphicPose,previewFrame}=require("../stage-layout.js");
 const {StartGate,bindAdvanceKey}=require("../opening-controller.js");
 function close(actual,expected){assert.ok(Math.abs(actual-expected)<1e-8,`${actual} != ${expected}`);}
 
@@ -50,6 +50,30 @@ test("a radial graphic uses the largest circle that stays inside either screen o
    close(r,Math.min(pose.clip.width,pose.clip.height)/2);
   }
  }
+});
+test("the opening clock fills the actual TV interior and stays centered at three stage sizes",()=>{
+ for(const [width,height] of [[1920,1080],[1440,810],[390,219]]){
+  const screen=projectImageRegion(width,height,1536,1024,{x:552,y:310,width:430,height:195});
+  const pose=fitRectGraphic(screen,236,84,screen.width/430*2);
+  close(pose.x,screen.x+screen.width/2);close(pose.y,screen.y+screen.height/2);
+  close(236*pose.scale,pose.clip.width);
+  assert.ok(84*pose.scale<=pose.clip.height);
+  assert.ok(pose.x-118*pose.scale>=screen.x&&pose.x+118*pose.scale<=screen.x+screen.width+1e-8);
+ }
+});
+test("rectangular graphics use the largest uniform scale for wide and tall apertures",()=>{
+ for(const region of [{x:50,y:20,width:360,height:160},{x:20,y:90,width:90,height:300}]){
+  const pose=fitRectGraphic(region,236,84,2);
+  assert.ok(236*pose.scale<=pose.clip.width+1e-8&&84*pose.scale<=pose.clip.height+1e-8);
+  assert.ok(Math.abs(236*pose.scale-pose.clip.width)<1e-8||Math.abs(84*pose.scale-pose.clip.height)<1e-8);
+  close(pose.x,region.x+region.width/2);close(pose.y,region.y+region.height/2);
+ }
+});
+test("rectangular fitting rejects unloaded dimensions or invalid inset",()=>{
+ const region={x:20,y:10,width:430,height:195};
+ for(const bad of [0,-1,NaN,Infinity])assert.throws(()=>fitRectGraphic(region,bad,84),RangeError);
+ assert.throws(()=>fitRectGraphic(region,236,84,-1),RangeError);
+ assert.throws(()=>fitRectGraphic({...region,height:0},236,84),RangeError);
 });
 test("AI expansion returns exactly to the idle graphic position and size",()=>{
  const home=projectImageRegion(1280,720,1536,1024,{x:552,y:310,width:430,height:195});

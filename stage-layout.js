@@ -48,6 +48,16 @@
     return { x: lerp(rest.x, large.x), y: lerp(rest.y, large.y), scale: lerp(rest.scale, large.scale),
       clip: Object.fromEntries(["x", "y", "width", "height"].map(key => [key, lerp(rest.clip[key], large.clip[key])])) };
   }
+  function fitRectGraphic(region, width, height, inset = 0) {
+    if (!region || ![region.x, region.y, region.width, region.height, width, height, inset].every(Number.isFinite) ||
+        Math.min(region.width, region.height, width, height) <= 0 || inset < 0) {
+      throw new RangeError("Rectangle fitting requires positive dimensions and a nonnegative inset.");
+    }
+    const clip = { x: region.x + inset, y: region.y + inset,
+      width: Math.max(0, region.width - inset * 2), height: Math.max(0, region.height - inset * 2) };
+    return { x: region.x + region.width / 2, y: region.y + region.height / 2,
+      scale: Math.min(clip.width / width, clip.height / height), clip };
+  }
   const previews = Object.freeze({
     dark: { room: false, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     bright: { room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
@@ -80,5 +90,5 @@
   function previewFrame(cue) {
     return Object.prototype.hasOwnProperty.call(previews, cue) ? previews[cue] : null;
   }
-  return { fitStage, coverLayout, projectImageRegion, fitRadialGraphic, expandGraphicPose, previewFrame };
+  return { fitStage, coverLayout, projectImageRegion, fitRadialGraphic, fitRectGraphic, expandGraphicPose, previewFrame };
 });

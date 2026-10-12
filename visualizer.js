@@ -546,12 +546,10 @@ function drawDigitalDigit(character,x){
  }
  ctx.restore();
 }
-function drawTimerFace(radius,remainingMs){
+function drawTimerFace(unit,remainingMs){
  const time=StageOpening.formatTime(remainingMs);
  // Clock coordinates are 236 wide by 84 high, with the colon between digits.
- const unit=radius*.012;
  ctx.save();
- ctx.translate(cx,cy);
  ctx.scale(unit,unit);
  ctx.translate(-118,-42);
  drawDigitalDigit(time[0],0);
@@ -599,6 +597,17 @@ function graphicPlacement(frame,radius){
  return StageLayout.expandGraphicPose(home,foreground,radius,progress,
   config.roomScreen.inset*home.width/config.roomScreen.width);
 }
+function clockPlacement(frame){
+ const unit=Math.min(w,h)*.23*.012;
+ if(frame.background&&frame.background!=="opening"){
+  return {x:w*config.idleShape.x,y:h*config.idleShape.y,scale:unit*config.idleShape.size,clip:null};
+ }
+ const screen=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
+ const rest=StageLayout.fitRectGraphic(screen,236,84,config.roomScreen.inset*screen.width/config.roomScreen.width);
+ const p=frame.scene,lerp=(a,b)=>a+(b-a)*p;
+ return {x:lerp(rest.x,cx),y:lerp(rest.y,cy),scale:lerp(rest.scale,unit),
+  clip:{x:lerp(rest.clip.x,0),y:lerp(rest.clip.y,0),width:lerp(rest.clip.width,w),height:lerp(rest.clip.height,h)}};
+}
 function draw(){
  requestAnimationFrame(draw);
  const now=performance.now();opening.getRemainingMs();updateTransitions(now);
@@ -616,11 +625,6 @@ function draw(){
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=frame.background==="memory"?waveBase+Math.min(w,h)*.075:waveBase-4*scale;
- const idle=config.idleShape,expansion=frame.timer==="selection"?0:frame.scene;
- const visualScale=idle.size+(1-idle.size)*expansion;
- const visualX=w*idle.x+(cx-w*idle.x)*expansion;
- const visualY=h*idle.y+(cy-h*idle.y)*expansion;
- const timerRadius=Math.min(w,h)*.23;
  const morph=frame.clock;
  const graphicOpacity=frame.ai*(1-easeInOutCubic(Math.min(1,morph/.55)));
  const clockOpacity=easeInOutCubic(Math.max(0,Math.min(1,(morph-.55)/.45)));
@@ -649,9 +653,12 @@ function draw(){
   ctx.restore();graphicGlowScale=1;
  }
  if(clockOpacity>0){
-  ctx.save();ctx.translate(visualX,visualY);ctx.scale(visualScale,visualScale);ctx.translate(-cx,-cy);
+  const pose=clockPlacement(frame);
+  ctx.save();
+  if(pose.clip){ctx.beginPath();ctx.rect(pose.clip.x,pose.clip.y,pose.clip.width,pose.clip.height);ctx.clip();}
+  ctx.translate(pose.x,pose.y);
   const remaining=frame.timer==="selection"?(frame.preview?config.voting.durationMs:stage.voting.getRemainingMs()):opening.getRemainingMs();
-  ctx.globalAlpha=clockOpacity;drawTimerFace(timerRadius,remaining);ctx.restore();
+  ctx.globalAlpha=clockOpacity;drawTimerFace(pose.scale,remaining);ctx.restore();
  }
  if(cardReady&&frame.card>0){
   const width=Math.min(w*.8,h*.6),height=width*cardImage.naturalHeight/cardImage.naturalWidth;

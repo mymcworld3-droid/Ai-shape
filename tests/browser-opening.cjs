@@ -156,11 +156,18 @@ async function naturalAudioEnd(page) {
   await page.waitForFunction(()=>transitions.scene.value===0&&performance.now()>=stage.busyUntil);
 }
 async function checkClockPlacement(page) {
-  const viewport=await page.locator('#visualizer').boundingBox();
-  const bounds=await expectedDifference(page,"assets/backgrounds/IMG_0165.png",[.1,.2,.9,.55]);
-  const expectedWidth=Math.min(viewport.width,viewport.height)*.23*.012*236*.37;
-  assert.ok(Math.abs(bounds.centerY-viewport.height*.4)<6,`Clock Y must be 40%: ${JSON.stringify(bounds)}`);
-  assert.ok(Math.abs(bounds.width-expectedWidth)<12,`Clock scale must be 37%: ${JSON.stringify(bounds)}`);
+  const viewport=await page.locator('#visualizer').evaluate(c=>({width:c.clientWidth,height:c.clientHeight}));
+  const scale=Math.max(viewport.width/1536,viewport.height/1024);
+  const screen={x:(viewport.width-1536*scale)/2+552*scale,
+    y:(viewport.height-1024*scale)/2+310*scale,width:430*scale,height:195*scale};
+  const bounds=await expectedDifference(page,"assets/backgrounds/IMG_0165.png",null,3);
+  assert.ok(bounds.width>screen.width*.95,'Shrunk clock must fill the TV width');
+  assert.ok(Math.abs(bounds.centerX-(screen.x+screen.width/2))<2,'Clock must be centered horizontally on the original TV');
+  assert.ok(Math.abs(bounds.centerY-(screen.y+screen.height/2))<2,'Clock must be centered vertically on the original TV');
+  assert.ok(bounds.x>=screen.x-1&&bounds.x+bounds.width<=screen.x+screen.width+1,
+    `Every clock pixel and glow must stay inside the original TV horizontally: ${JSON.stringify({screen,bounds})}`);
+  assert.ok(bounds.y>=screen.y-1&&bounds.y+bounds.height<=screen.y+screen.height+1,
+    `Every clock pixel and glow must stay inside the original TV vertically: ${JSON.stringify({screen,bounds})}`);
 }
 async function checkAiScreen(page,{centered=false,large=false,front=false}={}){
   if(front)return checkVoiceForeground(page,false,true,{centered});
@@ -184,8 +191,7 @@ async function checkAiScreen(page,{centered=false,large=false,front=false}={}){
 }
 async function checkVoiceForeground(page,voting=false,opening=false,{centered=false}={}){
   const viewport=await page.locator('#visualizer').evaluate(c=>({width:c.clientWidth,height:c.clientHeight}));
-  const source=opening?'assets/backgrounds/IMG_0165.png':'assets/backgrounds/memory-room.png';
-  const pixels=await expectedDifference(page,source,[0,0,1,voting ? .8 : 1],3,.75);
+  const pixels=await expectedDifference(page,null,[0,0,1,voting ? .8 : 1],3);
   const top=viewport.height*(voting ? .02 : .05),bottom=viewport.height*(voting ? .78 : .95);
   assert.ok(pixels.height>viewport.height*(voting ? .6 : .7),'AI itself must visibly enlarge into the foreground');
   assert.ok(pixels.x>=viewport.width*.15&&pixels.x+pixels.width<=viewport.width*.85,
@@ -196,11 +202,10 @@ async function checkVoiceForeground(page,voting=false,opening=false,{centered=fa
     assert.ok(Math.abs(pixels.centerX-viewport.width/2)<4,'Enlarged idle preview stays centered horizontally');
     assert.ok(Math.abs(pixels.centerY-viewport.height*(voting ? .4 : .5))<4,'Enlarged idle preview stays centered vertically');
   }
-  // Side strips must match the original cover-cropped photograph at 25%
-  // brightness. This catches any moved background, TV bezel or black panel.
+  // Every side-strip background pixel must reach exact black while AI remains visible.
   for(const region of [[0,0,.15,voting ? .8 : 1],[.85,0,1,voting ? .8 : 1]]){
-    const background=await expectedDifference(page,source,region,3,.75);
-    assert.ok(background.mean<1,'Voice background must retain its exact composition and only dim');
+    const background=await expectedDifference(page,null,region,0);
+    assert.equal(background.mean,0,'Enlarged voice background must end at exact black');
   }
   return pixels;
 }
@@ -459,7 +464,7 @@ async function fastVoting(page){
     assert.equal(errors.length,0,errors.join("\n"));
     assert.ok(requests.every(request=>request.startsWith(url)),"Show assets must be local");
     await page.close();
-    results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; clock Y=40%, size=37%, card show/hide and exact blackout pixels");
+    results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; shrunk opening clock fills the original TV center without overflowing, card show/hide and exact blackout pixels");
     results.push("natural opening continues into Memory Room, held presses cannot skip the room fade, previous overlays disappear, local background fills three ratios, dialogue holds and the original deadline never resets");
     results.push('all eighteen cues follow Act II monologue, office flashback, BANG, reflection and Memory Room return; independent pixels verify dim room, exact blackouts and clean backgrounds at three ratios; held cues never skip fades or reset the deadline');
     results.push('all twenty-five cues continue into actor-paced discussion and selection; four silent voice slots remain explicit, the separate minute starts only at the clock cue, vote text changes visibly, three ratios retain clock placement and every blackout pixel is zero');
@@ -542,7 +547,7 @@ async function fastVoting(page){
       await noControls(screenFit);await checkAiScreen(screenFit);
     }
     await screenFit.close();
-    results.push('only AI enlarges over the fixed original background during speech; independent pixels verify 25% background brightness, original composition, no bezel or panel, bounded glow and automatic return at three ratios');
+    results.push('only AI enlarges over the fixed original background during speech; independent pixels verify the background becomes exactly black, bounded glow and automatic return at three ratios');
     results.push("full-page and twenty-five silent step previews; no audio/video or either timer before Start; Start from the final selection blackout preview resets to first cue and hides every button");
 
     const voicePreview=await browser.newPage();await ready(voicePreview,url);
@@ -556,8 +561,8 @@ async function fastVoting(page){
         const voting=preview.startsWith('vote-');
         await checkVoiceForeground(voicePreview,voting);
         if(voting){
-          const gap=await expectedDifference(voicePreview,'assets/backgrounds/memory-room.png',[0,.8,1,.82],15,.75);
-          assert.ok(gap.mean<1,'Even maximum-spectrum AI glow must not enter the caption gap');
+          const gap=await expectedDifference(voicePreview,null,[0,.8,1,.82],0);
+          assert.equal(gap.mean,0,'The caption gap must be exactly black even at maximum spectrum');
         }
         assert.equal(await voicePreview.evaluate(()=>opening.deadline),null);
         assert.equal(await voicePreview.evaluate(()=>stage.voting.deadline),null);
