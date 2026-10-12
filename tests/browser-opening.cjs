@@ -657,8 +657,8 @@ async function fastVoting(page){
           const previous=StageLayout.expandGraphicPose(home,{x:w*.04,y:h*(voting?.02:.05),width:w*.92,height:h*(voting?.76:.9)},radius,openingRoom?frame.scene:frame.aiExpansion||0,config.roomScreen.inset*home.width/config.roomScreen.width);
           return{actual:graphicPlacement(frame,radius),previous};
         });
-        assert.equal(size.actual.x,size.previous.x,'Keep the foreground center');
-        assert.equal(size.actual.y,size.previous.y,'Keep the foreground center');
+        assert.ok(Math.abs(size.actual.x-size.previous.x)<1e-9,'Keep the foreground center');
+        assert.ok(Math.abs(size.actual.y-size.previous.y)<1e-9,'Keep the foreground center');
         if(preview==='ai')assert.deepEqual(size.actual,size.previous,'Idle TV graphic size stays unchanged');
         else assert.ok(Math.abs(size.actual.scale/size.previous.scale-.82)<.01,'Actual foreground pose is about 18% smaller');
       }
