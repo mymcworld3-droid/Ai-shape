@@ -173,6 +173,16 @@ npm run test:browser
 
 正式演出前仍需在實際電腦、投影機及喇叭上校正亮度與音量。
 
+2026-10-12：開場語音改用最新上傳的 `assets/audio/ai-opening.m4a`，
+29 秒、AAC、44.1 kHz 雙聲道，檔案原樣沿用。舊 MP3 已移除。
+版本 `ffb0049` 的 75 項控制測試與 18 組
+[Chrome 檢查](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/38186113154)
+全部通過，包含新 M4A 完整自然播放、真正結束後才開始倒數、
+AI 自動縮小及各幕流程。HTTPS 預覽另以開始鍵及 Space 實播，
+確認來源為新 M4A、長度 29 秒、結束時間 29 秒、所有按鈕隱藏。
+
+![新 M4A 自然播完後的實際倒數畫面](docs/m4a-opening-countdown.jpg)
+
 2026-10-12：記憶室與第三幕配音新增 AI 播放時放大、播完縮小及碼錶恢復。
 版本 `ab9aec1` 的 75 項控制測試與 18 組
 [Chrome 檢查](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/38183603121)
