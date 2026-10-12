@@ -39,20 +39,14 @@
       clip: { x: region.x + inset, y: region.y + inset,
         width: Math.max(0, region.width - inset * 2), height: Math.max(0, region.height - inset * 2) } };
   }
-  function moveScreenForward(width, height, home, progress, { maxWidth = 0.92, maxHeight = 0.9, centerY = 0.5 } = {}) {
-    if (!home || ![width, height, home.x, home.y, home.width, home.height, progress,
-        maxWidth, maxHeight, centerY].every(Number.isFinite) ||
-        Math.min(width, height, home.width, home.height, maxWidth, maxHeight) <= 0 ||
-        maxWidth > 1 || maxHeight > 1 || centerY < maxHeight / 2 || centerY > 1 - maxHeight / 2) {
-      throw new RangeError("Screen motion requires valid dimensions and a foreground display inside the stage.");
-    }
+  function expandGraphicPose(home, foreground, radius, progress, homeInset = 0) {
+    if (!Number.isFinite(progress)) throw new RangeError("Graphic expansion progress must be finite.");
     const p = Math.max(0, Math.min(1, progress));
-    const scale = Math.min(width * maxWidth / home.width, height * maxHeight / home.height);
-    const screenWidth = home.width * (1 + (scale - 1) * p);
-    const screenHeight = home.height * (1 + (scale - 1) * p);
-    const x = home.x + home.width / 2 + (width / 2 - home.x - home.width / 2) * p;
-    const y = home.y + home.height / 2 + (height * centerY - home.y - home.height / 2) * p;
-    return { x: x - screenWidth / 2, y: y - screenHeight / 2, width: screenWidth, height: screenHeight };
+    const rest = fitRadialGraphic(home, radius, homeInset, 0.98);
+    const large = fitRadialGraphic(foreground, radius, 2, 0.98);
+    const lerp = (a, b) => a + (b - a) * p;
+    return { x: lerp(rest.x, large.x), y: lerp(rest.y, large.y), scale: lerp(rest.scale, large.scale),
+      clip: Object.fromEntries(["x", "y", "width", "height"].map(key => [key, lerp(rest.clip[key], large.clip[key])])) };
   }
   const previews = Object.freeze({
     dark: { room: false, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
@@ -86,5 +80,5 @@
   function previewFrame(cue) {
     return Object.prototype.hasOwnProperty.call(previews, cue) ? previews[cue] : null;
   }
-  return { fitStage, coverLayout, projectImageRegion, fitRadialGraphic, moveScreenForward, previewFrame };
+  return { fitStage, coverLayout, projectImageRegion, fitRadialGraphic, expandGraphicPose, previewFrame };
 });

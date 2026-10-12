@@ -1,7 +1,7 @@
 "use strict";
 const {test}=require("node:test");
 const assert=require("node:assert/strict");
-const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,moveScreenForward,previewFrame}=require("../stage-layout.js");
+const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,expandGraphicPose,previewFrame}=require("../stage-layout.js");
 const {StartGate,bindAdvanceKey}=require("../opening-controller.js");
 function close(actual,expected){assert.ok(Math.abs(actual-expected)<1e-8,`${actual} != ${expected}`);}
 
@@ -51,41 +51,40 @@ test("a radial graphic uses the largest circle that stays inside either screen o
   }
  }
 });
-test("approaching TV returns exactly to its original photograph position",()=>{
- const home=projectImageRegion(1280,720,1536,1024,{x:543,y:300,width:447,height:216});
- const rest=moveScreenForward(1280,720,home,0),clamped=moveScreenForward(1280,720,home,-2);
- for(const key of ["x","y","width","height"]){close(rest[key],home[key]);close(clamped[key],home[key]);}
+test("AI expansion returns exactly to the idle graphic position and size",()=>{
+ const home=projectImageRegion(1280,720,1536,1024,{x:552,y:310,width:430,height:195});
+ const foreground={x:51.2,y:36,width:1177.6,height:648};
+ const rest=fitRadialGraphic(home,400,5/3,.98);
+ for(const p of [0,-2])assert.deepEqual(expandGraphicPose(home,foreground,400,p,5/3),rest);
 });
-test("the entire TV approaches smoothly without stretching and fills the foreground at three ratios",()=>{
+test("only the radial graphic scales up smoothly, bounded by the stage at three ratios",()=>{
  for(const [width,height] of [[1920,1080],[1440,810],[390,219]]){
-  const home=projectImageRegion(width,height,1536,1024,{x:543,y:300,width:447,height:216});
-  const front=moveScreenForward(width,height,home,1);
-  close(front.x+front.width/2,width/2);close(front.y+front.height/2,height/2);
-  assert.ok(front.width>home.width*3&&front.height>home.height*3);
-  assert.ok(front.width<=width*.92+1e-8&&front.height<=height*.9+1e-8);
+  const home=projectImageRegion(width,height,1536,1024,{x:552,y:310,width:430,height:195});
+  const area={x:width*.04,y:height*.05,width:width*.92,height:height*.9};
+  const rest=expandGraphicPose(home,area,400,0),front=expandGraphicPose(home,area,400,1);
+  close(front.x,width/2);close(front.y,height/2);assert.ok(front.scale>rest.scale*3);
   for(const p of [.1,.4,.7,1]){
-   const moving=moveScreenForward(width,height,home,p);
-   close(moving.width/moving.height,447/216);
-   close(moving.width,home.width+(front.width-home.width)*p);
-   close(moving.y+moving.height/2,home.y+home.height/2+(height/2-home.y-home.height/2)*p);
+   const pose=expandGraphicPose(home,area,400,p),r=400*pose.scale;
+   close(pose.scale,rest.scale+(front.scale-rest.scale)*p);
+   assert.ok(pose.x-r>=pose.clip.x-1e-8&&pose.x+r<=pose.clip.x+pose.clip.width+1e-8);
+   assert.ok(pose.y-r>=pose.clip.y-1e-8&&pose.y+r<=pose.clip.y+pose.clip.height+1e-8);
   }
  }
 });
-test("selection TV approach reserves the caption and remains entirely on stage",()=>{
- const home={x:453.75,y:198,width:372.5,height:180};
+test("enlarged selection AI reserves its caption without stretching or leaving the stage",()=>{
+ const home={x:460,y:206.75,width:1075/3,height:162.5};
+ const area={x:51.2,y:14.4,width:1177.6,height:547.2};
  for(const p of [0,.3,.5,.8,1,3]){
-  const rect=moveScreenForward(1280,720,home,p,{maxHeight:.76,centerY:.4});
-  assert.ok(rect.x>=0&&rect.x+rect.width<=1280);
-  assert.ok(rect.y>=0&&rect.y+rect.height<=720*.78+1e-8);
-  close(rect.width/rect.height,home.width/home.height);
+  const pose=expandGraphicPose(home,area,400,p),r=pose.scale*400;
+  assert.ok(pose.x-r>=0&&pose.x+r<=1280);
+  assert.ok(pose.y-r>=0&&pose.y+r<=720*.78+1e-8);
  }
 });
-test("screen approach rejects invalid geometry and a target that crosses the stage",()=>{
- const home={x:100,y:80,width:400,height:200};
- for(const bad of [0,-1,NaN,Infinity])assert.throws(()=>moveScreenForward(bad,720,home,1),RangeError);
- assert.throws(()=>moveScreenForward(1280,720,home,NaN),RangeError);
- assert.throws(()=>moveScreenForward(1280,720,home,1,{maxHeight:.9,centerY:.4}),RangeError);
- assert.throws(()=>moveScreenForward(1280,720,home,1,{maxWidth:1.2}),RangeError);
+test("graphic expansion rejects invalid radius, progress and area dimensions",()=>{
+ const home={x:100,y:80,width:400,height:200},area={x:0,y:0,width:1280,height:720};
+ for(const bad of [0,-1,NaN,Infinity])assert.throws(()=>expandGraphicPose(home,area,bad,1),RangeError);
+ assert.throws(()=>expandGraphicPose(home,area,400,NaN),RangeError);
+ assert.throws(()=>expandGraphicPose(home,{...area,height:0},400,1),RangeError);
 });
 test("silent step frames cover every cue and cannot mutate the playback transition data",()=>{
  const expected=["bright","ai","door-kick","welcome","clock","card","card-hidden","blackout",

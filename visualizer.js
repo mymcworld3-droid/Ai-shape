@@ -336,7 +336,9 @@ function drawBackground(now,frame){
  }else if(openingRoom&&!frame.preview&&roomReveal.state==="ready"){
   drawRevealVideo(1-roomHandoffProgress(now));
  }
- if(frame.scene>0){ctx.fillStyle=`rgba(0,0,0,${frame.scene})`;ctx.fillRect(0,0,w,h);}
+ const expansion=openingRoom?frame.scene:frame.aiExpansion||0;
+ const dim=openingRoom?config.voiceDim*expansion:frame.scene+(config.voiceDim-frame.scene)*expansion;
+ if(dim>0){ctx.fillStyle=`rgba(0,0,0,${dim})`;ctx.fillRect(0,0,w,h);}
 }
 function resizeCanvas(){
  const available=projectionViewport.getBoundingClientRect();
@@ -587,26 +589,15 @@ function drawVoteCue(cue,opacity){
  if(lines[1]){ctx.font=`400 ${Math.min(w*.022,h*.033)}px sans-serif`;ctx.fillText(lines[1],w/2,y+bh*.73);}
  ctx.restore();
 }
-function drawApproachingDisplay(frame){
+function graphicPlacement(frame,radius){
  const openingRoom=!frame.background||frame.background==="opening";
  const selection=frame.timer==="selection"||frame.caption?.startsWith("vote-");
  const progress=openingRoom?frame.scene:frame.aiExpansion||0;
- const source=config.roomDisplay,inner=config.roomScreen;
- const home=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,source);
+ const home=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
  if(!openingRoom){home.x=w*config.idleShape.x-home.width/2;home.y=h*config.idleShape.y-home.height/2;}
- const display=StageLayout.moveScreenForward(w,h,home,progress,
-  selection?{maxHeight:.76,centerY:.4}:undefined);
- const scale=display.width/source.width;
- // The bezel, screen aperture and AI all share this single moving rectangle.
- // A resting TV is already baked into the opening room's photograph.
- if(progress>0){
-  ctx.save();ctx.globalAlpha=Math.min(1,progress*8);
-  ctx.drawImage(backgroundImage,source.x,source.y,source.width,source.height,
-   display.x,display.y,display.width,display.height);ctx.restore();
- }
- return {progress,inset:inner.inset*scale,
-  screen:{x:display.x+(inner.x-source.x)*scale,y:display.y+(inner.y-source.y)*scale,
-   width:inner.width*scale,height:inner.height*scale}};
+ const foreground={x:w*.04,y:h*(selection ? .02 : .05),width:w*.92,height:h*(selection ? .76 : .9)};
+ return StageLayout.expandGraphicPose(home,foreground,radius,progress,
+  config.roomScreen.inset*home.width/config.roomScreen.width);
 }
 function draw(){
  requestAnimationFrame(draw);
@@ -622,7 +613,6 @@ function draw(){
  updateHexRotation(now);drawBackground(now,frame);
  // The bright room also remains empty until the separate AI fade-in cue.
  if(!frame.room||(!frame.preview&&frame.background==="opening"&&roomHandoffProgress(now)<1))return;
- const display=drawApproachingDisplay(frame);
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=frame.background==="memory"?waveBase+Math.min(w,h)*.075:waveBase-4*scale;
@@ -638,7 +628,7 @@ function draw(){
   const coils=createCoils(waveBase,now*.00045);
   const bass=Math.pow(Math.min(1,a.low/255),2);
   // Fit the actual strokes at their largest radius. Soft glow is clipped to
-  // the display interior, so a faint halo cannot shrink the main figure.
+  // the available graphic area, so a faint halo cannot shrink the main figure.
   const outlineRadius=Math.max(ringR+8*scale,ringR+(8+bass*18)*scale,
    ...coils.map(coil=>coil.radius),hexR*(1.52+energy*energy*.48)+bass*8*scale);
   const radius=Math.max(ringR+8*scale+.5,
@@ -646,7 +636,7 @@ function draw(){
    ...coils.map(coil=>coil.radius+coil.line/2),
    hexR+(bass*18+(1.2+energy*136)/2)*scale,
    hexR*(1.52+energy*energy*.48)+bass*8*scale+(1.1+energy*3.2)*scale/2)+2*scale;
-  const pose=StageLayout.fitRadialGraphic(display.screen,radius,display.inset,.98+.02*display.progress);
+  const pose=graphicPlacement(frame,radius);
   const clip=pose.clip;
   ctx.save();
   if(clip){ctx.beginPath();ctx.rect(clip.x,clip.y,clip.width,clip.height);ctx.clip();}

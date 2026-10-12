@@ -93,8 +93,8 @@ async function prepareWelcome(page) {
   await page.keyboard.press("Space"); await cue(page,"ai"); await page.waitForTimeout(1000);
   await page.keyboard.press("Space"); await cue(page,"door-kick"); await page.waitForTimeout(200);
 }
-async function expectedDifference(page, sourcePath, region=null, threshold=15, dim=0, display=null) {
-  return page.evaluate(async ({sourcePath,region,threshold,dim,display})=>{
+async function expectedDifference(page, sourcePath, region=null, threshold=15, dim=0) {
+  return page.evaluate(async ({sourcePath,region,threshold,dim})=>{
     let img=null;
     if(sourcePath){img=new Image();img.src=sourcePath;await img.decode();}
     const actual=document.getElementById("visualizer"),expected=document.createElement("canvas");
@@ -108,13 +108,6 @@ async function expectedDifference(page, sourcePath, region=null, threshold=15, d
       context.drawImage(img,(expected.width-width)/2,(expected.height-height)/2,width,height);
     }
     if(dim){context.fillStyle=`rgba(0,0,0,${dim})`;context.fillRect(0,0,expected.width,expected.height);}
-    if(display){
-      const tv=new Image();tv.src='assets/backgrounds/IMG_0165.png';await tv.decode();
-      const dpr=actual.width/actual.clientWidth;
-      // Subtract the photographed TV itself: the enlarged pixel bounds must
-      // belong to the AI, rather than merely its large black rectangle.
-      context.drawImage(tv,543,300,447,216,display.x*dpr,display.y*dpr,display.width*dpr,display.height*dpr);
-    }
     const a=actual.getContext("2d").getImageData(0,0,actual.width,actual.height).data;
     const b=context.getImageData(0,0,expected.width,expected.height).data;
     let difference=0,samples=0,minX=actual.width,maxX=-1,minY=actual.height,maxY=-1;
@@ -132,7 +125,7 @@ async function expectedDifference(page, sourcePath, region=null, threshold=15, d
     const dpr=actual.width/actual.clientWidth;
     return {mean:difference/samples,x:minX/dpr,y:minY/dpr,width:(maxX-minX+1)/dpr,
       height:(maxY-minY+1)/dpr,centerX:(minX+maxX)/2/dpr,centerY:(minY+maxY)/2/dpr};
-  },{sourcePath,region,threshold,dim,display});
+  },{sourcePath,region,threshold,dim});
 }
 async function matchesStill(page, sourcePath, region=null) {
   const comparison=await expectedDifference(page,sourcePath,region);
@@ -169,50 +162,46 @@ async function checkClockPlacement(page) {
   assert.ok(Math.abs(bounds.centerY-viewport.height*.4)<6,`Clock Y must be 40%: ${JSON.stringify(bounds)}`);
   assert.ok(Math.abs(bounds.width-expectedWidth)<12,`Clock scale must be 37%: ${JSON.stringify(bounds)}`);
 }
-async function foregroundScreen(page,voting=false){
+async function checkAiScreen(page,{centered=false,large=false,front=false}={}){
+  if(front)return checkVoiceForeground(page,false,true,{centered});
   const viewport=await page.locator('#visualizer').evaluate(c=>({width:c.clientWidth,height:c.clientHeight}));
-  const scale=Math.min(viewport.width*.92/447,viewport.height*(voting ? .76 : .9)/216);
-  const display={x:(viewport.width-447*scale)/2,y:viewport.height*(voting ? .4 : .5)-216*scale/2,
-    width:447*scale,height:216*scale};
-  return {viewport,display,screen:{x:display.x+9*scale,y:display.y+10*scale,width:430*scale,height:195*scale}};
-}
-async function checkAiScreen(page,{dark=false,centered=false,large=false,front=false}={}){
-  const viewport=await page.locator('#visualizer').evaluate(c=>({width:c.clientWidth,height:c.clientHeight}));
-  // Independently project the measured black interior of the actual PNG.
+  // Independently project the resting AI's measured position in the PNG.
   const scale=Math.max(viewport.width/1536,viewport.height/1024);
-  let screen={x:(viewport.width-1536*scale)/2+552*scale,
+  const screen={x:(viewport.width-1536*scale)/2+552*scale,
     y:(viewport.height-1024*scale)/2+310*scale,width:430*scale,height:195*scale};
-  let display=null;
-  if(front){
-    ({screen,display}=await foregroundScreen(page));
-    assert.ok(screen.height>195*scale*3,'Speaking TV must approach the camera, beyond its original fixed aperture');
-  }
-  const source=dark?null:'assets/backgrounds/IMG_0165.png';
-  const pixels=await expectedDifference(page,source,null,3,0,display);
+  const pixels=await expectedDifference(page,'assets/backgrounds/IMG_0165.png',null,3);
   assert.ok(pixels.width>0&&pixels.height>0,'AI must actually render');
-  assert.ok(pixels.x>=screen.x-1&&pixels.x+pixels.width<=screen.x+screen.width+1,
-    `Every AI pixel must stay between the TV's left and right edges: ${JSON.stringify({screen,pixels})}`);
-  assert.ok(pixels.y>=screen.y-1&&pixels.y+pixels.height<=screen.y+screen.height+1,
-    `Every AI pixel, including glow and particles, must stay inside the TV vertically: ${JSON.stringify({screen,pixels})}`);
-  const visible=centered||large?await expectedDifference(page,source,
+  assert.ok(pixels.x>=screen.x-1&&pixels.x+pixels.width<=screen.x+screen.width+1);
+  assert.ok(pixels.y>=screen.y-1&&pixels.y+pixels.height<=screen.y+screen.height+1);
+  const visible=centered||large?await expectedDifference(page,'assets/backgrounds/IMG_0165.png',
     [screen.x/viewport.width,screen.y/viewport.height,(screen.x+screen.width)/viewport.width,
-      (screen.y+screen.height)/viewport.height],1,0,display):pixels;
+      (screen.y+screen.height)/viewport.height],1):pixels;
   if(centered){
-    assert.ok(Math.abs(visible.centerX-(screen.x+screen.width/2))<4,'Idle AI must be centered horizontally on the TV');
-    assert.ok(Math.abs(visible.centerY-(screen.y+screen.height/2))<4,'Idle AI must be centered vertically on the TV');
+    assert.ok(Math.abs(visible.centerX-(screen.x+screen.width/2))<4,'Idle AI must be centered horizontally');
+    assert.ok(Math.abs(visible.centerY-(screen.y+screen.height/2))<4,'Idle AI must be centered vertically');
   }
-  if(large)assert.ok(visible.height>screen.height*.8,`AI must fill most of the TV height: ${JSON.stringify({screen,pixels:visible})}`);
-  if(front)assert.ok(pixels.height>195*scale*2.5,'AI itself must grow beyond the original TV height');
+  if(large)assert.ok(visible.height>screen.height*.8,'Idle AI must fill most of the original TV height');
 }
-async function checkVoiceForeground(page,voting=false){
-  const {viewport,display,screen}=await foregroundScreen(page,voting);
-  const pixels=await expectedDifference(page,'assets/backgrounds/memory-room.png',[0,0,1,voting ? .8 : 1],3,voting ? .2 : 0,display);
-  assert.ok(pixels.height>screen.height*.8,'AI itself must fill the approaching TV, rather than just enlarge the bezel');
-  assert.ok(pixels.x>=screen.x-1&&pixels.x+pixels.width<=screen.x+screen.width+1,
-    `AI must stay within the moving display horizontally: ${JSON.stringify({screen,pixels})}`);
-  assert.ok(pixels.y>=screen.y-1&&pixels.y+pixels.height<=screen.y+screen.height+1,
-    `AI must stay within the moving display vertically: ${JSON.stringify({screen,pixels})}`);
-  assert.ok(pixels.height>viewport.height*.55,'Every speaking AI must reach the foreground');
+async function checkVoiceForeground(page,voting=false,opening=false,{centered=false}={}){
+  const viewport=await page.locator('#visualizer').evaluate(c=>({width:c.clientWidth,height:c.clientHeight}));
+  const source=opening?'assets/backgrounds/IMG_0165.png':'assets/backgrounds/memory-room.png';
+  const pixels=await expectedDifference(page,source,[0,0,1,voting ? .8 : 1],3,.75);
+  const top=viewport.height*(voting ? .02 : .05),bottom=viewport.height*(voting ? .78 : .95);
+  assert.ok(pixels.height>viewport.height*(voting ? .6 : .7),'AI itself must visibly enlarge into the foreground');
+  assert.ok(pixels.x>=viewport.width*.15&&pixels.x+pixels.width<=viewport.width*.85,
+    `Only the radial AI should enlarge: ${JSON.stringify(pixels)}`);
+  assert.ok(pixels.y>=top-1&&pixels.y+pixels.height<=bottom+1,
+    `Enlarged AI and glow must stay on stage above the caption: ${JSON.stringify(pixels)}`);
+  if(centered){
+    assert.ok(Math.abs(pixels.centerX-viewport.width/2)<4,'Enlarged idle preview stays centered horizontally');
+    assert.ok(Math.abs(pixels.centerY-viewport.height*(voting ? .4 : .5))<4,'Enlarged idle preview stays centered vertically');
+  }
+  // Side strips must match the original cover-cropped photograph at 25%
+  // brightness. This catches any moved background, TV bezel or black panel.
+  for(const region of [[0,0,.15,voting ? .8 : 1],[.85,0,1,voting ? .8 : 1]]){
+    const background=await expectedDifference(page,source,region,3,.75);
+    assert.ok(background.mean<1,'Voice background must retain its exact composition and only dim');
+  }
   return pixels;
 }
 async function fastMemory(page){
@@ -293,7 +282,7 @@ async function fastVoting(page){
     assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),"showShell");
     await page.screenshot({path:path.join(output,"04-welcome.png")});
     for(let frame=0;frame<4;frame++){
-      await checkAiScreen(page,{dark:true,front:true});await page.waitForTimeout(80);
+      await checkAiScreen(page,{front:true});await page.waitForTimeout(80);
     }
     await page.keyboard.press("Space"); await cue(page,"clock"); await page.waitForTimeout(1400);
     assert.equal(await page.evaluate(()=>transitions.clock.value),1);
@@ -535,14 +524,14 @@ async function fastVoting(page){
     }
     await screenFit.locator('#pageViewButton').click();await screenFit.locator('#stepsViewButton').click();
     await screenFit.locator('[data-preview="welcome"]').click();await screenFit.waitForTimeout(100);
-    await checkAiScreen(screenFit,{dark:true,centered:true,large:true,front:true});
+    await checkAiScreen(screenFit,{centered:true,large:true,front:true});
     // Render a maximum-range spectrum in this test page only. This verifies
     // animated coils, thick hex strokes, particles and glow at their extremes.
     await screenFit.evaluate(()=>{analyze=()=>{smooth.fill(255);return{avg:255,low:255,mid:255,high:255};};});
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await screenFit.setViewportSize(viewport);await screenFit.waitForTimeout(400);
       for(let frame=0;frame<4;frame++){
-        await checkAiScreen(screenFit,{dark:true,front:true});await screenFit.waitForTimeout(60);
+        await checkAiScreen(screenFit,{front:true});await screenFit.waitForTimeout(60);
       }
     }
     assert.equal(await screenFit.locator('#openingAudio').evaluate(a=>a.currentTime),0);
@@ -553,7 +542,7 @@ async function fastVoting(page){
       await noControls(screenFit);await checkAiScreen(screenFit);
     }
     await screenFit.close();
-    results.push('idle AI fills the photographed TV; speaking TV and AI approach the camera together, over three times the original aperture, with all particles and glow clipped to the moving display at three viewport ratios');
+    results.push('only AI enlarges over the fixed original background during speech; independent pixels verify 25% background brightness, original composition, no bezel or panel, bounded glow and automatic return at three ratios');
     results.push("full-page and twenty-five silent step previews; no audio/video or either timer before Start; Start from the final selection blackout preview resets to first cue and hides every button");
 
     const voicePreview=await browser.newPage();await ready(voicePreview,url);
@@ -567,7 +556,7 @@ async function fastVoting(page){
         const voting=preview.startsWith('vote-');
         await checkVoiceForeground(voicePreview,voting);
         if(voting){
-          const gap=await expectedDifference(voicePreview,'assets/backgrounds/memory-room.png',[0,.8,1,.82],15,.2);
+          const gap=await expectedDifference(voicePreview,'assets/backgrounds/memory-room.png',[0,.8,1,.82],15,.75);
           assert.ok(gap.mean<1,'Even maximum-spectrum AI glow must not enter the caption gap');
         }
         assert.equal(await voicePreview.evaluate(()=>opening.deadline),null);
