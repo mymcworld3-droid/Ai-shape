@@ -407,7 +407,7 @@ function drawSymmetricRing(r,thickness,alpha,glow){
  ctx.shadowBlur=glow*graphicGlowScale;ctx.shadowColor=`rgba(255,255,255,${Math.min(.9,alpha+.16)})`;ctx.stroke();ctx.restore();
 }
 
-// Audio coil: every point is mirrored from the left/right partner. Amplitude is proportional to volume^2 * 10.
+// Mirrored audio ripples bend inward within a fixed graphic envelope.
 function createCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd){
  const points=300,arr=[];let radius=0;
  const range=selectedBins(),lo=range.lo,hi=range.hi;
@@ -422,7 +422,7 @@ function createCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd){
   const volumeSquared2=v2*v2;
   const harmonic=volumeSquared*.72+volumeSquared2*.28;
   const detail=.88+.12*Math.sin(u*Math.PI*22+phase);
-  const ripple=harmonic*amp*scale*10*detail;
+  const ripple=-harmonic*base*(amp/52)*.25*detail;
   const fine=(highEnergy/255)**2*3.2*scale*Math.sin(u*Math.PI*54+phase*2.1);
   const bassBend=(bassEnergy/255)**2*amp*.16*scale*Math.sin(u*Math.PI*6+phase*.55);
   const a=t*Math.PI*2-Math.PI/2;
@@ -451,7 +451,7 @@ function drawBassArcs(radius,audio,phase){
  ctx.save();ctx.lineCap="round";
  for(let j=0;j<3;j++){
   ctx.beginPath();
-  const arcRadius=radius+(j-1)*5*scale+bass*18*scale;
+  const arcRadius=radius+(j-1)*5*scale;
   const start=phase*.55+j*Math.PI*2/3;
   const span=.55+bass*1.05;
   ctx.arc(cx,cy,arcRadius,start,start+span);
@@ -473,13 +473,7 @@ function updateHexRotation(now){
 
 function drawHex(radius,rot,audio){
  ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
- const def=[];
- const range=selectedBins(),lo=range.lo,hi=range.hi;
- for(let i=0;i<6;i++){
-  const band=Math.floor(lo+(i/6)*Math.max(1,(hi-lo)*.30));
-  const v=Math.max(0,Math.min(1,(smooth[Math.min(hi,band)]||0)/255));
-  def[i]=(v*v)*12*scale*(.7+(audio.low/255)**2*.8);
- }
+ const def=[0,0,0,0,0,0];
  ctx.beginPath();
  for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=radius+def[i],x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
  ctx.closePath();
@@ -489,17 +483,17 @@ function drawHex(radius,rot,audio){
  for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=radius*.76+def[i]*.45,x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
  ctx.closePath();ctx.fillStyle="rgba(5,5,5,.9)";ctx.fill();
  const hexVolume=Math.max(0,Math.min(1,energy));
- const edgeWidth=(1.2+hexVolume*136)*scale;
+ const edgeWidth=(1.2+hexVolume*3)*scale;
  ctx.strokeStyle=`rgba(255,255,255,${.2+hexVolume*.55})`;ctx.lineWidth=edgeWidth;ctx.stroke();
- const core=(3+energy*7+audio.high/255*2)*scale;
+ const core=6*scale;
  ctx.beginPath();ctx.arc(0,0,core,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${.35+energy*.65})`;ctx.shadowBlur=10*scale*graphicGlowScale;ctx.shadowColor="rgba(255,255,255,.8)";ctx.fill();
  ctx.restore();
 }
 
 function drawOuterHex(radius,rot,audio){
- const outerScale=1.52+Math.pow(Math.min(1,energy),2)*.48;
+ const outerScale=1.52;
  const outerRadius=radius*outerScale;
- const outerDef=(audio.low/255)**2*8*scale;
+ const outerDef=0;
  ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.beginPath();
  for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/2,r=outerRadius+outerDef,x=r*Math.cos(a),y=r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}
  ctx.closePath();ctx.strokeStyle=`rgba(255,255,255,${.16+energy*.30})`;ctx.lineWidth=(1.1+energy*3.2)*scale;ctx.shadowBlur=(7+energy*12)*scale*graphicGlowScale;ctx.shadowColor="rgba(255,255,255,.65)";ctx.stroke();ctx.restore();
@@ -628,24 +622,18 @@ function draw(){
  updateHexRotation(now);drawBackground(now,frame);
  // The bright room also remains empty until the separate AI fade-in cue.
  if(!frame.room||(!frame.preview&&frame.background==="opening"&&roomHandoffProgress(now)<1))return;
- const hexR=Math.min(w,h)*.105+energy*10*scale;
- const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
+ const hexR=Math.min(w,h)*.105;
+ const waveBase=hexR+Math.min(w,h)*.095;
  const ringR=frame.background==="memory"?waveBase+Math.min(w,h)*.075:waveBase-4*scale;
  const morph=frame.clock;
  const graphicOpacity=frame.ai*(1-easeInOutCubic(Math.min(1,morph/.55)));
  const clockOpacity=easeInOutCubic(Math.max(0,Math.min(1,(morph-.55)/.45)));
  if(graphicOpacity>0){
   const coils=createCoils(waveBase,now*.00045);
-  const bass=Math.pow(Math.min(1,a.low/255),2);
-  // Fit the actual strokes at their largest radius. Soft glow is clipped to
-  // the available graphic area, so a faint halo cannot shrink the main figure.
-  const outlineRadius=Math.max(ringR+8*scale,ringR+(8+bass*18)*scale,
-   ...coils.map(coil=>coil.radius),hexR*(1.52+energy*energy*.48)+bass*8*scale);
-  const radius=Math.max(ringR+8*scale+.5,
-   ringR+(8+bass*18+1.3)*scale,
-   ...coils.map(coil=>coil.radius+coil.line/2),
-   hexR+(bass*18+(1.2+energy*136)/2)*scale,
-   hexR*(1.52+energy*energy*.48)+bass*8*scale+(1.1+energy*3.2)*scale/2)+2*scale;
+  // Camera scale depends only on the stage and cue, never on audio samples.
+  // Reserve the bounded ripple/stroke margin once; keep particles in this envelope.
+  const radius=Math.max(ringR+10*scale,waveBase+16*scale,hexR*1.52+3*scale)+2*scale;
+  const outlineRadius=radius-2*scale;
   const pose=graphicPlacement(frame,radius);
   const clip=pose.clip;
   ctx.save();

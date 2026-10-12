@@ -616,6 +616,37 @@ async function fastVoting(page){
     results.push('only AI enlarges over the fixed original background during speech; independent pixels verify the background becomes exactly black, bounded glow and automatic return at three ratios');
     results.push("full-page and twenty-five silent step previews; no audio/video or either timer before Start; Start from the final selection blackout preview resets to first cue and hides every button");
 
+    const stableSize=await browser.newPage();await ready(stableSize,url);
+    await stableSize.locator('#stepsViewButton').click();
+    await stableSize.evaluate(()=>{
+      const place=graphicPlacement,ring=drawSymmetricRing,coils=createCoils;
+      graphicPlacement=(frame,radius)=>{
+        const pose=place(frame,radius);window.sizeProbe={radius,pose,rings:[],wave:window.lastWave};return pose;
+      };
+      drawSymmetricRing=(radius,...args)=>{window.sizeProbe.rings.push(radius);return ring(radius,...args);};
+      createCoils=(...args)=>{const result=coils(...args);window.lastWave=result[3].arr.map(p=>Math.hypot(p.x-cx,p.y-cy));return result;};
+    });
+    for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
+      await stableSize.setViewportSize(viewport);
+      for(const preview of ['ai','welcome','memory-welcome','vote-prompt']){
+        await stableSize.locator(`[data-preview="${preview}"]`).click();await settlePreview(stableSize);
+        const samples=[];
+        for(const volume of [0,96,255,0]){
+          await stableSize.evaluate(volume=>{analyze=()=>{smooth.fill(volume);return{avg:volume,low:volume,mid:volume,high:volume};};},volume);
+          await stableSize.waitForTimeout(650);
+          samples.push(await stableSize.evaluate(()=>window.sizeProbe));
+        }
+        for(const sample of samples.slice(1)){
+          assert.deepEqual(sample.pose,samples[0].pose,`${preview}: volume must never rescale or recenter AI`);
+          assert.equal(sample.radius,samples[0].radius,'The graphic envelope must be volume independent');
+          assert.deepEqual(sample.rings,samples[0].rings,'Outer circle diameters must remain fixed');
+        }
+        assert.ok(samples[2].wave.some((r,i)=>Math.abs(r-samples[0].wave[i])>2),'Audio must still animate waves within the fixed envelope');
+      }
+    }
+    await stableSize.close();
+    results.push('quiet, medium, maximum and returning-to-silence spectra keep identical AI scale, center, envelope and ring diameters in four cues at three ratios; waves remain audio reactive');
+
     const voicePreview=await browser.newPage();await ready(voicePreview,url);
     await voicePreview.locator('#stepsViewButton').click();
     await voicePreview.evaluate(()=>{analyze=()=>{smooth.fill(255);return{avg:255,low:255,mid:255,high:255};};});
