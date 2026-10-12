@@ -407,7 +407,7 @@ function drawSymmetricRing(r,thickness,alpha,glow){
  ctx.shadowBlur=glow*graphicGlowScale;ctx.shadowColor=`rgba(255,255,255,${Math.min(.9,alpha+.16)})`;ctx.stroke();ctx.restore();
 }
 
-// Original mirrored, squared-volume wave response. Only overflowing coils are fitted locally.
+// Original mirrored, squared-volume wave response; no audio-dependent normalization.
 function createCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd){
  const points=300,arr=[];let radius=0;
  const range=selectedBins(),lo=range.lo,hi=range.hi;
@@ -444,16 +444,6 @@ function createCoils(base,phase){
   createCoil(base-1*scale,39,.18,3,13,phase*1.22+1.5,.08,.84),
   createCoil(base-4*scale,34,.72,1.7,7,phase*1.45+2.7,.02,.90)
  ];
- // Retain each original curve's shape; fit only the waveform if it overflows.
- // This never changes the camera, hex, particles, fixed rings or stage pose.
- const limit=base+12*scale;
- for(const coil of coils){
-  const fit=Math.min(1,limit/coil.radius);
-  if(fit<1){
-   coil.arr=coil.arr.map(p=>({x:cx+(p.x-cx)*fit,y:cy+(p.y-cy)*fit}));
-   coil.radius*=fit;
-  }
- }
  return coils;
 }
 
@@ -656,6 +646,12 @@ function draw(){
   const outlineRadius=radius-2*scale;
   const pose=graphicPlacement(frame,radius);
   const clip=pose.clip;
+  // Waves keep their fixed base and full amplitude; only the canvas crops them.
+  ctx.save();
+  ctx.translate(pose.x,pose.y);ctx.scale(pose.scale,pose.scale);ctx.translate(-cx,-cy);
+  ctx.globalAlpha=graphicOpacity;graphicGlowScale=pose.scale*dpr;
+  for(const coil of coils)drawCoil(coil);
+  ctx.restore();
   ctx.save();
   if(clip){ctx.beginPath();ctx.rect(clip.x,clip.y,clip.width,clip.height);ctx.clip();}
   ctx.translate(pose.x,pose.y);ctx.scale(pose.scale,pose.scale);ctx.translate(-cx,-cy);
@@ -663,7 +659,7 @@ function draw(){
   ctx.globalAlpha=graphicOpacity;graphicGlowScale=clip?pose.scale*dpr:1;
   drawParticles(a,clip?outlineRadius:null);drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
   drawSymmetricRing(ringR+8*scale,1,.025+energy*.065,energy*5*scale);
-  drawBassArcs(ringR+3*scale,a,now*.00065);for(const coil of coils)drawCoil(coil);
+  drawBassArcs(ringR+3*scale,a,now*.00065);
   drawOuterHex(hexR,rotation,a);drawHex(hexR,rotation,a);
   ctx.restore();graphicGlowScale=1;
  }

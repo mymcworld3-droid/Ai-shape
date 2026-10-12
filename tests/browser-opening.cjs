@@ -148,7 +148,7 @@ async function expectedDifference(page, sourcePath, region=null, threshold=15, d
     if(dim){context.fillStyle=`rgba(0,0,0,${dim})`;context.fillRect(0,0,expected.width,expected.height);}
     const a=actual.getContext("2d").getImageData(0,0,actual.width,actual.height).data;
     const b=context.getImageData(0,0,expected.width,expected.height).data;
-    let difference=0,samples=0,minX=actual.width,maxX=-1,minY=actual.height,maxY=-1;
+    let difference=0,samples=0,changedPixels=0,minX=actual.width,maxX=-1,minY=actual.height,maxY=-1;
     const bounds=region||[0,0,1,1];
     for(let py=Math.floor(bounds[1]*actual.height);py<bounds[3]*actual.height;py++)
       for(let px=Math.floor(bounds[0]*actual.width);px<bounds[2]*actual.width;px++){
@@ -158,10 +158,10 @@ async function expectedDifference(page, sourcePath, region=null, threshold=15, d
           const delta=Math.abs(a[index+channel]-b[index+channel]);
           difference+=delta;samples++;if(delta>threshold)changed=true;
         }
-        if(changed){minX=Math.min(minX,px);maxX=Math.max(maxX,px);minY=Math.min(minY,py);maxY=Math.max(maxY,py);}
+        if(changed){changedPixels++;minX=Math.min(minX,px);maxX=Math.max(maxX,px);minY=Math.min(minY,py);maxY=Math.max(maxY,py);}
       }
     const dpr=actual.width/actual.clientWidth;
-    return {mean:difference/samples,x:minX/dpr,y:minY/dpr,width:(maxX-minX+1)/dpr,
+    return {mean:difference/samples,pixels:changedPixels,x:minX/dpr,y:minY/dpr,width:(maxX-minX+1)/dpr,
       height:(maxY-minY+1)/dpr,centerX:(minX+maxX)/2/dpr,centerY:(minY+maxY)/2/dpr};
   },{sourcePath,region,threshold,dim});
 }
@@ -207,8 +207,24 @@ async function checkClockPlacement(page) {
   assert.ok(bounds.y>=screen.y-1&&bounds.y+bounds.height<=screen.y+screen.height+1,
     `Every clock pixel and glow must stay inside the original TV vertically: ${JSON.stringify({screen,bounds})}`);
 }
-async function checkAiScreen(page,{centered=false,large=false,front=false}={}){
-  if(front)return checkVoiceForeground(page,false,true,{centered});
+// Core/TV/background bounds exclude waves, which are now deliberately free to overflow.
+async function withoutWaves(page,check){
+  await page.evaluate(()=>{window.testDrawCoil=drawCoil;drawCoil=()=>{};});
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  try{return await check();}
+  finally{
+    await page.evaluate(()=>{drawCoil=window.testDrawCoil;delete window.testDrawCoil;});
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  }
+}
+async function checkAiScreen(page,options={}){
+  return withoutWaves(page,()=>checkAiCoreScreen(page,options));
+}
+async function checkVoiceForeground(page,...args){
+  return withoutWaves(page,()=>checkVoiceCoreForeground(page,...args));
+}
+async function checkAiCoreScreen(page,{centered=false,large=false,front=false}={}){
+  if(front)return checkVoiceCoreForeground(page,false,true,{centered});
   const viewport=await page.locator('#visualizer').evaluate(c=>({width:c.clientWidth,height:c.clientHeight}));
   // Independently project the resting AI's measured position in the PNG.
   const scale=Math.max(viewport.width/1536,viewport.height/1024);
@@ -227,7 +243,7 @@ async function checkAiScreen(page,{centered=false,large=false,front=false}={}){
   }
   if(large)assert.ok(visible.height>screen.height*.8,'Idle AI must fill most of the original TV height');
 }
-async function checkVoiceForeground(page,voting=false,opening=false,{centered=false}={}){
+async function checkVoiceCoreForeground(page,voting=false,opening=false,{centered=false}={}){
   const viewport=await page.locator('#visualizer').evaluate(c=>({width:c.clientWidth,height:c.clientHeight}));
   const pixels=await expectedDifference(page,null,[0,0,1,voting ? .8 : 1],3);
   const top=viewport.height*(voting ? .02 : .05),bottom=viewport.height*(voting ? .78 : .95);
@@ -625,10 +641,10 @@ async function fastVoting(page){
       ctx.stroke=()=>{if(window.hexProbe)window.hexProbe.width=ctx.lineWidth;return stroke();};
       drawHex=(...args)=>{window.hexProbe={vertices:[],width:0};hex(...args);window.sizeProbe.hex=window.hexProbe;window.hexProbe=null;};
       graphicPlacement=(frame,radius)=>{
-        const pose=place(frame,radius);window.sizeProbe={radius,pose,rings:[],wave:window.lastWave};return pose;
+        const pose=place(frame,radius);window.sizeProbe={radius,pose,rings:[],wave:window.lastWave,waveBase:window.lastWaveBase};return pose;
       };
       drawSymmetricRing=(radius,...args)=>{window.sizeProbe.rings.push(radius);return ring(radius,...args);};
-      createCoils=(...args)=>{const result=coils(...args);window.lastWave=result[3].arr.map(p=>Math.hypot(p.x-cx,p.y-cy));return result;};
+      createCoils=(...args)=>{const result=coils(...args);window.lastWaveBase=args[0];window.lastWave=result[3].arr.map(p=>Math.hypot(p.x-cx,p.y-cy));return result;};
     });
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await stableSize.setViewportSize(viewport);
@@ -644,8 +660,9 @@ async function fastVoting(page){
           assert.deepEqual(sample.pose,samples[0].pose,`${preview}: volume must never rescale or recenter AI`);
           assert.equal(sample.radius,samples[0].radius,'The graphic envelope must be volume independent');
           assert.deepEqual(sample.rings,samples[0].rings,'Outer circle diameters must remain fixed');
+          assert.equal(sample.waveBase,samples[0].waveBase,'Wave baseline never shrinks with volume');
         }
-        assert.ok(samples[2].wave.some((r,i)=>r-samples[0].wave[i]>2),'Audio waves must respond outward as before');
+        assert.ok(samples[2].wave.some((r,i)=>r-samples[0].wave[i]>100*Math.max(.48,Math.min(viewport.width*9/16,viewport.height)/760)),'Full original amplitude must remain; no per-coil fitting or limiting');
         assert.notDeepEqual(samples[2].hex.vertices,samples[0].hex.vertices,'The inner hex must deform with voice volume');
         assert.ok(samples[2].hex.width>samples[0].hex.width*5,'Restore the hex volume-dependent edge thickness');
         const size=await stableSize.evaluate(()=>{
@@ -677,8 +694,8 @@ async function fastVoting(page){
         const voting=preview.startsWith('vote-');
         await checkVoiceForeground(voicePreview,voting);
         if(voting){
-          const gap=await expectedDifference(voicePreview,null,[0,.8,1,.82],0);
-          assert.equal(gap.mean,0,'The caption gap must be exactly black even at maximum spectrum');
+          const caption=await expectedDifference(voicePreview,null,[.17,.83,.83,.95],100);
+          assert.ok(caption.pixels>40,'Selection caption remains drawn above overflowing waves');
         }
         assert.equal(await voicePreview.evaluate(()=>opening.deadline),null);
         assert.equal(await voicePreview.evaluate(()=>stage.voting.deadline),null);
@@ -686,7 +703,29 @@ async function fastVoting(page){
       }
     }
     await voicePreview.close();
-    results.push('Memory and four selection voice previews show enlarged AI at three ratios without playing media; maximum-spectrum strokes, particles and glow stay in the stage and clear of the caption');
+    results.push('Memory and four selection voice previews show enlarged AI at three ratios without playing media; maximum-spectrum core strokes, particles and glow retain their bounds; captions remain drawn above unrestricted waves');
+
+    const overflowingWaves=await browser.newPage();await ready(overflowingWaves,url);
+    await overflowingWaves.locator('#stepsViewButton').click();
+    await overflowingWaves.locator('[data-preview="welcome"]').click();await settlePreview(overflowingWaves);
+    await overflowingWaves.evaluate(()=>{
+      drawHex=drawOuterHex=drawParticles=drawSymmetricRing=drawBassArcs=()=>{};
+      analyze=()=>{smooth.fill(96);return{avg:96,low:96,mid:96,high:96};};
+    });
+    for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
+      await overflowingWaves.setViewportSize(viewport);await overflowingWaves.waitForTimeout(350);
+      const pixels=await expectedDifference(overflowingWaves,null,null,3);
+      const clip=await overflowingWaves.evaluate(()=>{
+        const base=Math.min(w,h)*.2,ring=base-4*scale;
+        const radius=Math.max(ring+10*scale,base+16*scale,Math.min(w,h)*.105*1.52+3*scale)+2*scale;
+        return graphicPlacement(projectionFrame(),radius).clip;
+      });
+      assert.ok(pixels.pixels>100,'Full-amplitude waves must visibly render');
+      assert.ok(pixels.y<clip.y-2||pixels.x<clip.x-2||pixels.y+pixels.height>clip.y+clip.height+2||pixels.x+pixels.width>clip.x+clip.width+2,'Wave pixels must extend past the former foreground clip');
+      await fixedFrame(overflowingWaves);
+    }
+    await overflowingWaves.close();
+    results.push('independent wave-only canvas pixels extend beyond the former graphic boundary at three ratios; full original amplitude is cropped by the 16:9 canvas without shrinking its baseline or causing page overflow');
 
     const slow=await browser.newPage();
     let releaseAudio;
