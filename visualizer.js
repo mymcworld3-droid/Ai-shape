@@ -407,7 +407,7 @@ function drawSymmetricRing(r,thickness,alpha,glow){
  ctx.shadowBlur=glow*graphicGlowScale;ctx.shadowColor=`rgba(255,255,255,${Math.min(.9,alpha+.16)})`;ctx.stroke();ctx.restore();
 }
 
-// Original mirrored, squared-volume wave response, bounded locally instead of rescaling the whole AI.
+// Original mirrored, squared-volume wave response. Only overflowing coils are fitted locally.
 function createCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd){
  const points=300,arr=[];let radius=0;
  const range=selectedBins(),lo=range.lo,hi=range.hi;
@@ -426,10 +426,7 @@ function createCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd){
   const fine=(highEnergy/255)**2*3.2*scale*Math.sin(u*Math.PI*54+phase*2.1);
   const bassBend=(bassEnergy/255)**2*amp*.16*scale*Math.sin(u*Math.PI*6+phase*.55);
   const a=t*Math.PI*2-Math.PI/2;
-  // Outward waves keep their original spectrum and volume response.
-  // Compress only their excursion near the fixed outer boundary.
-  const excursion=12*scale;
-  const r=base+excursion*Math.tanh((ripple+fine+bassBend)/excursion);
+  const r=base+ripple+fine+bassBend;
   radius=Math.max(radius,r);arr.push(radialPoint(r,a));
  }
  return {arr,radius,alpha,line,blur};
@@ -441,12 +438,23 @@ function drawCoil({arr,alpha,line,blur}){
  ctx.closePath();ctx.strokeStyle=`rgba(255,255,255,${alpha})`;ctx.lineWidth=line;ctx.shadowBlur=blur*graphicGlowScale;ctx.shadowColor=`rgba(255,255,255,${Math.min(1,alpha+.22)})`;ctx.stroke();ctx.restore();
 }
 function createCoils(base,phase){
- return [
+ const coils=[
   createCoil(base,52,.045,8,28,phase,.00,.72),
   createCoil(base+2*scale,45,.075,5,20,phase*1.08+.8,.04,.78),
   createCoil(base-1*scale,39,.18,3,13,phase*1.22+1.5,.08,.84),
   createCoil(base-4*scale,34,.72,1.7,7,phase*1.45+2.7,.02,.90)
  ];
+ // Retain each original curve's shape; fit only the waveform if it overflows.
+ // This never changes the camera, hex, particles, fixed rings or stage pose.
+ const limit=base+12*scale;
+ for(const coil of coils){
+  const fit=Math.min(1,limit/coil.radius);
+  if(fit<1){
+   coil.arr=coil.arr.map(p=>({x:cx+(p.x-cx)*fit,y:cy+(p.y-cy)*fit}));
+   coil.radius*=fit;
+  }
+ }
+ return coils;
 }
 
 function drawBassArcs(radius,audio,phase){
