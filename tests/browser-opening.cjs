@@ -650,10 +650,11 @@ async function fastVoting(page){
         assert.ok(samples[2].hex.width>samples[0].hex.width*5,'Restore the hex volume-dependent edge thickness');
         const size=await stableSize.evaluate(()=>{
           const frame=projectionFrame(),radius=window.sizeProbe.radius;
+          const openingRoom=!frame.background||frame.background==='opening';
           const home=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
-          if(frame.background!=='opening'){home.x=w*.5-home.width/2;home.y=h*.4-home.height/2;}
+          if(!openingRoom){home.x=w*.5-home.width/2;home.y=h*.4-home.height/2;}
           const voting=frame.caption?.startsWith('vote-');
-          const previous=StageLayout.expandGraphicPose(home,{x:w*.04,y:h*(voting?.02:.05),width:w*.92,height:h*(voting?.76:.9)},radius,frame.background==='opening'?frame.scene:frame.aiExpansion,config.roomScreen.inset*home.width/config.roomScreen.width);
+          const previous=StageLayout.expandGraphicPose(home,{x:w*.04,y:h*(voting?.02:.05),width:w*.92,height:h*(voting?.76:.9)},radius,openingRoom?frame.scene:frame.aiExpansion||0,config.roomScreen.inset*home.width/config.roomScreen.width);
           return{actual:graphicPlacement(frame,radius),previous};
         });
         assert.equal(size.actual.x,size.previous.x,'Keep the foreground center');
