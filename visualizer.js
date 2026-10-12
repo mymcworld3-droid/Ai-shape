@@ -587,6 +587,27 @@ function drawVoteCue(cue,opacity){
  if(lines[1]){ctx.font=`400 ${Math.min(w*.022,h*.033)}px sans-serif`;ctx.fillText(lines[1],w/2,y+bh*.73);}
  ctx.restore();
 }
+function drawApproachingDisplay(frame){
+ const openingRoom=!frame.background||frame.background==="opening";
+ const selection=frame.timer==="selection"||frame.caption?.startsWith("vote-");
+ const progress=openingRoom?frame.scene:frame.aiExpansion||0;
+ const source=config.roomDisplay,inner=config.roomScreen;
+ const home=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,source);
+ if(!openingRoom){home.x=w*config.idleShape.x-home.width/2;home.y=h*config.idleShape.y-home.height/2;}
+ const display=StageLayout.moveScreenForward(w,h,home,progress,
+  selection?{maxHeight:.76,centerY:.4}:undefined);
+ const scale=display.width/source.width;
+ // The bezel, screen aperture and AI all share this single moving rectangle.
+ // A resting TV is already baked into the opening room's photograph.
+ if(progress>0){
+  ctx.save();ctx.globalAlpha=Math.min(1,progress*8);
+  ctx.drawImage(backgroundImage,source.x,source.y,source.width,source.height,
+   display.x,display.y,display.width,display.height);ctx.restore();
+ }
+ return {progress,inset:inner.inset*scale,
+  screen:{x:display.x+(inner.x-source.x)*scale,y:display.y+(inner.y-source.y)*scale,
+   width:inner.width*scale,height:inner.height*scale}};
+}
 function draw(){
  requestAnimationFrame(draw);
  const now=performance.now();opening.getRemainingMs();updateTransitions(now);
@@ -601,6 +622,7 @@ function draw(){
  updateHexRotation(now);drawBackground(now,frame);
  // The bright room also remains empty until the separate AI fade-in cue.
  if(!frame.room||(!frame.preview&&frame.background==="opening"&&roomHandoffProgress(now)<1))return;
+ const display=drawApproachingDisplay(frame);
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
  const ringR=frame.background==="memory"?waveBase+Math.min(w,h)*.075:waveBase-4*scale;
@@ -624,22 +646,8 @@ function draw(){
    ...coils.map(coil=>coil.radius+coil.line/2),
    hexR+(bass*18+(1.2+energy*136)/2)*scale,
    hexR*(1.52+energy*energy*.48)+bass*8*scale+(1.1+energy*3.2)*scale/2)+2*scale;
-  let pose={x:visualX,y:visualY,scale:visualScale},clip=null;
-  if(!frame.background||frame.background==="opening"){
-   const screen=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
-   pose=StageLayout.fitRadialGraphic(screen,radius,config.roomScreen.inset*screen.width/config.roomScreen.width,.98+.02*expansion);
-   clip=pose.clip;
-  }else{
-   // Keep the voice graphic independent from the background dim and clock.
-   const selection=frame.timer==="selection"||frame.caption?.startsWith("vote-");
-   const expansion=frame.aiExpansion||0;
-   const y=selection?h*idle.y:h*idle.y+(cy-h*idle.y)*expansion;
-   const area={x:2,y:2,width:w-4,height:h*(selection ? .8 : 1)-4};
-   const available=Math.max(0,Math.min(w*idle.x-area.x,area.x+area.width-w*idle.x,
-    y-area.y,area.y+area.height-y));
-   pose={x:w*idle.x,y,scale:Math.min(idle.size+(1-idle.size)*expansion,available/radius)};
-   clip=area;
-  }
+  const pose=StageLayout.fitRadialGraphic(display.screen,radius,display.inset,.98+.02*display.progress);
+  const clip=pose.clip;
   ctx.save();
   if(clip){ctx.beginPath();ctx.rect(clip.x,clip.y,clip.width,clip.height);ctx.clip();}
   ctx.translate(pose.x,pose.y);ctx.scale(pose.scale,pose.scale);ctx.translate(-cx,-cy);

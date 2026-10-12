@@ -1,7 +1,7 @@
 "use strict";
 const {test}=require("node:test");
 const assert=require("node:assert/strict");
-const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,previewFrame}=require("../stage-layout.js");
+const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,moveScreenForward,previewFrame}=require("../stage-layout.js");
 const {StartGate,bindAdvanceKey}=require("../opening-controller.js");
 function close(actual,expected){assert.ok(Math.abs(actual-expected)<1e-8,`${actual} != ${expected}`);}
 
@@ -50,6 +50,42 @@ test("a radial graphic uses the largest circle that stays inside either screen o
    close(r,Math.min(pose.clip.width,pose.clip.height)/2);
   }
  }
+});
+test("approaching TV returns exactly to its original photograph position",()=>{
+ const home=projectImageRegion(1280,720,1536,1024,{x:543,y:300,width:447,height:216});
+ const rest=moveScreenForward(1280,720,home,0),clamped=moveScreenForward(1280,720,home,-2);
+ for(const key of ["x","y","width","height"]){close(rest[key],home[key]);close(clamped[key],home[key]);}
+});
+test("the entire TV approaches smoothly without stretching and fills the foreground at three ratios",()=>{
+ for(const [width,height] of [[1920,1080],[1440,810],[390,219]]){
+  const home=projectImageRegion(width,height,1536,1024,{x:543,y:300,width:447,height:216});
+  const front=moveScreenForward(width,height,home,1);
+  close(front.x+front.width/2,width/2);close(front.y+front.height/2,height/2);
+  assert.ok(front.width>home.width*3&&front.height>home.height*3);
+  assert.ok(front.width<=width*.92+1e-8&&front.height<=height*.9+1e-8);
+  for(const p of [.1,.4,.7,1]){
+   const moving=moveScreenForward(width,height,home,p);
+   close(moving.width/moving.height,447/216);
+   close(moving.width,home.width+(front.width-home.width)*p);
+   close(moving.y+moving.height/2,home.y+home.height/2+(height/2-home.y-home.height/2)*p);
+  }
+ }
+});
+test("selection TV approach reserves the caption and remains entirely on stage",()=>{
+ const home={x:453.75,y:198,width:372.5,height:180};
+ for(const p of [0,.3,.5,.8,1,3]){
+  const rect=moveScreenForward(1280,720,home,p,{maxHeight:.76,centerY:.4});
+  assert.ok(rect.x>=0&&rect.x+rect.width<=1280);
+  assert.ok(rect.y>=0&&rect.y+rect.height<=720*.78+1e-8);
+  close(rect.width/rect.height,home.width/home.height);
+ }
+});
+test("screen approach rejects invalid geometry and a target that crosses the stage",()=>{
+ const home={x:100,y:80,width:400,height:200};
+ for(const bad of [0,-1,NaN,Infinity])assert.throws(()=>moveScreenForward(bad,720,home,1),RangeError);
+ assert.throws(()=>moveScreenForward(1280,720,home,NaN),RangeError);
+ assert.throws(()=>moveScreenForward(1280,720,home,1,{maxHeight:.9,centerY:.4}),RangeError);
+ assert.throws(()=>moveScreenForward(1280,720,home,1,{maxWidth:1.2}),RangeError);
 });
 test("silent step frames cover every cue and cannot mutate the playback transition data",()=>{
  const expected=["bright","ai","door-kick","welcome","clock","card","card-hidden","blackout",
