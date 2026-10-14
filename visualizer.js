@@ -107,6 +107,7 @@ const stage=new StageOpening.StageCueController({
    selectionPrompt:"selectionPromptState",selectionOne:"selectionOneState",
    selectionTwo:"selectionTwoState",selectionFinal:"selectionFinalState"}[kind];
   document.body.dataset[key]=state;
+  if(kind==="narration"&&state==="ready")animate("scene",0,config.settleDurationMs);
   if(kind==="memoryVoice"){
    if(state==="playing")animate("aiExpansion",1,config.memory.voiceExpandMs);
    if(state==="finished"||state==="error")animate("aiExpansion",0,config.memory.aiFadeMs);
@@ -295,7 +296,7 @@ function advanceStage(){
  if(stage.state==="clock"&&!cardReady)return;
  if(performance.now()<stage.busyUntil)return;
  if(stage.state==="dark")document.body.dataset.videoError="false";
- if(stage.state==="door-kick"&&!["starting","playing","error"].includes(stage.effectState)){
+ if(stage.state==="ai"||(stage.state==="welcome"&&stage.opening.state==="ready")){
   document.body.dataset.audioError="false";prepareAudio();
  }
  if(stage.state==="memory-light"&&config.memory.narration){
