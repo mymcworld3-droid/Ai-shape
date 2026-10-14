@@ -1,18 +1,18 @@
 # 第一幕第二場：記憶室
 
-沿用 `feat/one-key-opening`、16:9 畫框、背景 cover 裁切與同一個 Space 鍵。
+沿用原開場控制流程、16:9 畫框、背景 cover 裁切與同一個 Space 鍵。
 開始後所有控制按鍵仍隱藏。第一場第 8 段全暗可一直停留，讓演員進場，
 不會自動亮起記憶室。
 
 | 段 | 按鍵時機 | 投影 |
 | --- | --- | --- |
 | 09 | Megan 說完 Where's the light? | 1 秒淡入記憶室，清除第一場的 AI、碼錶與卡片。開燈音效欄位預留。 |
-| 10 | Rachel 說完 Scary. | AI 漸顯，配置後播放 Welcome to the Memory Room. |
+| 10 | Rachel 說完 Scary. | AI 漸顯並播放 `Memory-room.m4a`，約 3.7 秒。 |
 | 11 | 歡迎之後，演員開始找相框 | AI 淡出，只保留房間。演員可自行掌握對話長度。 |
 | 12 | Ethan 說完 Go ahead. 且準備轉幕 | 1.2 秒淡至全暗，停留等下一幕。 |
 
-若提供記憶室歡迎語音，AI 圖形在 900 ms 內放大，原記憶室保持構圖並漸暗至全黑，
-播完在 600 ms 內縮回並淡出，背景恢復亮度。圖形、波形與發光均限制在畫框內。
+已配置記憶室歡迎語音，AI 圖形在 900 ms 內放大，原記憶室保持構圖並漸暗至全黑，
+播完在 600 ms 內縮回並淡出，背景恢復亮度。主圖形保持固定比例，波形可向外延伸；光點位於主圖形外側，超出 16:9 畫面直接裁掉。
 AI 會在真實 `ended` 後自動淡出，
 第 11 段的操作仍保留，不會因此直接跳到全暗。影音播放中、動畫中、
 長按和雙擊都不會排隊推進。播放失敗時，下一個新按鍵只重試該項影音。
@@ -24,20 +24,20 @@ AI 會在真實 `ended` 後自動淡出，
 
 | 素材 | 建議檔案／內容 |
 | --- | --- |
-| 記憶室歡迎語音 | `assets/audio/ai-memory-room.mp3`；Welcome to the Memory Room. |
+| 記憶室歡迎語音 | **已提供**：`assets/audio/Memory-room.m4a`，約 3.7 秒，保留原檔。 |
 | 開燈音效 | `assets/audio/memory-light-click.mp3`；短、獨立的 click，避免長前置靜音。 |
 | 相框道具照片 | Christopher 與 Liam 的合照；實際演員或你指定的角色照片，不在這次背景中生成長相。 |
 | 相框背面 | To remember, to forgive, to forget. —Chris |
 
-語音與音效備妥後，在 `opening-config.js` 的 `memory` 中設定：
+目前在 `opening-config.js` 的 `memory` 中設定：
 
 ```js
-narration: "assets/audio/ai-memory-room.mp3",
-lightClick: "assets/audio/memory-light-click.mp3",
+narration: "assets/audio/Memory-room.m4a",
+lightClick: null,
 ```
 
-目前兩個欄位都是 `null`，不會請求不存在的檔案。
-歡迎 cue 先顯示 AI，第 11 段由操作員按鍵使 AI 退場。
+歡迎語音已接上，開燈音效仍為 `null`。語音真正播完後 AI 自動縮回並淡出；
+第 11 段仍由操作員按鍵進入演員對話，不會自動跳步。
 相框與人物照片在劇本中是演員拿取的道具，不額外加上照片投影 cue。
 
 ## 背景
@@ -70,3 +70,13 @@ Use case: lighting-weather and precise-object-edit. Edit Image 1, the Memory Roo
 ![步驟檢視中的單門亮房間](memory-room-preview.jpg)
 
 ![開始後的實際投影，所有按鈕已隱藏](memory-room-live.jpg)
+
+## 原始語音實播（2026-10-14）
+
+分支 `feat/memory-room-voice` 使用上傳的原始 `Memory-room.m4a`，瀏覽器回報長度 3.7 秒，
+正常播放、無解碼錯誤。真正結束後 `ended=true`，畫面恢復原房間、AI 退場，
+仍停留 `memory-welcome` 等待下一次按鍵；原開場語音沒有重播。
+
+![記憶房間語音自然播完後，恢復房間並等待下一次按鍵](memory-original-voice-ended.jpg)
+
+記憶房間原始語音整合（`ed65649`）：[84 項控制／版面測試與 22 組 Chrome 檢查](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/38516525648)全部通過；3.7 秒原始 M4A 自然播放、音訊分析、放大與全黑背景、真正結束後退場、長按不跳步及倒數不重設均已驗證。

@@ -11,8 +11,8 @@ window.OPENING_CONFIG = Object.freeze({
   card: "assets/cards/memory-access-card.svg",
   memory: Object.freeze({
     background: "assets/backgrounds/memory-room.png",
-    // Add final assets later. null makes no missing-file requests.
-    narration: null,
+    // Original uploaded recording; keep its filename and bytes unchanged.
+    narration: "assets/audio/Memory-room.m4a",
     lightClick: null,
     fadeMs: 1000,
     aiFadeMs: 600,
