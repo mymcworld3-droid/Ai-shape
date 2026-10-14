@@ -44,7 +44,7 @@
 | --- | --- | --- |
 | 1 | 暗 → 亮 | 播放完整 `Start_animation.mp4`；自然播完後回到原本的 `IMG_0165.png`，先不顯示 AI。 |
 | 2 | AI 漸顯 | 1500 ms 漸顯，置於電視內框正中央，依內框可容納的最大尺寸顯示。 |
-| 3 | 踢門音效 | 播放設定的音效；音效播完後等待下一個 cue。目前音效尚未提供，此 cue 保留但無聲。 |
+| 3 | 踢門音效 | 播放設定的音效；音效播完後等待下一個 cue。已接上使用者提供的踢門 WAV，約 0.51 秒。 |
 | 4 | 歡迎語音 | AI 圖形放大到前景，原房間保持構圖並漸暗；播放最新 29 秒語音。播完圖形縮回、恢復房間亮度。 |
 | 5 | 碼錶取代圖形 | **在歡迎語音播放期間按下**，讓 AI 漸變成七段電子碼錶；先顯示 15:00，不計時。 |
 | 6 | 顯示卡片 | 語音播完、畫面縮小完成後，顯示暫用的 MEMORY ACCESS 卡片。 |
@@ -105,7 +105,7 @@ Y＝40% 指**整個投影畫面高度**；大小＝37% 是原本大小滑桿的�
 | 初始暗房間 | `assets/backgrounds/Start_dark.PNG`，原檔未修改。 |
 | 暗亮轉場影片 | `assets/videos/Start_animation.mp4`，使用最新上傳的 4.27 秒版本，完整播放且靜音，原檔未修改。檔名大小寫須與設定一致。 |
 | 歡迎語音 | `assets/audio/ai-opening.m4a`，使用最新上傳的 29 秒 AAC 原檔。 |
-| 踢門音效 | **待提供**。放到 `assets/audio/door-kick.mp3` 後，把設定的 `doorKick: null` 改成 `doorKick: "assets/audio/door-kick.mp3"`。 |
+| 踢門音效 | 已有 `assets/audio/door-kick.wav`，使用者提供的原始 WAV，約 0.51 秒；第 3 步播放，真正結束後等待下一次按鍵。 |
 | 卡片圖片 | 已有暫用 `assets/cards/memory-access-card.svg`。若提供正式 PNG/JPG，可放在 `assets/cards/`，並更新設定的 `card` 路徑。 |
 | 記憶室背景 | 已有 `assets/backgrounds/memory-room.png`，和原亮房間一樣明亮，只保留左側一扇門；左後方相框留白。 |
 | 記憶室歡迎語音 | **待提供**：Welcome to the Memory Room. 設定在 `memory.narration`。 |
@@ -124,7 +124,7 @@ Y＝40% 指**整個投影畫面高度**；大小＝37% 是原本大小滑桿的�
 [兩張後續場景的背景提示詞](docs/background-prompts.md) 仍保留。
 影片為 16:9、房間圖片為 3:2；皆填滿 16:9 畫框，超出部分裁掉、不拉伸。
 素材之間有 240 ms 交接淡化。所有現有執行素材皆為相對路徑，可離線使用；
-`doorKick: null` 不會請求不存在的檔案。影片右下角的原有標記仍保留。
+踢門音效與開場語音都使用專案內檔案，不依賴外站連線。影片右下角的原有標記仍保留。
 
 ## 驗證
 
@@ -248,3 +248,12 @@ AI 自動縮小及各幕流程。HTTPS 預覽另以開始鍵及 Space 實播，
 波形完整振幅與固定基準圈（`93f95b9`）：[84 項控制／版面測試與 21 組 Chrome 檢查](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/38197015897)全部通過。
 
 光點外移（`3bfba11`）：[84 項控制／版面測試與 22 組 Chrome 檢查](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/38513986179)全部通過。
+
+## 踢門音效（2026-10-14）
+
+第 3 步播放 `assets/audio/door-kick.wav`；原檔取自
+[使用者指定的 249.wav](https://downsc.chinaz.net/files/download/sound/huang/cd9/wav/249.wav)。
+WAV 為 44.1 kHz、16-bit、雙聲道 PCM，22,500 幀，長度 0.510204 秒、90,044 bytes。
+檔案未剪輯或轉碼，SHA-256：`4385817b7ba8a163fe9feb70d0da9861b92e4bdb4636e58649581e717d50c655`。
+播放期間禁止切到歡迎語音；真正結束後仍停在踢門 cue，放開按鍵再按一下才進入第 4 步。
+播放失敗時下一次按鍵只重試踢門音效，不會跳到語音或開始倒數。

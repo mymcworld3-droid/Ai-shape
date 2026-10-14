@@ -6,7 +6,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "test-results");
-const types = { ".html":"text/html", ".js":"text/javascript", ".css":"text/css", ".png":"image/png", ".svg":"image/svg+xml", ".mp3":"audio/mpeg", ".m4a":"audio/mp4", ".mp4":"video/mp4" };
+const types = { ".html":"text/html", ".js":"text/javascript", ".css":"text/css", ".png":"image/png", ".svg":"image/svg+xml", ".mp3":"audio/mpeg", ".wav":"audio/wav", ".m4a":"audio/mp4", ".mp4":"video/mp4" };
 
 // A short, quiet PCM test tone exercises the optional audio slot. It is never
 // shipped as a show effect or configured on the production page.
@@ -129,7 +129,7 @@ async function fastReveal(page) {
 }
 async function prepareWelcome(page) {
   await page.keyboard.press("Space"); await cue(page,"ai"); await settleLiveAi(page);
-  await page.keyboard.press("Space"); await cue(page,"door-kick"); await page.waitForTimeout(200);
+  await page.keyboard.press("Space"); await cue(page,"door-kick"); await flag(page,"effectState","finished");
 }
 async function expectedDifference(page, sourcePath, region=null, threshold=15, dim=0) {
   return page.evaluate(async ({sourcePath,region,threshold,dim})=>{
@@ -330,9 +330,18 @@ async function fastVoting(page){
     await settleLiveAi(page); await page.screenshot({path:path.join(output,"03-ai.png")});
     await checkAiScreen(page,{centered:true,large:true});
     await page.keyboard.press("Space"); await cue(page,"door-kick");
-    assert.equal(await page.locator('body').getAttribute('data-effect-state'),"missing");
-    assert.equal(await page.locator('#doorKickAudio').getAttribute('src'),null);
-    await page.waitForTimeout(200); await page.keyboard.press("Space"); await state(page,"narration");
+    await flag(page,'effectState','playing');
+    assert.equal(await page.locator('#doorKickAudio').getAttribute('src'),'assets/audio/door-kick.wav');
+    const kick=await page.locator('#doorKickAudio').evaluate(a=>({duration:a.duration,paused:a.paused,time:a.currentTime}));
+    assert.ok(Math.abs(kick.duration-22500/44100)<.002,'Play the exact supplied 0.5102-second WAV');
+    assert.equal(kick.paused,false);
+    await page.keyboard.down('Space');await cue(page,'door-kick');
+    assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0,'Voice must wait until the kick actually ends');
+    await flag(page,'effectState','finished');
+    assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.ended),true);
+    await page.keyboard.down('Space');await cue(page,'door-kick');
+    assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0,'Held Space cannot advance at effect end');
+    await page.keyboard.up('Space');await page.keyboard.press('Space');await state(page,'narration');
     await page.waitForTimeout(2200);
     const playing=await page.locator('#openingAudio').evaluate(a=>({time:a.currentTime,paused:a.paused}));
     assert.ok(playing.time>1); assert.equal(playing.paused,false);
@@ -364,7 +373,7 @@ async function fastVoting(page){
     const remaining=await page.evaluate(()=>stageOpening.remainingMs);
     assert.ok(remaining>890000&&remaining<900000);
     await page.screenshot({path:path.join(output,"06-countdown.png")});
-    results.push("explicit Start gate, hidden controls, natural MP4 and M4A ends, eight separate cues, waiting clock and automatic countdown");
+    results.push("explicit Start gate, hidden controls, natural supplied MP4, original 0.5102-second door-kick WAV and M4A ends; held Space cannot skip the effect; eight cues, waiting clock and automatic countdown");
 
     await page.keyboard.press("Escape");
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]) {
@@ -816,7 +825,7 @@ async function fastVoting(page){
 
     const effectPage=await browser.newPage();
     await effectPage.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:
-      fs.readFileSync(path.join(root,'opening-config.js'),'utf8').replace('doorKick: null','doorKick: "test-fixtures/door-kick.wav"')}));
+      fs.readFileSync(path.join(root,'opening-config.js'),'utf8').replace('doorKick: "assets/audio/door-kick.wav"','doorKick: "test-fixtures/door-kick.wav"')}));
     await effectPage.addInitScript(()=>{
       const play=HTMLMediaElement.prototype.play;let blocked=true;
       HTMLMediaElement.prototype.play=function(){if(this.id==="doorKickAudio"&&blocked){blocked=false;return Promise.reject(new DOMException("Blocked","NotAllowedError"));}return play.call(this);};
@@ -832,7 +841,7 @@ async function fastVoting(page){
     assert.equal(await effectPage.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await effectPage.keyboard.press("Space"); await state(effectPage,"narration");
     await noControls(effectPage); await effectPage.close();
-    results.push("optional SFX slot tested with real PCM fixture playback, failure/retry and separate welcome cue; production stays explicitly silent until the effect is supplied");
+    results.push("door-kick failure/retry and separate welcome cue tested with a longer real PCM fixture; production uses the supplied original WAV");
 
     const memoryMedia=await browser.newPage();
     await memoryMedia.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:

@@ -6,9 +6,8 @@ window.OPENING_CONFIG = Object.freeze({
   roomReveal: "assets/videos/Start_animation.mp4",
   revealFadeMs: 240,
   narration: "assets/audio/ai-opening.m4a",
-  // Supply the final effect, then set this to "assets/audio/door-kick.mp3".
-  // null reserves its cue silently, without requesting a nonexistent file.
-  doorKick: null,
+  // Original user-supplied WAV, stored locally for offline playback.
+  doorKick: "assets/audio/door-kick.wav",
   card: "assets/cards/memory-access-card.svg",
   memory: Object.freeze({
     background: "assets/backgrounds/memory-room.png",
