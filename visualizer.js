@@ -357,8 +357,8 @@ function resizeCanvas(){
  scale=Math.max(.48,Math.min(Math.min(w,h)/760,1));initParticles();
 }
 function initParticles(){
- particles.length=0;const maxR=Math.min(w,h)*.47;
- for(let i=0;i<PARTICLES;i++)particles.push({a:Math.random()*Math.PI*2,r:maxR*(.55+Math.random()*.44),
+ particles.length=0;
+ for(let i=0;i<PARTICLES;i++)particles.push({a:Math.random()*Math.PI*2,band:Math.random(),
  s:.00012+Math.random()*.00065,size:.45+Math.random()*1.5,alpha:.035+Math.random()*.19});
 }
 resizeCanvas();
@@ -506,11 +506,11 @@ function drawOuterHex(radius,rot,audio){
  ctx.closePath();ctx.strokeStyle=`rgba(255,255,255,${.16+energy*.30})`;ctx.lineWidth=(1.1+energy*3.2)*scale;ctx.shadowBlur=(7+energy*12)*scale*graphicGlowScale;ctx.shadowColor="rgba(255,255,255,.65)";ctx.stroke();ctx.restore();
 }
 
-function drawParticles(audio,radiusLimit=null){
+function drawParticles(audio,coreRadius){
  for(const p of particles){
   if(!audioElement.paused&&!audioElement.ended)p.a+=p.s*16;
-  const r=radiusLimit===null?p.r+energy*42*scale+audio.high/255*16*scale:
-   Math.min(radiusLimit-3*scale,p.r/(Math.min(w,h)*.47)*radiusLimit);
+  // Fixed annulus beyond the whole core, with a gap even at maximum dot size.
+  const r=coreRadius+6*scale+p.band*Math.min(w,h)*.055;
   const x=cx+Math.cos(p.a)*r,y=cy+Math.sin(p.a)*r;
   ctx.beginPath();ctx.arc(x,y,p.size+(audio.high/255)*.6,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${Math.min(.5,p.alpha*(.3+energy*2.1))})`;ctx.fill();
  }
@@ -641,15 +641,15 @@ function draw(){
  if(graphicOpacity>0){
   const coils=createCoils(waveBase,now*.00045);
   // Camera scale depends only on the stage and cue, never on audio samples.
-  // Reserve the bounded ripple/stroke margin once; keep particles in this envelope.
+  // Reserve the core stroke margin once; particles orbit beyond this boundary.
   const radius=Math.max(ringR+10*scale,waveBase+16*scale,Math.min(w,h)*.105*1.52+3*scale)+2*scale;
-  const outlineRadius=radius-2*scale;
   const pose=graphicPlacement(frame,radius);
   const clip=pose.clip;
   // Waves keep their fixed base and full amplitude; only the canvas crops them.
   ctx.save();
   ctx.translate(pose.x,pose.y);ctx.scale(pose.scale,pose.scale);ctx.translate(-cx,-cy);
   ctx.globalAlpha=graphicOpacity;graphicGlowScale=pose.scale*dpr;
+  drawParticles(a,radius);
   for(const coil of coils)drawCoil(coil);
   ctx.restore();
   ctx.save();
@@ -657,7 +657,7 @@ function draw(){
   ctx.translate(pose.x,pose.y);ctx.scale(pose.scale,pose.scale);ctx.translate(-cx,-cy);
   ctx.beginPath();ctx.arc(cx,cy,radius,0,Math.PI*2);ctx.clip();
   ctx.globalAlpha=graphicOpacity;graphicGlowScale=clip?pose.scale*dpr:1;
-  drawParticles(a,clip?outlineRadius:null);drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
+  drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
   drawSymmetricRing(ringR+8*scale,1,.025+energy*.065,energy*5*scale);
   drawBassArcs(ringR+3*scale,a,now*.00065);
   drawOuterHex(hexR,rotation,a);drawHex(hexR,rotation,a);

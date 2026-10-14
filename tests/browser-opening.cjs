@@ -207,21 +207,21 @@ async function checkClockPlacement(page) {
   assert.ok(bounds.y>=screen.y-1&&bounds.y+bounds.height<=screen.y+screen.height+1,
     `Every clock pixel and glow must stay inside the original TV vertically: ${JSON.stringify({screen,bounds})}`);
 }
-// Core/TV/background bounds exclude waves, which are now deliberately free to overflow.
-async function withoutWaves(page,check){
-  await page.evaluate(()=>{window.testDrawCoil=drawCoil;drawCoil=()=>{};});
+// Core/TV/background bounds exclude the deliberately external waves and light dots.
+async function withoutExternalEffects(page,check){
+  await page.evaluate(()=>{window.testDrawCoil=drawCoil;window.testDrawDots=drawParticles;drawCoil=drawParticles=()=>{};});
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   try{return await check();}
   finally{
-    await page.evaluate(()=>{drawCoil=window.testDrawCoil;delete window.testDrawCoil;});
+    await page.evaluate(()=>{drawCoil=window.testDrawCoil;drawParticles=window.testDrawDots;delete window.testDrawCoil;delete window.testDrawDots;});
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   }
 }
 async function checkAiScreen(page,options={}){
-  return withoutWaves(page,()=>checkAiCoreScreen(page,options));
+  return withoutExternalEffects(page,()=>checkAiCoreScreen(page,options));
 }
 async function checkVoiceForeground(page,...args){
-  return withoutWaves(page,()=>checkVoiceCoreForeground(page,...args));
+  return withoutExternalEffects(page,()=>checkVoiceCoreForeground(page,...args));
 }
 async function checkAiCoreScreen(page,{centered=false,large=false,front=false}={}){
   if(front)return checkVoiceCoreForeground(page,false,true,{centered});
@@ -635,7 +635,10 @@ async function fastVoting(page){
     const stableSize=await browser.newPage();await ready(stableSize,url);
     await stableSize.locator('#stepsViewButton').click();
     await stableSize.evaluate(()=>{
-      const place=graphicPlacement,ring=drawSymmetricRing,coils=createCoils,hex=drawHex;
+      const place=graphicPlacement,ring=drawSymmetricRing,coils=createCoils,hex=drawHex,dots=drawParticles;
+      const arc=ctx.arc.bind(ctx);
+      ctx.arc=(x,y,r,...rest)=>{if(window.dotProbe)window.dotProbe.push({r:Math.hypot(x-cx,y-cy),size:r});return arc(x,y,r,...rest);};
+      drawParticles=(audio,radius)=>{window.dotProbe=[];dots(audio,radius);window.sizeProbe.dots={points:window.dotProbe,core:radius,unit:scale,band:Math.min(w,h)*.055};window.dotProbe=null;};
       const lineTo=ctx.lineTo.bind(ctx),stroke=ctx.stroke.bind(ctx);
       ctx.lineTo=(x,y)=>{if(window.hexProbe)window.hexProbe.vertices.push([x,y]);return lineTo(x,y);};
       ctx.stroke=()=>{if(window.hexProbe)window.hexProbe.width=ctx.lineWidth;return stroke();};
@@ -661,8 +664,16 @@ async function fastVoting(page){
           assert.equal(sample.radius,samples[0].radius,'The graphic envelope must be volume independent');
           assert.deepEqual(sample.rings,samples[0].rings,'Outer circle diameters must remain fixed');
           assert.equal(sample.waveBase,samples[0].waveBase,'Wave baseline never shrinks with volume');
+          assert.deepEqual(sample.dots.points.map(p=>p.r),samples[0].dots.points.map(p=>p.r),'Dot orbits never move inward with volume');
         }
         assert.ok(samples[2].wave.some((r,i)=>r-samples[0].wave[i]>100*Math.max(.48,Math.min(viewport.width*9/16,viewport.height)/760)),'Full original amplitude must remain; no per-coil fitting or limiting');
+        for(const sample of samples){
+          assert.equal(sample.dots.points.length,90,'Keep all 90 light dots');
+          for(const dot of sample.dots.points){
+            assert.ok(dot.r-dot.size>sample.dots.core,'Every light dot lies entirely outside the core');
+            assert.ok(dot.r<=sample.dots.core+6*sample.dots.unit+sample.dots.band+1e-8,'Dots occupy the intended outer band');
+          }
+        }
         assert.notDeepEqual(samples[2].hex.vertices,samples[0].hex.vertices,'The inner hex must deform with voice volume');
         assert.ok(samples[2].hex.width>samples[0].hex.width*5,'Restore the hex volume-dependent edge thickness');
         const size=await stableSize.evaluate(()=>{
@@ -703,7 +714,7 @@ async function fastVoting(page){
       }
     }
     await voicePreview.close();
-    results.push('Memory and four selection voice previews show enlarged AI at three ratios without playing media; maximum-spectrum core strokes, particles and glow retain their bounds; captions remain drawn above unrestricted waves');
+    results.push('Memory and four selection voice previews show enlarged AI at three ratios without playing media; maximum-spectrum core strokes and glow retain their bounds; captions remain drawn above unrestricted waves');
 
     const overflowingWaves=await browser.newPage();await ready(overflowingWaves,url);
     await overflowingWaves.locator('#stepsViewButton').click();
@@ -726,6 +737,24 @@ async function fastVoting(page){
     }
     await overflowingWaves.close();
     results.push('independent wave-only canvas pixels extend beyond the former graphic boundary at three ratios; full original amplitude is cropped by the 16:9 canvas without shrinking its baseline or causing page overflow');
+
+    const outerDots=await browser.newPage();await ready(outerDots,url);
+    await outerDots.locator('#stepsViewButton').click();
+    await outerDots.locator('[data-preview="welcome"]').click();await settlePreview(outerDots);
+    await outerDots.evaluate(()=>{
+      drawHex=drawOuterHex=drawCoil=drawSymmetricRing=drawBassArcs=()=>{};
+      analyze=()=>{smooth.fill(96);return{avg:96,low:96,mid:96,high:96};};
+    });
+    for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
+      await outerDots.setViewportSize(viewport);await outerDots.waitForTimeout(350);
+      const center=await expectedDifference(outerDots,null,[.4,.35,.6,.65],0);
+      const all=await expectedDifference(outerDots,null,null,3);
+      assert.equal(center.mean,0,'No particle pixels may appear around the inner hex');
+      assert.ok(all.pixels>40&&all.height>await outerDots.locator('#visualizer').evaluate(c=>c.clientHeight*.65),'Peripheral light dots must visibly surround the core');
+      await fixedFrame(outerDots);
+    }
+    await outerDots.close();
+    results.push('all 90 light dots occupy a fixed annulus entirely outside the core at four cues and three ratios; independent particle-only canvas pixels leave the center completely empty and retain a visible outer halo');
 
     const slow=await browser.newPage();
     let releaseAudio;
