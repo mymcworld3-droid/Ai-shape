@@ -278,6 +278,10 @@ async function fastOffice(page){
  for(const next of ['memory-welcome','memory-room','memory-blackout','past-intro','past-isolate','office-light']){
   await page.keyboard.press('Space');await cue(page,next);
   await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
+  if(next==='memory-welcome'){
+   await flag(page,'memoryVoiceState','finished');
+   await page.waitForFunction(()=>transitions.aiExpansion.value===0&&transitions.ai.value===0&&performance.now()>=stage.busyUntil);
+  }
  }
 }
 async function fastVoting(page){
@@ -409,15 +413,28 @@ async function fastVoting(page){
     await matchesStill(page,'assets/backgrounds/memory-room.png');
     assert.equal(await page.evaluate(()=>transitions.clock.value+transitions.card.value+transitions.ai.value),0,
       'The previous clock, card and AI must not leak into the new room');
-    assert.equal(await page.locator('#memoryWelcomeAudio').getAttribute('src'),null);
+    assert.equal(await page.locator('#memoryWelcomeAudio').getAttribute('src'),'assets/audio/Memory-room.m4a');
+    assert.equal(await page.locator('#memoryWelcomeAudio').evaluate(a=>a.paused&&a.currentTime===0),true,'Memory voice must wait for its own cue');
     assert.equal(await page.locator('#memoryLightAudio').getAttribute('src'),null);
     await page.screenshot({path:path.join(output,'11-memory-light.png')});
     await page.keyboard.up('Space');await page.keyboard.press('Space');await cue(page,'memory-welcome');
-    await page.keyboard.press('Space');await cue(page,'memory-welcome');await page.waitForTimeout(750);
-    const memoryAi=await expectedDifference(page,'assets/backgrounds/memory-room.png',[.1,.2,.9,.6],50);
-    assert.ok(Math.abs(memoryAi.centerY-720*.4)<12,'Memory AI also uses Y=40%');
+    await flag(page,'memoryVoiceState','playing');
+    await page.keyboard.down('Space');await cue(page,'memory-welcome');
+    await page.waitForFunction(()=>transitions.aiExpansion.value===1);
+    const memoryVoice=await page.locator('#memoryWelcomeAudio').evaluate(a=>({duration:a.duration,time:a.currentTime,paused:a.paused}));
+    assert.ok(Math.abs(memoryVoice.duration-3.7)<.03,'Play the original uploaded Memory-room.m4a');
+    assert.ok(memoryVoice.time>0&&!memoryVoice.paused,'Memory recording must really play');
+    assert.ok(await page.evaluate(()=>smooth.some(v=>v>0)),'Original Memory voice reaches the analyser');
+    await checkVoiceForeground(page);
+    assert.equal(await page.evaluate(()=>opening.deadline),deadline,'Memory voice never resets the original countdown');
     await page.screenshot({path:path.join(output,'12-memory-welcome.png')});
-    await page.keyboard.press('Space');await cue(page,'memory-room');await page.waitForTimeout(750);
+    await flag(page,'memoryVoiceState','finished');
+    assert.equal(await page.locator('#memoryWelcomeAudio').evaluate(a=>a.ended),true,'Wait for the natural Memory voice end');
+    await page.waitForFunction(()=>transitions.aiExpansion.value===0&&transitions.ai.value===0&&performance.now()>=stage.busyUntil);
+    await page.keyboard.down('Space');await cue(page,'memory-welcome');
+    await matchesStill(page,'assets/backgrounds/memory-room.png');
+    assert.equal(await page.evaluate(()=>opening.deadline),deadline);
+    await page.keyboard.up('Space');await page.keyboard.press('Space');await cue(page,'memory-room');await page.waitForTimeout(750);
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await page.setViewportSize(viewport);await page.waitForTimeout(100);
       await matchesStill(page,'assets/backgrounds/memory-room.png');await noControls(page);
@@ -528,7 +545,7 @@ async function fastVoting(page){
     assert.ok(requests.every(request=>request.startsWith(url)),"Show assets must be local");
     await page.close();
     results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; shrunk opening clock fills the original TV center without overflowing, card show/hide and exact blackout pixels");
-    results.push("natural opening continues into Memory Room, held presses cannot skip the room fade, previous overlays disappear, local background fills three ratios, dialogue holds and the original deadline never resets");
+    results.push("natural opening continues into Memory Room with the original 3.7-second M4A; AI enlarges over black, real audio reaches the analyser, genuine end fades and shrinks it, held Space never skips and the original deadline never resets");
     results.push('all eighteen cues follow Act II monologue, office flashback, BANG, reflection and Memory Room return; independent pixels verify dim room, exact blackouts and clean backgrounds at three ratios; held cues never skip fades or reset the deadline');
     results.push('all twenty-five cues continue into actor-paced discussion and selection; four silent voice slots remain explicit, the separate minute starts only at the clock cue, vote text changes visibly, three ratios retain clock placement and every blackout pixel is zero');
 
@@ -846,7 +863,7 @@ async function fastVoting(page){
     const memoryMedia=await browser.newPage();
     await memoryMedia.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:
       fs.readFileSync(path.join(root,'opening-config.js'),'utf8')
-        .replace('narration: null','narration: "test-fixtures/memory-welcome.wav"')
+        .replace('narration: "assets/audio/Memory-room.m4a"','narration: "test-fixtures/memory-welcome.wav"')
         .replace('lightClick: null','lightClick: "test-fixtures/door-kick.wav"')}));
     await memoryMedia.addInitScript(()=>{
       const play=HTMLMediaElement.prototype.play;const blocked=new Set(['memoryLightAudio','memoryWelcomeAudio']);
