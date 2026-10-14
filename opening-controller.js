@@ -466,7 +466,7 @@
             this.lock(this.settleMs);
             this.onNarrationEnd();
           }
-          if (state === "ready") { this.busyUntil = 0; this.setCue("door-kick"); }
+          if (state === "ready") { this.busyUntil = 0; this.setCue("welcome"); }
           this.onMediaState("narration", state);
         }, onError: error => this.onError("narration", error) });
       this.effectEnded = () => {
@@ -518,14 +518,18 @@
         case "bright":
           this.lock(this.aiFadeMs); this.setCue("ai"); return true;
         case "ai":
+          this.lock(this.expandMs); this.setCue("welcome");
+          return this.opening.advance();
+        case "welcome":
+          if (this.opening.state === "ready") {
+            this.lock(this.expandMs); this.setCue("welcome");
+            return this.opening.advance();
+          }
+          if (!["countdown", "finished"].includes(this.opening.state)) return false;
           this.setCue("door-kick"); return this.playEffect();
         case "door-kick":
           if (["starting", "playing"].includes(this.effectState)) return false;
           if (this.effectState === "error") return this.playEffect();
-          this.lock(this.expandMs); this.setCue("welcome");
-          return this.opening.advance();
-        case "welcome":
-          if (!["narration", "countdown", "finished"].includes(this.opening.state)) return false;
           this.lock(this.morphMs); this.setCue("clock"); return true;
         case "clock":
           if (!["countdown", "finished"].includes(this.opening.state)) return false;

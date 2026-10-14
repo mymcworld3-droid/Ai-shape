@@ -129,7 +129,6 @@ async function fastReveal(page) {
 }
 async function prepareWelcome(page) {
   await page.keyboard.press("Space"); await cue(page,"ai"); await settleLiveAi(page);
-  await page.keyboard.press("Space"); await cue(page,"door-kick"); await flag(page,"effectState","finished");
 }
 async function expectedDifference(page, sourcePath, region=null, threshold=15, dim=0) {
   return page.evaluate(async ({sourcePath,region,threshold,dim})=>{
@@ -266,6 +265,7 @@ async function checkVoiceCoreForeground(page,voting=false,opening=false,{centere
 async function fastMemory(page){
  await fastReveal(page);await prepareWelcome(page);
  await page.keyboard.press('Space');await state(page,'narration');await naturalAudioEnd(page);
+ await page.keyboard.press('Space');await cue(page,'door-kick');await flag(page,'effectState','finished');
  await page.keyboard.press('Space');await cue(page,'clock');await page.waitForTimeout(1300);
  await page.keyboard.press('Space');await cue(page,'card');await page.waitForTimeout(450);
  await page.keyboard.press('Space');await cue(page,'card-hidden');await page.waitForTimeout(450);
@@ -333,19 +333,8 @@ async function fastVoting(page){
     await page.keyboard.press("Space"); await cue(page,"ai"); // Fade cannot be skipped.
     await settleLiveAi(page); await page.screenshot({path:path.join(output,"03-ai.png")});
     await checkAiScreen(page,{centered:true,large:true});
-    await page.keyboard.press("Space"); await cue(page,"door-kick");
-    await flag(page,'effectState','playing');
-    assert.equal(await page.locator('#doorKickAudio').getAttribute('src'),'assets/audio/door-kick.wav');
-    const kick=await page.locator('#doorKickAudio').evaluate(a=>({duration:a.duration,paused:a.paused,time:a.currentTime}));
-    assert.ok(Math.abs(kick.duration-22500/44100)<.002,'Play the exact supplied 0.5102-second WAV');
-    assert.equal(kick.paused,false);
-    await page.keyboard.down('Space');await cue(page,'door-kick');
-    assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0,'Voice must wait until the kick actually ends');
-    await flag(page,'effectState','finished');
-    assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.ended),true);
-    await page.keyboard.down('Space');await cue(page,'door-kick');
-    assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0,'Held Space cannot advance at effect end');
-    await page.keyboard.up('Space');await page.keyboard.press('Space');await state(page,'narration');
+    await page.keyboard.press('Space');await state(page,'narration');
+    assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Welcome precedes any door sound');
     await page.waitForTimeout(2200);
     const playing=await page.locator('#openingAudio').evaluate(a=>({time:a.currentTime,paused:a.paused}));
     assert.ok(playing.time>1); assert.equal(playing.paused,false);
@@ -356,28 +345,34 @@ async function fastVoting(page){
     for(let frame=0;frame<4;frame++){
       await checkAiScreen(page,{front:true});await page.waitForTimeout(80);
     }
-    await page.keyboard.press("Space"); await cue(page,"clock"); await page.waitForTimeout(1400);
-    assert.equal(await page.evaluate(()=>transitions.clock.value),1);
-    assert.equal(await page.evaluate(()=>stageOpening.remainingMs),900000);
-    assert.equal(await page.evaluate(()=>opening.deadline),null);
-    assert.equal(await page.locator('#openingAudio').evaluate(a=>a.paused),false);
-    await page.screenshot({path:path.join(output,"05-clock-during-speech.png")});
-    await page.waitForTimeout(1100);
-    assert.equal(await page.evaluate(()=>stageOpening.remainingMs),900000);
-    await page.keyboard.down("Space"); // Card is blocked while speech continues.
-    await cue(page,"clock");
+    await page.keyboard.down("Space"); await cue(page,"welcome");
+    assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Speech blocks the door cue');
     // Play the entire supplied recording to its genuine natural end.
     await state(page,"countdown");
     assert.equal(await page.locator('#openingAudio').evaluate(a=>a.ended),true);
     const deadline=await page.evaluate(()=>opening.deadline);
-    await page.waitForTimeout(1200); await page.keyboard.down("Space");
-    await cue(page,"clock"); await page.keyboard.up("Space");
+    await page.waitForTimeout(1200); await page.keyboard.down("Space"); await cue(page,"welcome");
+    assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Held Space cannot spill into kick');
     assert.equal(await page.evaluate(()=>transitions.scene.value),0);
+    await page.keyboard.up("Space");await page.keyboard.press('Space');await cue(page,'door-kick');
+    await flag(page,'effectState','playing');
+    assert.equal(await page.locator('#doorKickAudio').getAttribute('src'),'assets/audio/door-kick.wav');
+    const kick=await page.locator('#doorKickAudio').evaluate(a=>({duration:a.duration,paused:a.paused}));
+    assert.ok(Math.abs(kick.duration-22500/44100)<.002,'Play the exact supplied 0.5102-second WAV');
+    assert.equal(kick.paused,false);
+    await page.keyboard.down('Space');await cue(page,'door-kick');
+    await flag(page,'effectState','finished');
+    assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.ended),true);
+    await page.keyboard.down('Space');await cue(page,'door-kick');
+    await page.keyboard.up('Space');await page.keyboard.press('Space');await cue(page,'clock');
+    await page.waitForTimeout(1400);
+    assert.equal(await page.evaluate(()=>transitions.clock.value),1);
+    assert.equal(await page.evaluate(()=>opening.deadline),deadline,'Kick and clock must preserve the speech-owned deadline');
     await checkClockPlacement(page); await noControls(page);
     const remaining=await page.evaluate(()=>stageOpening.remainingMs);
     assert.ok(remaining>890000&&remaining<900000);
     await page.screenshot({path:path.join(output,"06-countdown.png")});
-    results.push("explicit Start gate, hidden controls, natural supplied MP4, original 0.5102-second door-kick WAV and M4A ends; held Space cannot skip the effect; eight cues, waiting clock and automatic countdown");
+    results.push("explicit Start gate, hidden controls, natural MP4 and full 29-second welcome BEFORE the original 0.5102-second kick; held Space cannot skip either recording; unchanged deadline and automatic shrink");
 
     await page.keyboard.press("Escape");
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]) {
@@ -808,6 +803,8 @@ async function fastVoting(page){
     await naturalAudioEnd(failedFullscreen); await cue(failedFullscreen,"welcome");
     assert.equal(await failedFullscreen.evaluate(()=>transitions.scene.value),0);
     await checkAiScreen(failedFullscreen,{centered:true,large:true});
+    await failedFullscreen.keyboard.press("Space"); await cue(failedFullscreen,"door-kick");
+    await flag(failedFullscreen,"effectState","finished");
     await failedFullscreen.keyboard.press("Space"); await cue(failedFullscreen,"clock");
     await noControls(failedFullscreen); await failedFullscreen.close();
     results.push("Space-only operation and fullscreen rejection; automatic shrink also works before the manual clock cue");
@@ -834,7 +831,7 @@ async function fastVoting(page){
       HTMLMediaElement.prototype.play=function(){if(this.id==="openingAudio"&&blocked){blocked=false;return Promise.reject(new DOMException("Blocked","NotAllowedError"));}return play.call(this);};
     });
     await ready(audioRetry,url); await fastReveal(audioRetry); await prepareWelcome(audioRetry);
-    await audioRetry.keyboard.press("Space"); await flag(audioRetry,"audioError","true"); await cue(audioRetry,"door-kick");
+    await audioRetry.keyboard.press("Space"); await flag(audioRetry,"audioError","true"); await cue(audioRetry,"welcome");
     assert.equal(await audioRetry.evaluate(()=>opening.deadline),null);
     await audioRetry.keyboard.press("Space"); await state(audioRetry,"narration");
     await naturalAudioEnd(audioRetry); await audioRetry.close();
@@ -849,16 +846,19 @@ async function fastVoting(page){
     });
     await ready(effectPage,url); await fastReveal(effectPage);
     await effectPage.keyboard.press("Space"); await cue(effectPage,"ai"); await settleLiveAi(effectPage);
+    await effectPage.keyboard.press("Space"); await state(effectPage,"narration"); await naturalAudioEnd(effectPage);
+    const effectDeadline=await effectPage.evaluate(()=>opening.deadline);
     await effectPage.keyboard.press("Space"); await flag(effectPage,"effectState","error");
-    assert.equal(await effectPage.locator('#openingAudio').evaluate(a=>a.currentTime),0);
+    assert.equal(await effectPage.locator('#openingAudio').evaluate(a=>a.ended),true);
     await effectPage.keyboard.press("Space"); await flag(effectPage,"effectState","playing");
     await effectPage.keyboard.press("Space"); await cue(effectPage,"door-kick");
     await flag(effectPage,"effectState","finished");
     assert.equal(await effectPage.locator('#doorKickAudio').evaluate(a=>a.ended),true);
-    assert.equal(await effectPage.locator('#openingAudio').evaluate(a=>a.currentTime),0);
-    await effectPage.keyboard.press("Space"); await state(effectPage,"narration");
+    assert.equal(await effectPage.locator('#openingAudio').evaluate(a=>a.ended),true);
+    await effectPage.keyboard.press("Space"); await cue(effectPage,"clock");
+    assert.equal(await effectPage.evaluate(()=>opening.deadline),effectDeadline);
     await noControls(effectPage); await effectPage.close();
-    results.push("door-kick failure/retry and separate welcome cue tested with a longer real PCM fixture; production uses the supplied original WAV");
+    results.push("door-kick failure/retry after completed welcome, preserving the countdown tested with a longer real PCM fixture; production uses the supplied original WAV");
 
     const memoryMedia=await browser.newPage();
     await memoryMedia.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:
@@ -1012,13 +1012,14 @@ async function fastVoting(page){
     await cue(touch,"bright"); await touch.waitForTimeout(400);
     await matchesStill(touch,"assets/backgrounds/IMG_0165.png");
     await touch.touchscreen.tap(190,420); await cue(touch,"ai"); await settleLiveAi(touch);
+    await touch.touchscreen.tap(190,420); await state(touch,"narration"); await naturalAudioEnd(touch);
     await touch.touchscreen.tap(190,420); await cue(touch,"door-kick"); await touch.waitForTimeout(200);
     // A second tap inside Chrome's double-click interval is intentionally
     // filtered. A fresh tap, after releasing that gesture, is a new cue.
     await touch.touchscreen.tap(190,420); await cue(touch,"door-kick");
-    assert.equal(await touch.locator('#openingAudio').evaluate(a=>a.currentTime),0);
+    assert.equal(await touch.locator('#openingAudio').evaluate(a=>a.ended),true);
     await touch.waitForTimeout(650);
-    await touch.touchscreen.tap(190,420); await state(touch,"narration");
+    await touch.touchscreen.tap(190,420); await cue(touch,"clock");
     await noControls(touch); await touch.close();
     results.push("mobile step review and fixed Start; touch advances cues, filters double taps and retains a 16:9 projection without visible controls");
 

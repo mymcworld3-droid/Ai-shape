@@ -85,6 +85,7 @@ test("all eighteen cues leave the opening deadline and completed opening media u
  const step=async(ms=0)=>{time+=ms;return stage.advance();};
  await step();video.end();await step(300);await step(1000);await step(200);await step(2000);
  audio.end();const deadline=stage.opening.deadline;
+ await step(1100);await step(200);
  for(const ms of [1300,500,500,1300,1100,700,700])await step(ms);
  assert.equal(stage.state,"memory-blackout");assert.equal(await step(500),false);
  await step(800);assert.equal(stage.state,"past-intro");
