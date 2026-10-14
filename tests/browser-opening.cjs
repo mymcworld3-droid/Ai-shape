@@ -6,7 +6,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "test-results");
-const types = { ".html":"text/html", ".js":"text/javascript", ".css":"text/css", ".png":"image/png", ".svg":"image/svg+xml", ".mp3":"audio/mpeg", ".mp4":"video/mp4" };
+const types = { ".html":"text/html", ".js":"text/javascript", ".css":"text/css", ".png":"image/png", ".svg":"image/svg+xml", ".mp3":"audio/mpeg", ".wav":"audio/wav", ".m4a":"audio/mp4", ".mp4":"video/mp4" };
 
 // A short, quiet PCM test tone exercises the optional audio slot. It is never
 // shipped as a show effect or configured on the production page.
@@ -50,6 +50,44 @@ const server = http.createServer((request, response) => {
   }
 });
 
+async function settlePreview(page) {
+  await page.waitForFunction(()=>{
+    const frame=projectionFrame(),target=StageLayout.previewFrame(document.body.dataset.previewCue);
+    return !frame.preview||!target?.ai||target.clock===1||frame.ai===1;
+  });
+  await page.waitForTimeout(40);
+}
+async function settleLiveAi(page) {
+  await page.waitForFunction(()=>transitions.ai.value===1&&performance.now()>=stage.busyUntil);
+}
+async function fadePixels(page) {
+  return page.evaluate(async()=>{
+    const c=document.getElementById('visualizer'),context=c.getContext('2d');
+    const scale=Math.max(c.width/1536,c.height/1024);
+    const x=Math.ceil((c.width-1536*scale)/2+554*scale),y=Math.ceil((c.height-1024*scale)/2+312*scale);
+    const width=Math.floor(426*scale),height=Math.floor(191*scale),samples=[];
+    const read=()=>{
+      const pixels=context.getImageData(x,y,width,height).data;
+      let sum=0;for(let i=0;i<pixels.length;i+=4)sum+=pixels[i]+pixels[i+1]+pixels[i+2];
+      return sum/(width*height*3);
+    };
+    await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);
+    const start=performance.now(),duration=OPENING_CONFIG.aiFadeMs;
+    for(const fraction of [0,.2,.4,.7,1.15]){
+      while(performance.now()-start<duration*fraction)await new Promise(requestAnimationFrame);
+      samples.push({elapsed:performance.now()-start,mean:read()});
+    }
+    return samples;
+  });
+}
+function gradualPixels(samples,label) {
+  const full=samples[4].mean;
+  assert.ok(full>1,`${label}: AI must become visibly drawn`);
+  assert.ok(samples[0].mean<full*.05,`${label}: must begin fully transparent: ${JSON.stringify(samples)}`);
+  assert.ok(samples[1].mean<full*.25,`${label}: early frame cannot already be fully visible`);
+  assert.ok(samples[2].mean>full*.15&&samples[2].mean<full*.65,`${label}: an intermediate opacity must be visible`);
+  assert.ok(samples[3].mean>full*.65,`${label}: opacity must increase through the fade`);
+}
 async function ready(page, url) {
   await page.goto(url);
   try {
@@ -90,8 +128,8 @@ async function fastReveal(page) {
   await cue(page,"bright"); await page.waitForTimeout(350);
 }
 async function prepareWelcome(page) {
-  await page.keyboard.press("Space"); await cue(page,"ai"); await page.waitForTimeout(1000);
-  await page.keyboard.press("Space"); await cue(page,"door-kick"); await page.waitForTimeout(200);
+  await page.keyboard.press("Space"); await cue(page,"ai"); await settleLiveAi(page);
+  await page.keyboard.press("Space"); await cue(page,"door-kick"); await flag(page,"effectState","finished");
 }
 async function expectedDifference(page, sourcePath, region=null, threshold=15, dim=0) {
   return page.evaluate(async ({sourcePath,region,threshold,dim})=>{
@@ -110,7 +148,7 @@ async function expectedDifference(page, sourcePath, region=null, threshold=15, d
     if(dim){context.fillStyle=`rgba(0,0,0,${dim})`;context.fillRect(0,0,expected.width,expected.height);}
     const a=actual.getContext("2d").getImageData(0,0,actual.width,actual.height).data;
     const b=context.getImageData(0,0,expected.width,expected.height).data;
-    let difference=0,samples=0,minX=actual.width,maxX=-1,minY=actual.height,maxY=-1;
+    let difference=0,samples=0,changedPixels=0,minX=actual.width,maxX=-1,minY=actual.height,maxY=-1;
     const bounds=region||[0,0,1,1];
     for(let py=Math.floor(bounds[1]*actual.height);py<bounds[3]*actual.height;py++)
       for(let px=Math.floor(bounds[0]*actual.width);px<bounds[2]*actual.width;px++){
@@ -120,10 +158,10 @@ async function expectedDifference(page, sourcePath, region=null, threshold=15, d
           const delta=Math.abs(a[index+channel]-b[index+channel]);
           difference+=delta;samples++;if(delta>threshold)changed=true;
         }
-        if(changed){minX=Math.min(minX,px);maxX=Math.max(maxX,px);minY=Math.min(minY,py);maxY=Math.max(maxY,py);}
+        if(changed){changedPixels++;minX=Math.min(minX,px);maxX=Math.max(maxX,px);minY=Math.min(minY,py);maxY=Math.max(maxY,py);}
       }
     const dpr=actual.width/actual.clientWidth;
-    return {mean:difference/samples,x:minX/dpr,y:minY/dpr,width:(maxX-minX+1)/dpr,
+    return {mean:difference/samples,pixels:changedPixels,x:minX/dpr,y:minY/dpr,width:(maxX-minX+1)/dpr,
       height:(maxY-minY+1)/dpr,centerX:(minX+maxX)/2/dpr,centerY:(minY+maxY)/2/dpr};
   },{sourcePath,region,threshold,dim});
 }
@@ -156,33 +194,74 @@ async function naturalAudioEnd(page) {
   await page.waitForFunction(()=>transitions.scene.value===0&&performance.now()>=stage.busyUntil);
 }
 async function checkClockPlacement(page) {
-  const viewport=await page.locator('#visualizer').boundingBox();
-  const bounds=await expectedDifference(page,"assets/backgrounds/IMG_0165.png",[.1,.2,.9,.55]);
-  const expectedWidth=Math.min(viewport.width,viewport.height)*.23*.012*236*.37;
-  assert.ok(Math.abs(bounds.centerY-viewport.height*.4)<6,`Clock Y must be 40%: ${JSON.stringify(bounds)}`);
-  assert.ok(Math.abs(bounds.width-expectedWidth)<12,`Clock scale must be 37%: ${JSON.stringify(bounds)}`);
-}
-async function checkAiScreen(page,{dark=false,centered=false,large=false}={}){
-  const viewport=await page.locator('#visualizer').boundingBox();
-  // Independently project the measured black interior of the actual PNG.
+  const viewport=await page.locator('#visualizer').evaluate(c=>({width:c.clientWidth,height:c.clientHeight}));
   const scale=Math.max(viewport.width/1536,viewport.height/1024);
   const screen={x:(viewport.width-1536*scale)/2+552*scale,
     y:(viewport.height-1024*scale)/2+310*scale,width:430*scale,height:195*scale};
-  const source=dark?null:'assets/backgrounds/IMG_0165.png';
-  const pixels=await expectedDifference(page,source,null,3);
+  const bounds=await expectedDifference(page,"assets/backgrounds/IMG_0165.png",null,3);
+  assert.ok(bounds.width>screen.width*.95,'Shrunk clock must fill the TV width');
+  assert.ok(Math.abs(bounds.centerX-(screen.x+screen.width/2))<2,'Clock must be centered horizontally on the original TV');
+  assert.ok(Math.abs(bounds.centerY-(screen.y+screen.height/2))<2,'Clock must be centered vertically on the original TV');
+  assert.ok(bounds.x>=screen.x-1&&bounds.x+bounds.width<=screen.x+screen.width+1,
+    `Every clock pixel and glow must stay inside the original TV horizontally: ${JSON.stringify({screen,bounds})}`);
+  assert.ok(bounds.y>=screen.y-1&&bounds.y+bounds.height<=screen.y+screen.height+1,
+    `Every clock pixel and glow must stay inside the original TV vertically: ${JSON.stringify({screen,bounds})}`);
+}
+// Core/TV/background bounds exclude the deliberately external waves and light dots.
+async function withoutExternalEffects(page,check){
+  await page.evaluate(()=>{window.testDrawCoil=drawCoil;window.testDrawDots=drawParticles;drawCoil=drawParticles=()=>{};});
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  try{return await check();}
+  finally{
+    await page.evaluate(()=>{drawCoil=window.testDrawCoil;drawParticles=window.testDrawDots;delete window.testDrawCoil;delete window.testDrawDots;});
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  }
+}
+async function checkAiScreen(page,options={}){
+  return withoutExternalEffects(page,()=>checkAiCoreScreen(page,options));
+}
+async function checkVoiceForeground(page,...args){
+  return withoutExternalEffects(page,()=>checkVoiceCoreForeground(page,...args));
+}
+async function checkAiCoreScreen(page,{centered=false,large=false,front=false}={}){
+  if(front)return checkVoiceCoreForeground(page,false,true,{centered});
+  const viewport=await page.locator('#visualizer').evaluate(c=>({width:c.clientWidth,height:c.clientHeight}));
+  // Independently project the resting AI's measured position in the PNG.
+  const scale=Math.max(viewport.width/1536,viewport.height/1024);
+  const screen={x:(viewport.width-1536*scale)/2+552*scale,
+    y:(viewport.height-1024*scale)/2+310*scale,width:430*scale,height:195*scale};
+  const pixels=await expectedDifference(page,'assets/backgrounds/IMG_0165.png',null,3);
   assert.ok(pixels.width>0&&pixels.height>0,'AI must actually render');
-  assert.ok(pixels.x>=screen.x-1&&pixels.x+pixels.width<=screen.x+screen.width+1,
-    `Every AI pixel must stay between the TV's left and right edges: ${JSON.stringify({screen,pixels})}`);
-  assert.ok(pixels.y>=screen.y-1&&pixels.y+pixels.height<=screen.y+screen.height+1,
-    `Every AI pixel, including glow and particles, must stay inside the TV vertically: ${JSON.stringify({screen,pixels})}`);
-  const visible=centered||large?await expectedDifference(page,source,
+  assert.ok(pixels.x>=screen.x-1&&pixels.x+pixels.width<=screen.x+screen.width+1);
+  assert.ok(pixels.y>=screen.y-1&&pixels.y+pixels.height<=screen.y+screen.height+1);
+  const visible=centered||large?await expectedDifference(page,'assets/backgrounds/IMG_0165.png',
     [screen.x/viewport.width,screen.y/viewport.height,(screen.x+screen.width)/viewport.width,
       (screen.y+screen.height)/viewport.height],1):pixels;
   if(centered){
-    assert.ok(Math.abs(visible.centerX-(screen.x+screen.width/2))<4,'Idle AI must be centered horizontally on the TV');
-    assert.ok(Math.abs(visible.centerY-(screen.y+screen.height/2))<4,'Idle AI must be centered vertically on the TV');
+    assert.ok(Math.abs(visible.centerX-(screen.x+screen.width/2))<4,'Idle AI must be centered horizontally');
+    assert.ok(Math.abs(visible.centerY-(screen.y+screen.height/2))<4,'Idle AI must be centered vertically');
   }
-  if(large)assert.ok(visible.height>screen.height*.8,`AI must fill most of the TV height: ${JSON.stringify({screen,pixels:visible})}`);
+  if(large)assert.ok(visible.height>screen.height*.8,'Idle AI must fill most of the original TV height');
+}
+async function checkVoiceCoreForeground(page,voting=false,opening=false,{centered=false}={}){
+  const viewport=await page.locator('#visualizer').evaluate(c=>({width:c.clientWidth,height:c.clientHeight}));
+  const pixels=await expectedDifference(page,null,[0,0,1,voting ? .8 : 1],3);
+  const top=viewport.height*(voting ? .02 : .05),bottom=viewport.height*(voting ? .78 : .95);
+  assert.ok(pixels.height>viewport.height*(voting ? .48 : .55),'AI itself must visibly enlarge into the foreground');
+  assert.ok(pixels.x>=viewport.width*.15&&pixels.x+pixels.width<=viewport.width*.85,
+    `Only the radial AI should enlarge: ${JSON.stringify(pixels)}`);
+  assert.ok(pixels.y>=top-1&&pixels.y+pixels.height<=bottom+1,
+    `Enlarged AI and glow must stay on stage above the caption: ${JSON.stringify(pixels)}`);
+  if(centered){
+    assert.ok(Math.abs(pixels.centerX-viewport.width/2)<4,'Enlarged idle preview stays centered horizontally');
+    assert.ok(Math.abs(pixels.centerY-viewport.height*(voting ? .4 : .5))<4,'Enlarged idle preview stays centered vertically');
+  }
+  // Every side-strip background pixel must reach exact black while AI remains visible.
+  for(const region of [[0,0,.15,voting ? .8 : 1],[.85,0,1,voting ? .8 : 1]]){
+    const background=await expectedDifference(page,null,region,0);
+    assert.equal(background.mean,0,'Enlarged voice background must end at exact black');
+  }
+  return pixels;
 }
 async function fastMemory(page){
  await fastReveal(page);await prepareWelcome(page);
@@ -248,12 +327,21 @@ async function fastVoting(page){
     await page.screenshot({path:path.join(output,"02-bright-empty.png")});
     await page.keyboard.up("Space"); await page.keyboard.press("Space"); await cue(page,"ai");
     await page.keyboard.press("Space"); await cue(page,"ai"); // Fade cannot be skipped.
-    await page.waitForTimeout(1000); await page.screenshot({path:path.join(output,"03-ai.png")});
+    await settleLiveAi(page); await page.screenshot({path:path.join(output,"03-ai.png")});
     await checkAiScreen(page,{centered:true,large:true});
     await page.keyboard.press("Space"); await cue(page,"door-kick");
-    assert.equal(await page.locator('body').getAttribute('data-effect-state'),"missing");
-    assert.equal(await page.locator('#doorKickAudio').getAttribute('src'),null);
-    await page.waitForTimeout(200); await page.keyboard.press("Space"); await state(page,"narration");
+    await flag(page,'effectState','playing');
+    assert.equal(await page.locator('#doorKickAudio').getAttribute('src'),'assets/audio/door-kick.wav');
+    const kick=await page.locator('#doorKickAudio').evaluate(a=>({duration:a.duration,paused:a.paused,time:a.currentTime}));
+    assert.ok(Math.abs(kick.duration-22500/44100)<.002,'Play the exact supplied 0.5102-second WAV');
+    assert.equal(kick.paused,false);
+    await page.keyboard.down('Space');await cue(page,'door-kick');
+    assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0,'Voice must wait until the kick actually ends');
+    await flag(page,'effectState','finished');
+    assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.ended),true);
+    await page.keyboard.down('Space');await cue(page,'door-kick');
+    assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0,'Held Space cannot advance at effect end');
+    await page.keyboard.up('Space');await page.keyboard.press('Space');await state(page,'narration');
     await page.waitForTimeout(2200);
     const playing=await page.locator('#openingAudio').evaluate(a=>({time:a.currentTime,paused:a.paused}));
     assert.ok(playing.time>1); assert.equal(playing.paused,false);
@@ -262,7 +350,7 @@ async function fastVoting(page){
     assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),"showShell");
     await page.screenshot({path:path.join(output,"04-welcome.png")});
     for(let frame=0;frame<4;frame++){
-      await checkAiScreen(page,{dark:true});await page.waitForTimeout(80);
+      await checkAiScreen(page,{front:true});await page.waitForTimeout(80);
     }
     await page.keyboard.press("Space"); await cue(page,"clock"); await page.waitForTimeout(1400);
     assert.equal(await page.evaluate(()=>transitions.clock.value),1);
@@ -285,7 +373,7 @@ async function fastVoting(page){
     const remaining=await page.evaluate(()=>stageOpening.remainingMs);
     assert.ok(remaining>890000&&remaining<900000);
     await page.screenshot({path:path.join(output,"06-countdown.png")});
-    results.push("explicit Start gate, hidden controls, natural MP4 and MP3 ends, eight separate cues, waiting clock and automatic countdown");
+    results.push("explicit Start gate, hidden controls, natural supplied MP4, original 0.5102-second door-kick WAV and M4A ends; held Space cannot skip the effect; eight cues, waiting clock and automatic countdown");
 
     await page.keyboard.press("Escape");
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]) {
@@ -439,10 +527,38 @@ async function fastVoting(page){
     assert.equal(errors.length,0,errors.join("\n"));
     assert.ok(requests.every(request=>request.startsWith(url)),"Show assets must be local");
     await page.close();
-    results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; clock Y=40%, size=37%, card show/hide and exact blackout pixels");
+    results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; shrunk opening clock fills the original TV center without overflowing, card show/hide and exact blackout pixels");
     results.push("natural opening continues into Memory Room, held presses cannot skip the room fade, previous overlays disappear, local background fills three ratios, dialogue holds and the original deadline never resets");
     results.push('all eighteen cues follow Act II monologue, office flashback, BANG, reflection and Memory Room return; independent pixels verify dim room, exact blackouts and clean backgrounds at three ratios; held cues never skip fades or reset the deadline');
     results.push('all twenty-five cues continue into actor-paced discussion and selection; four silent voice slots remain explicit, the separate minute starts only at the clock cue, vote text changes visibly, three ratios retain clock placement and every blackout pixel is zero');
+
+    const fadePage=await browser.newPage({viewport:{width:1280,height:720}});
+    const fadeErrors=[];fadePage.on('pageerror',error=>fadeErrors.push(String(error)));
+    let releaseFadeBackground;
+    const heldFadeBackground=new Promise(done=>releaseFadeBackground=done);
+    await fadePage.route('**/assets/backgrounds/IMG_0165.png',async route=>{await heldFadeBackground;await route.continue();});
+    await fadePage.goto(url,{waitUntil:'domcontentloaded'});
+    await fadePage.locator('#stepsViewButton').click();await fadePage.locator('[data-preview="ai"]').click();
+    await fadePage.waitForTimeout(1700);
+    assert.equal(await fadePage.locator('#startButton').isDisabled(),true);
+    assert.equal(await fadePage.evaluate(()=>projectionFrame().ai),0,'Loading must not consume the fade before the image can render');
+    releaseFadeBackground();await flag(fadePage,'backgroundReady','true');
+    gradualPixels(await fadePixels(fadePage),'preview after background loading');
+    await fadePage.locator('[data-preview="ai"]').click();
+    gradualPixels(await fadePixels(fadePage),'replaying the same second step');
+    assert.equal(await fadePage.evaluate(()=>Array.from(document.querySelectorAll('audio,video')).every(m=>m.currentTime===0&&m.paused)),true);
+    assert.equal(await fadePage.evaluate(()=>opening.deadline),null);
+    assert.equal(await fadePage.evaluate(()=>stage.voting.deadline),null);
+    await fadePage.locator('[data-preview="ai"]').click();await fadePage.waitForTimeout(200);
+    await fadePage.locator('[data-preview="bright"]').click();await fadePage.waitForTimeout(1700);
+    await matchesStill(fadePage,'assets/backgrounds/IMG_0165.png');
+    await fadePage.locator('[data-preview="ai"]').click();await fadePage.waitForTimeout(200);
+    await fastReveal(fadePage);await matchesStill(fadePage,'assets/backgrounds/IMG_0165.png');
+    await fadePage.keyboard.press('Space');await cue(fadePage,'ai');
+    gradualPixels(await fadePixels(fadePage),'live second cue');
+    await noControls(fadePage);assert.equal(fadeErrors.length,0,fadeErrors.join('\n'));
+    await fadePage.screenshot({path:path.join(output,'25-ai-fade-live.png')});await fadePage.close();
+    results.push('second-step AI fades through independently measured transparent, intermediate and complete pixels in preview and live playback; delayed loading, same-step replay, switching away and Start during a fade never leak overlays or start media or timers');
 
     const review=await browser.newPage({viewport:{width:1440,height:900}});
     const reviewErrors=[];review.on('pageerror',error=>reviewErrors.push(String(error)));
@@ -479,7 +595,7 @@ async function fastVoting(page){
     await review.locator('[data-preview="office-light"]').click();await review.waitForTimeout(100);
     await matchesStill(review,'assets/backgrounds/office-memory.png');await fixedFrame(review);
     await review.screenshot({path:path.join(output,'19-office-step-review.png')});
-    await review.locator('[data-preview="vote-two"]').click();await review.waitForTimeout(100);await fixedFrame(review);
+    await review.locator('[data-preview="vote-two"]').click();await settlePreview(review);await fixedFrame(review);
     await review.screenshot({path:path.join(output,'22-voting-step-review.png')});
     await review.locator('#pageViewButton').click();await flag(review,'view','page');await review.waitForTimeout(100);
     await matchesStill(review,'assets/backgrounds/Start_dark.PNG');await fixedFrame(review);
@@ -499,31 +615,93 @@ async function fastVoting(page){
     await ready(screenFit,url);await screenFit.locator('#stepsViewButton').click();
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await screenFit.setViewportSize(viewport);
-      await screenFit.locator('[data-preview="ai"]').click();await screenFit.waitForTimeout(100);
+      await screenFit.locator('[data-preview="ai"]').click();await settlePreview(screenFit);
       await fixedFrame(screenFit);await checkAiScreen(screenFit,{centered:true,large:true});
     }
     await screenFit.locator('#pageViewButton').click();await screenFit.locator('#stepsViewButton').click();
-    await screenFit.locator('[data-preview="welcome"]').click();await screenFit.waitForTimeout(100);
-    await checkAiScreen(screenFit,{dark:true,centered:true,large:true});
+    await screenFit.locator('[data-preview="welcome"]').click();await settlePreview(screenFit);
+    await checkAiScreen(screenFit,{centered:true,large:true,front:true});
     // Render a maximum-range spectrum in this test page only. This verifies
     // animated coils, thick hex strokes, particles and glow at their extremes.
     await screenFit.evaluate(()=>{analyze=()=>{smooth.fill(255);return{avg:255,low:255,mid:255,high:255};};});
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await screenFit.setViewportSize(viewport);await screenFit.waitForTimeout(400);
       for(let frame=0;frame<4;frame++){
-        await checkAiScreen(screenFit,{dark:true});await screenFit.waitForTimeout(60);
+        await checkAiScreen(screenFit,{front:true});await screenFit.waitForTimeout(60);
       }
     }
     assert.equal(await screenFit.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await fastReveal(screenFit);
-    await screenFit.keyboard.press('Space');await cue(screenFit,'ai');await screenFit.waitForTimeout(1000);
+    await screenFit.keyboard.press('Space');await cue(screenFit,'ai');await settleLiveAi(screenFit);
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await screenFit.setViewportSize(viewport);await screenFit.waitForTimeout(100);
       await noControls(screenFit);await checkAiScreen(screenFit);
     }
     await screenFit.close();
-    results.push('AI fills and stays centered on the actual TV interior after cover cropping; idle, real speech and maximum-spectrum particles, waves and glow never escape, in full-page/review and three viewport ratios');
+    results.push('only AI enlarges over the fixed original background during speech; independent pixels verify the background becomes exactly black, bounded glow and automatic return at three ratios');
     results.push("full-page and twenty-five silent step previews; no audio/video or either timer before Start; Start from the final selection blackout preview resets to first cue and hides every button");
+
+    const stableSize=await browser.newPage();await ready(stableSize,url);
+    await stableSize.locator('#stepsViewButton').click();
+    await stableSize.evaluate(()=>{
+      const place=graphicPlacement,ring=drawSymmetricRing,coils=createCoils,hex=drawHex,dots=drawParticles;
+      const arc=ctx.arc.bind(ctx);
+      ctx.arc=(x,y,r,...rest)=>{if(window.dotProbe)window.dotProbe.push({r:Math.hypot(x-cx,y-cy),size:r});return arc(x,y,r,...rest);};
+      drawParticles=(audio,radius)=>{window.dotProbe=[];dots(audio,radius);window.sizeProbe.dots={points:window.dotProbe,core:radius,unit:scale,band:Math.min(w,h)*.055};window.dotProbe=null;};
+      const lineTo=ctx.lineTo.bind(ctx),stroke=ctx.stroke.bind(ctx);
+      ctx.lineTo=(x,y)=>{if(window.hexProbe)window.hexProbe.vertices.push([x,y]);return lineTo(x,y);};
+      ctx.stroke=()=>{if(window.hexProbe)window.hexProbe.width=ctx.lineWidth;return stroke();};
+      drawHex=(...args)=>{window.hexProbe={vertices:[],width:0};hex(...args);window.sizeProbe.hex=window.hexProbe;window.hexProbe=null;};
+      graphicPlacement=(frame,radius)=>{
+        const pose=place(frame,radius);window.sizeProbe={radius,pose,rings:[],wave:window.lastWave,waveBase:window.lastWaveBase};return pose;
+      };
+      drawSymmetricRing=(radius,...args)=>{window.sizeProbe.rings.push(radius);return ring(radius,...args);};
+      createCoils=(...args)=>{const result=coils(...args);window.lastWaveBase=args[0];window.lastWave=result[3].arr.map(p=>Math.hypot(p.x-cx,p.y-cy));return result;};
+    });
+    for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
+      await stableSize.setViewportSize(viewport);
+      for(const preview of ['ai','welcome','memory-welcome','vote-prompt']){
+        await stableSize.locator(`[data-preview="${preview}"]`).click();await settlePreview(stableSize);
+        const samples=[];
+        for(const volume of [0,96,255,0]){
+          await stableSize.evaluate(volume=>{analyze=()=>{smooth.fill(volume);return{avg:volume,low:volume,mid:volume,high:volume};};},volume);
+          await stableSize.waitForTimeout(650);
+          samples.push(await stableSize.evaluate(()=>window.sizeProbe));
+        }
+        for(const sample of samples.slice(1)){
+          assert.deepEqual(sample.pose,samples[0].pose,`${preview}: volume must never rescale or recenter AI`);
+          assert.equal(sample.radius,samples[0].radius,'The graphic envelope must be volume independent');
+          assert.deepEqual(sample.rings,samples[0].rings,'Outer circle diameters must remain fixed');
+          assert.equal(sample.waveBase,samples[0].waveBase,'Wave baseline never shrinks with volume');
+          assert.deepEqual(sample.dots.points.map(p=>p.r),samples[0].dots.points.map(p=>p.r),'Dot orbits never move inward with volume');
+        }
+        assert.ok(samples[2].wave.some((r,i)=>r-samples[0].wave[i]>100*Math.max(.48,Math.min(viewport.width*9/16,viewport.height)/760)),'Full original amplitude must remain; no per-coil fitting or limiting');
+        for(const sample of samples){
+          assert.equal(sample.dots.points.length,90,'Keep all 90 light dots');
+          for(const dot of sample.dots.points){
+            assert.ok(dot.r-dot.size>sample.dots.core,'Every light dot lies entirely outside the core');
+            assert.ok(dot.r<=sample.dots.core+6*sample.dots.unit+sample.dots.band+1e-8,'Dots occupy the intended outer band');
+          }
+        }
+        assert.notDeepEqual(samples[2].hex.vertices,samples[0].hex.vertices,'The inner hex must deform with voice volume');
+        assert.ok(samples[2].hex.width>samples[0].hex.width*5,'Restore the hex volume-dependent edge thickness');
+        const size=await stableSize.evaluate(()=>{
+          const frame=projectionFrame(),radius=window.sizeProbe.radius;
+          const openingRoom=!frame.background||frame.background==='opening';
+          const home=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
+          if(!openingRoom){home.x=w*.5-home.width/2;home.y=h*.4-home.height/2;}
+          const voting=frame.caption?.startsWith('vote-');
+          const previous=StageLayout.expandGraphicPose(home,{x:w*.04,y:h*(voting?.02:.05),width:w*.92,height:h*(voting?.76:.9)},radius,openingRoom?frame.scene:frame.aiExpansion||0,config.roomScreen.inset*home.width/config.roomScreen.width);
+          return{actual:graphicPlacement(frame,radius),previous};
+        });
+        assert.ok(Math.abs(size.actual.x-size.previous.x)<1e-9,'Keep the foreground center');
+        assert.ok(Math.abs(size.actual.y-size.previous.y)<1e-9,'Keep the foreground center');
+        if(preview==='ai')assert.deepEqual(size.actual,size.previous,'Idle TV graphic size stays unchanged');
+        else assert.ok(Math.abs(size.actual.scale/size.previous.scale-.82)<.01,'Actual foreground pose is about 18% smaller');
+      }
+    }
+    await stableSize.close();
+    results.push('quiet, medium, maximum and returning-to-silence spectra keep identical AI scale, center, envelope and ring diameters in four cues at three ratios; outward waves and hex geometry/stroke thickness remain audio reactive; foreground size is 82%');
 
     const voicePreview=await browser.newPage();await ready(voicePreview,url);
     await voicePreview.locator('#stepsViewButton').click();
@@ -531,15 +709,13 @@ async function fastVoting(page){
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await voicePreview.setViewportSize(viewport);
       for(const preview of ['memory-welcome','vote-prompt','vote-one','vote-two','vote-final']){
-        await voicePreview.locator(`[data-preview="${preview}"]`).click();await voicePreview.waitForTimeout(150);
+        await voicePreview.locator(`[data-preview="${preview}"]`).click();await settlePreview(voicePreview);
         await fixedFrame(voicePreview);const box=await voicePreview.locator('#visualizer').boundingBox();
         const voting=preview.startsWith('vote-');
-        const graphic=await expectedDifference(voicePreview,'assets/backgrounds/memory-room.png',[0,0,1,voting ? .8 : 1],15,voting ? .2 : 0);
-        assert.ok(graphic.height>box.height*.25,'Every voice preview must show a large AI graphic');
-        assert.ok(graphic.x>=0&&graphic.x+graphic.width<=box.width+1,'Expanded AI stays inside the stage');
+        await checkVoiceForeground(voicePreview,voting);
         if(voting){
-          const gap=await expectedDifference(voicePreview,'assets/backgrounds/memory-room.png',[0,.8,1,.82],15,.2);
-          assert.ok(gap.mean<1,'Even maximum-spectrum AI glow must not enter the caption gap');
+          const caption=await expectedDifference(voicePreview,null,[.17,.83,.83,.95],100);
+          assert.ok(caption.pixels>40,'Selection caption remains drawn above overflowing waves');
         }
         assert.equal(await voicePreview.evaluate(()=>opening.deadline),null);
         assert.equal(await voicePreview.evaluate(()=>stage.voting.deadline),null);
@@ -547,13 +723,53 @@ async function fastVoting(page){
       }
     }
     await voicePreview.close();
-    results.push('Memory and four selection voice previews show enlarged AI at three ratios without playing media; maximum-spectrum strokes, particles and glow stay in the stage and clear of the caption');
+    results.push('Memory and four selection voice previews show enlarged AI at three ratios without playing media; maximum-spectrum core strokes and glow retain their bounds; captions remain drawn above unrestricted waves');
+
+    const overflowingWaves=await browser.newPage();await ready(overflowingWaves,url);
+    await overflowingWaves.locator('#stepsViewButton').click();
+    await overflowingWaves.locator('[data-preview="welcome"]').click();await settlePreview(overflowingWaves);
+    await overflowingWaves.evaluate(()=>{
+      drawHex=drawOuterHex=drawParticles=drawSymmetricRing=drawBassArcs=()=>{};
+      analyze=()=>{smooth.fill(96);return{avg:96,low:96,mid:96,high:96};};
+    });
+    for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
+      await overflowingWaves.setViewportSize(viewport);await overflowingWaves.waitForTimeout(350);
+      const pixels=await expectedDifference(overflowingWaves,null,null,3);
+      const clip=await overflowingWaves.evaluate(()=>{
+        const base=Math.min(w,h)*.2,ring=base-4*scale;
+        const radius=Math.max(ring+10*scale,base+16*scale,Math.min(w,h)*.105*1.52+3*scale)+2*scale;
+        return graphicPlacement(projectionFrame(),radius).clip;
+      });
+      assert.ok(pixels.pixels>100,'Full-amplitude waves must visibly render');
+      assert.ok(pixels.y<clip.y-2||pixels.x<clip.x-2||pixels.y+pixels.height>clip.y+clip.height+2||pixels.x+pixels.width>clip.x+clip.width+2,'Wave pixels must extend past the former foreground clip');
+      await fixedFrame(overflowingWaves);
+    }
+    await overflowingWaves.close();
+    results.push('independent wave-only canvas pixels extend beyond the former graphic boundary at three ratios; full original amplitude is cropped by the 16:9 canvas without shrinking its baseline or causing page overflow');
+
+    const outerDots=await browser.newPage();await ready(outerDots,url);
+    await outerDots.locator('#stepsViewButton').click();
+    await outerDots.locator('[data-preview="welcome"]').click();await settlePreview(outerDots);
+    await outerDots.evaluate(()=>{
+      drawHex=drawOuterHex=drawCoil=drawSymmetricRing=drawBassArcs=()=>{};
+      analyze=()=>{smooth.fill(96);return{avg:96,low:96,mid:96,high:96};};
+    });
+    for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
+      await outerDots.setViewportSize(viewport);await outerDots.waitForTimeout(350);
+      const center=await expectedDifference(outerDots,null,[.4,.35,.6,.65],0);
+      const all=await expectedDifference(outerDots,null,null,3);
+      assert.equal(center.mean,0,'No particle pixels may appear around the inner hex');
+      assert.ok(all.pixels>40&&all.height>await outerDots.locator('#visualizer').evaluate(c=>c.clientHeight*.65),'Peripheral light dots must visibly surround the core');
+      await fixedFrame(outerDots);
+    }
+    await outerDots.close();
+    results.push('all 90 light dots occupy a fixed annulus entirely outside the core at four cues and three ratios; independent particle-only canvas pixels leave the center completely empty and retain a visible outer halo');
 
     const slow=await browser.newPage();
     let releaseAudio;
     const heldAudio=new Promise(resolve=>{releaseAudio=resolve;});
-    await slow.route('**/assets/audio/ai-opening.mp3',async route=>{
-      await heldAudio;await route.fulfill({contentType:'audio/mpeg',body:fs.readFileSync(path.join(root,'assets/audio/ai-opening.mp3'))});
+    await slow.route('**/assets/audio/ai-opening.m4a',async route=>{
+      await heldAudio;await route.fulfill({contentType:'audio/mp4',body:fs.readFileSync(path.join(root,'assets/audio/ai-opening.m4a'))});
     });
     await slow.goto(url,{waitUntil:'domcontentloaded'});
     await slow.locator('#startButton').waitFor({state:'visible'});
@@ -574,6 +790,7 @@ async function fastVoting(page){
     await failedFullscreen.keyboard.press("Space"); await state(failedFullscreen,"narration");
     await naturalAudioEnd(failedFullscreen); await cue(failedFullscreen,"welcome");
     assert.equal(await failedFullscreen.evaluate(()=>transitions.scene.value),0);
+    await checkAiScreen(failedFullscreen,{centered:true,large:true});
     await failedFullscreen.keyboard.press("Space"); await cue(failedFullscreen,"clock");
     await noControls(failedFullscreen); await failedFullscreen.close();
     results.push("Space-only operation and fullscreen rejection; automatic shrink also works before the manual clock cue");
@@ -608,13 +825,13 @@ async function fastVoting(page){
 
     const effectPage=await browser.newPage();
     await effectPage.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:
-      fs.readFileSync(path.join(root,'opening-config.js'),'utf8').replace('doorKick: null','doorKick: "test-fixtures/door-kick.wav"')}));
+      fs.readFileSync(path.join(root,'opening-config.js'),'utf8').replace('doorKick: "assets/audio/door-kick.wav"','doorKick: "test-fixtures/door-kick.wav"')}));
     await effectPage.addInitScript(()=>{
       const play=HTMLMediaElement.prototype.play;let blocked=true;
       HTMLMediaElement.prototype.play=function(){if(this.id==="doorKickAudio"&&blocked){blocked=false;return Promise.reject(new DOMException("Blocked","NotAllowedError"));}return play.call(this);};
     });
     await ready(effectPage,url); await fastReveal(effectPage);
-    await effectPage.keyboard.press("Space"); await cue(effectPage,"ai"); await effectPage.waitForTimeout(1000);
+    await effectPage.keyboard.press("Space"); await cue(effectPage,"ai"); await settleLiveAi(effectPage);
     await effectPage.keyboard.press("Space"); await flag(effectPage,"effectState","error");
     assert.equal(await effectPage.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await effectPage.keyboard.press("Space"); await flag(effectPage,"effectState","playing");
@@ -624,7 +841,7 @@ async function fastVoting(page){
     assert.equal(await effectPage.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await effectPage.keyboard.press("Space"); await state(effectPage,"narration");
     await noControls(effectPage); await effectPage.close();
-    results.push("optional SFX slot tested with real PCM fixture playback, failure/retry and separate welcome cue; production stays explicitly silent until the effect is supplied");
+    results.push("door-kick failure/retry and separate welcome cue tested with a longer real PCM fixture; production uses the supplied original WAV");
 
     const memoryMedia=await browser.newPage();
     await memoryMedia.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:
@@ -650,7 +867,7 @@ async function fastVoting(page){
     await memoryMedia.keyboard.press('Space');await flag(memoryMedia,'memoryVoiceState','playing');
     await memoryMedia.waitForFunction(()=>transitions.aiExpansion.value===1);
     assert.ok(await memoryMedia.evaluate(()=>smooth.some(v=>v>0)), 'Memory voice reaches the audio analyser');
-    const memoryLarge=await expectedDifference(memoryMedia,'assets/backgrounds/memory-room.png',null,20);
+    const memoryLarge=await checkVoiceForeground(memoryMedia);
     assert.ok(memoryLarge.height>memoryIdle.height*1.8,'Memory AI must visibly enlarge during real voice playback');
     await memoryMedia.screenshot({path:path.join(output,'23-memory-voice-expanded.png')});
     await memoryMedia.keyboard.down('Space');await cue(memoryMedia,'memory-welcome');
@@ -736,7 +953,7 @@ async function fastVoting(page){
       await votingMedia.keyboard.press('Space');await flag(votingMedia,'selection'+kind+'State','playing');
       await votingMedia.waitForFunction(()=>transitions.aiExpansion.value===1&&transitions.clock.value===0);
       assert.ok(await votingMedia.evaluate(()=>smooth.some(v=>v>0)),'Each selection recording reaches the waveform analyser');
-      const large=await expectedDifference(votingMedia,'assets/backgrounds/memory-room.png',[0,0,1,.8],15,.2);
+      const large=await checkVoiceForeground(votingMedia,true);
       assert.ok(large.height>voteIdle.height*1.8,'Each selection recording must visibly enlarge AI');
       await votingMedia.screenshot({path:path.join(output,'24-selection-'+kind.toLowerCase()+'-expanded.png')});
       await votingMedia.keyboard.down('Space');await cue(votingMedia,current);
@@ -777,7 +994,7 @@ async function fastVoting(page){
     await touch.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
     await cue(touch,"bright"); await touch.waitForTimeout(400);
     await matchesStill(touch,"assets/backgrounds/IMG_0165.png");
-    await touch.touchscreen.tap(190,420); await cue(touch,"ai"); await touch.waitForTimeout(1000);
+    await touch.touchscreen.tap(190,420); await cue(touch,"ai"); await settleLiveAi(touch);
     await touch.touchscreen.tap(190,420); await cue(touch,"door-kick"); await touch.waitForTimeout(200);
     // A second tap inside Chrome's double-click interval is intentionally
     // filtered. A fresh tap, after releasing that gesture, is a new cue.

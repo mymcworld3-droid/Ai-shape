@@ -5,10 +5,9 @@ window.OPENING_CONFIG = Object.freeze({
   darkBackground: "assets/backgrounds/Start_dark.PNG",
   roomReveal: "assets/videos/Start_animation.mp4",
   revealFadeMs: 240,
-  narration: "assets/audio/ai-opening.mp3",
-  // Supply the final effect, then set this to "assets/audio/door-kick.mp3".
-  // null reserves its cue silently, without requesting a nonexistent file.
-  doorKick: null,
+  narration: "assets/audio/ai-opening.m4a",
+  // Original user-supplied WAV, stored locally for offline playback.
+  doorKick: "assets/audio/door-kick.wav",
   card: "assets/cards/memory-access-card.svg",
   memory: Object.freeze({
     background: "assets/backgrounds/memory-room.png",
@@ -41,9 +40,13 @@ window.OPENING_CONFIG = Object.freeze({
   countdownMs: 15 * 60 * 1000,
   // Black display interior in IMG_0165.png's source pixels; excludes its bezel.
   roomScreen: Object.freeze({ x: 552, y: 310, width: 430, height: 195, inset: 2 }),
-  // The clock and the screen-free Memory Room retain their existing placement.
+  // Voice playback dims the original room without changing its composition.
+  voiceDim: 1,
+  // Reduce the foreground graphic only; idle TV placement and clocks stay unchanged.
+  voiceGraphicScale: 0.82,
+  // The selection clock and the Memory Room's resting AI use this placement.
   idleShape: Object.freeze({ x: 0.5, y: 0.4, size: 0.37 }),
-  aiFadeMs: 900,
+  aiFadeMs: 1500,
   sceneDurationMs: 1600,
   morphDurationMs: 1200,
   settleDurationMs: 1000,

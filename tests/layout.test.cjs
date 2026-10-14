@@ -1,7 +1,7 @@
 "use strict";
 const {test}=require("node:test");
 const assert=require("node:assert/strict");
-const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,previewFrame}=require("../stage-layout.js");
+const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,fitRectGraphic,expandGraphicPose,fadeInProgress,previewFrame}=require("../stage-layout.js");
 const {StartGate,bindAdvanceKey}=require("../opening-controller.js");
 function close(actual,expected){assert.ok(Math.abs(actual-expected)<1e-8,`${actual} != ${expected}`);}
 
@@ -50,6 +50,81 @@ test("a radial graphic uses the largest circle that stays inside either screen o
    close(r,Math.min(pose.clip.width,pose.clip.height)/2);
   }
  }
+});
+test("the opening clock fills the actual TV interior and stays centered at three stage sizes",()=>{
+ for(const [width,height] of [[1920,1080],[1440,810],[390,219]]){
+  const screen=projectImageRegion(width,height,1536,1024,{x:552,y:310,width:430,height:195});
+  const pose=fitRectGraphic(screen,236,84,screen.width/430*2);
+  close(pose.x,screen.x+screen.width/2);close(pose.y,screen.y+screen.height/2);
+  close(236*pose.scale,pose.clip.width);
+  assert.ok(84*pose.scale<=pose.clip.height);
+  assert.ok(pose.x-118*pose.scale>=screen.x&&pose.x+118*pose.scale<=screen.x+screen.width+1e-8);
+ }
+});
+test("rectangular graphics use the largest uniform scale for wide and tall apertures",()=>{
+ for(const region of [{x:50,y:20,width:360,height:160},{x:20,y:90,width:90,height:300}]){
+  const pose=fitRectGraphic(region,236,84,2);
+  assert.ok(236*pose.scale<=pose.clip.width+1e-8&&84*pose.scale<=pose.clip.height+1e-8);
+  assert.ok(Math.abs(236*pose.scale-pose.clip.width)<1e-8||Math.abs(84*pose.scale-pose.clip.height)<1e-8);
+  close(pose.x,region.x+region.width/2);close(pose.y,region.y+region.height/2);
+ }
+});
+test("rectangular fitting rejects unloaded dimensions or invalid inset",()=>{
+ const region={x:20,y:10,width:430,height:195};
+ for(const bad of [0,-1,NaN,Infinity])assert.throws(()=>fitRectGraphic(region,bad,84),RangeError);
+ assert.throws(()=>fitRectGraphic(region,236,84,-1),RangeError);
+ assert.throws(()=>fitRectGraphic({...region,height:0},236,84),RangeError);
+});
+test("AI expansion returns exactly to the idle graphic position and size",()=>{
+ const home=projectImageRegion(1280,720,1536,1024,{x:552,y:310,width:430,height:195});
+ const foreground={x:51.2,y:36,width:1177.6,height:648};
+ const rest=fitRadialGraphic(home,400,5/3,.98);
+ for(const p of [0,-2])assert.deepEqual(expandGraphicPose(home,foreground,400,p,5/3),rest);
+});
+test("only the radial graphic scales up smoothly, bounded by the stage at three ratios",()=>{
+ for(const [width,height] of [[1920,1080],[1440,810],[390,219]]){
+  const home=projectImageRegion(width,height,1536,1024,{x:552,y:310,width:430,height:195});
+  const area={x:width*.04,y:height*.05,width:width*.92,height:height*.9};
+  const rest=expandGraphicPose(home,area,400,0),front=expandGraphicPose(home,area,400,1);
+  close(front.x,width/2);close(front.y,height/2);assert.ok(front.scale>rest.scale*3);
+  for(const p of [.1,.4,.7,1]){
+   const pose=expandGraphicPose(home,area,400,p),r=400*pose.scale;
+   close(pose.scale,rest.scale+(front.scale-rest.scale)*p);
+   assert.ok(pose.x-r>=pose.clip.x-1e-8&&pose.x+r<=pose.clip.x+pose.clip.width+1e-8);
+   assert.ok(pose.y-r>=pose.clip.y-1e-8&&pose.y+r<=pose.clip.y+pose.clip.height+1e-8);
+  }
+ }
+});
+test("enlarged selection AI reserves its caption without stretching or leaving the stage",()=>{
+ const home={x:460,y:206.75,width:1075/3,height:162.5};
+ const area={x:51.2,y:14.4,width:1177.6,height:547.2};
+ for(const p of [0,.3,.5,.8,1,3]){
+  const pose=expandGraphicPose(home,area,400,p),r=pose.scale*400;
+  assert.ok(pose.x-r>=0&&pose.x+r<=1280);
+  assert.ok(pose.y-r>=0&&pose.y+r<=720*.78+1e-8);
+ }
+});
+test("graphic expansion rejects invalid radius, progress and area dimensions",()=>{
+ const home={x:100,y:80,width:400,height:200},area={x:0,y:0,width:1280,height:720};
+ for(const bad of [0,-1,NaN,Infinity])assert.throws(()=>expandGraphicPose(home,area,bad,1),RangeError);
+ assert.throws(()=>expandGraphicPose(home,area,400,NaN),RangeError);
+ assert.throws(()=>expandGraphicPose(home,{...area,height:0},400,1),RangeError);
+});
+test("AI fade starts fully transparent, increases smoothly and stays fully visible at the end",()=>{
+ for(const duration of [600,1500,3000]){
+  close(fadeInProgress(-100,duration),0);close(fadeInProgress(0,duration),0);
+  close(fadeInProgress(duration*.25,duration),.0625);
+  close(fadeInProgress(duration*.5,duration),.5);
+  close(fadeInProgress(duration*.75,duration),.9375);
+  close(fadeInProgress(duration,duration),1);close(fadeInProgress(duration*10,duration),1);
+  let previous=0;
+  for(let t=0;t<=duration;t+=duration/100){const p=fadeInProgress(t,duration);assert.ok(p>=previous&&p<=1);previous=p;}
+ }
+});
+test("a static frame has no fade delay and invalid fade timing is rejected",()=>{
+ close(fadeInProgress(0,0),1);
+ for(const bad of [NaN,Infinity,-Infinity])assert.throws(()=>fadeInProgress(bad,1500),RangeError);
+ assert.throws(()=>fadeInProgress(0,-1),RangeError);
 });
 test("silent step frames cover every cue and cannot mutate the playback transition data",()=>{
  const expected=["bright","ai","door-kick","welcome","clock","card","card-hidden","blackout",

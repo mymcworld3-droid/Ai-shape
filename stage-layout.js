@@ -39,6 +39,32 @@
       clip: { x: region.x + inset, y: region.y + inset,
         width: Math.max(0, region.width - inset * 2), height: Math.max(0, region.height - inset * 2) } };
   }
+  function expandGraphicPose(home, foreground, radius, progress, homeInset = 0) {
+    if (!Number.isFinite(progress)) throw new RangeError("Graphic expansion progress must be finite.");
+    const p = Math.max(0, Math.min(1, progress));
+    const rest = fitRadialGraphic(home, radius, homeInset, 0.98);
+    const large = fitRadialGraphic(foreground, radius, 2, 0.98);
+    const lerp = (a, b) => a + (b - a) * p;
+    return { x: lerp(rest.x, large.x), y: lerp(rest.y, large.y), scale: lerp(rest.scale, large.scale),
+      clip: Object.fromEntries(["x", "y", "width", "height"].map(key => [key, lerp(rest.clip[key], large.clip[key])])) };
+  }
+  function fitRectGraphic(region, width, height, inset = 0) {
+    if (!region || ![region.x, region.y, region.width, region.height, width, height, inset].every(Number.isFinite) ||
+        Math.min(region.width, region.height, width, height) <= 0 || inset < 0) {
+      throw new RangeError("Rectangle fitting requires positive dimensions and a nonnegative inset.");
+    }
+    const clip = { x: region.x + inset, y: region.y + inset,
+      width: Math.max(0, region.width - inset * 2), height: Math.max(0, region.height - inset * 2) };
+    return { x: region.x + region.width / 2, y: region.y + region.height / 2,
+      scale: Math.min(clip.width / width, clip.height / height), clip };
+  }
+  function fadeInProgress(elapsed, duration) {
+    if (![elapsed, duration].every(Number.isFinite) || duration < 0) {
+      throw new RangeError("Fade timing must be finite, with a nonnegative duration.");
+    }
+    const p = duration ? Math.max(0, Math.min(1, elapsed / duration)) : 1;
+    return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+  }
   const previews = Object.freeze({
     dark: { room: false, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     bright: { room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
@@ -71,5 +97,5 @@
   function previewFrame(cue) {
     return Object.prototype.hasOwnProperty.call(previews, cue) ? previews[cue] : null;
   }
-  return { fitStage, coverLayout, projectImageRegion, fitRadialGraphic, previewFrame };
+  return { fitStage, coverLayout, projectImageRegion, fitRadialGraphic, fitRectGraphic, expandGraphicPose, fadeInProgress, previewFrame };
 });

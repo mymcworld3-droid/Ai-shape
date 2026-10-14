@@ -21,7 +21,7 @@ const cardImage=new Image();
 const memoryBackgroundImage=new Image();
 const officeBackgroundImage=new Image();
 let backgroundReady=false,darkBackgroundReady=false,cardReady=false,memoryBackgroundReady=false,officeBackgroundReady=false,roomReadyAt=null;
-let previewCue=null;
+let previewCue=null,previewAiStartedAt=null;
 let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
 const audioSources=new Map();
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1,graphicGlowScale=1;
@@ -63,7 +63,7 @@ const stage=new StageOpening.StageCueController({
  onCue(cue){
   document.body.dataset.cue=cue;
   if(cue==="bright")roomReadyAt=performance.now();
-  if(cue==="ai")animate("ai",1,config.aiFadeMs);
+  if(cue==="ai"){animate("ai",0,0);animate("ai",1,config.aiFadeMs);}
   if(cue==="door-kick"){
    animate("clock",0,0);animate("scene",0,config.settleDurationMs);
   }
@@ -139,7 +139,7 @@ const opening=stage.opening,roomReveal=stage.room;
 const startGate=new StageOpening.StartGate({
  isReady:showAssetsReady,
  onStart(){
-  previewCue=null;
+  previewCue=null;previewAiStartedAt=null;
   document.body.dataset.started="true";
   document.body.dataset.view="page";
   document.body.dataset.previewCue="dark";
@@ -188,11 +188,17 @@ function notifyAssetsChange(){window.dispatchEvent(new Event("stageassetschange"
 function setProjectionPreview(cue){
  if(startGate.started)return;
  previewCue=StageLayout.previewFrame(cue)?cue:null;
+ previewAiStartedAt=null;
  document.body.dataset.previewCue=previewCue||"dark";
 }
 function projectionFrame(){
  if(!startGate.started&&previewCue){
   const frame={...StageLayout.previewFrame(previewCue),preview:true};
+  if(frame.ai>0&&frame.clock===0){
+   const ready=frame.background==="memory"?memoryBackgroundReady:frame.background==="office"?officeBackgroundReady:backgroundReady;
+   if(previewAiStartedAt===null&&ready)previewAiStartedAt=performance.now();
+   frame.ai*=previewAiStartedAt===null?0:StageLayout.fadeInProgress(performance.now()-previewAiStartedAt,config.aiFadeMs);
+  }
   if(previewCue==="past-intro")frame.scene=config.office.introDim;
   if(previewCue==="discussion"||previewCue.startsWith("vote-")&&previewCue!=="vote-blackout")frame.scene=config.voting.discussionDim;
   frame.caption=previewCue;
@@ -336,7 +342,9 @@ function drawBackground(now,frame){
  }else if(openingRoom&&!frame.preview&&roomReveal.state==="ready"){
   drawRevealVideo(1-roomHandoffProgress(now));
  }
- if(frame.scene>0){ctx.fillStyle=`rgba(0,0,0,${frame.scene})`;ctx.fillRect(0,0,w,h);}
+ const expansion=openingRoom?frame.scene:frame.aiExpansion||0;
+ const dim=openingRoom?config.voiceDim*expansion:frame.scene+(config.voiceDim-frame.scene)*expansion;
+ if(dim>0){ctx.fillStyle=`rgba(0,0,0,${dim})`;ctx.fillRect(0,0,w,h);}
 }
 function resizeCanvas(){
  const available=projectionViewport.getBoundingClientRect();
@@ -349,8 +357,8 @@ function resizeCanvas(){
  scale=Math.max(.48,Math.min(Math.min(w,h)/760,1));initParticles();
 }
 function initParticles(){
- particles.length=0;const maxR=Math.min(w,h)*.47;
- for(let i=0;i<PARTICLES;i++)particles.push({a:Math.random()*Math.PI*2,r:maxR*(.55+Math.random()*.44),
+ particles.length=0;
+ for(let i=0;i<PARTICLES;i++)particles.push({a:Math.random()*Math.PI*2,band:Math.random(),
  s:.00012+Math.random()*.00065,size:.45+Math.random()*1.5,alpha:.035+Math.random()*.19});
 }
 resizeCanvas();
@@ -399,7 +407,7 @@ function drawSymmetricRing(r,thickness,alpha,glow){
  ctx.shadowBlur=glow*graphicGlowScale;ctx.shadowColor=`rgba(255,255,255,${Math.min(.9,alpha+.16)})`;ctx.stroke();ctx.restore();
 }
 
-// Audio coil: every point is mirrored from the left/right partner. Amplitude is proportional to volume^2 * 10.
+// Original mirrored, squared-volume wave response; no audio-dependent normalization.
 function createCoil(base,amp,alpha,line,blur,phase,bandStart,bandEnd){
  const points=300,arr=[];let radius=0;
  const range=selectedBins(),lo=range.lo,hi=range.hi;
@@ -430,12 +438,13 @@ function drawCoil({arr,alpha,line,blur}){
  ctx.closePath();ctx.strokeStyle=`rgba(255,255,255,${alpha})`;ctx.lineWidth=line;ctx.shadowBlur=blur*graphicGlowScale;ctx.shadowColor=`rgba(255,255,255,${Math.min(1,alpha+.22)})`;ctx.stroke();ctx.restore();
 }
 function createCoils(base,phase){
- return [
+ const coils=[
   createCoil(base,52,.045,8,28,phase,.00,.72),
   createCoil(base+2*scale,45,.075,5,20,phase*1.08+.8,.04,.78),
   createCoil(base-1*scale,39,.18,3,13,phase*1.22+1.5,.08,.84),
   createCoil(base-4*scale,34,.72,1.7,7,phase*1.45+2.7,.02,.90)
  ];
+ return coils;
 }
 
 function drawBassArcs(radius,audio,phase){
@@ -443,7 +452,7 @@ function drawBassArcs(radius,audio,phase){
  ctx.save();ctx.lineCap="round";
  for(let j=0;j<3;j++){
   ctx.beginPath();
-  const arcRadius=radius+(j-1)*5*scale+bass*18*scale;
+  const arcRadius=radius+(j-1)*5*scale;
   const start=phase*.55+j*Math.PI*2/3;
   const span=.55+bass*1.05;
   ctx.arc(cx,cy,arcRadius,start,start+span);
@@ -497,11 +506,11 @@ function drawOuterHex(radius,rot,audio){
  ctx.closePath();ctx.strokeStyle=`rgba(255,255,255,${.16+energy*.30})`;ctx.lineWidth=(1.1+energy*3.2)*scale;ctx.shadowBlur=(7+energy*12)*scale*graphicGlowScale;ctx.shadowColor="rgba(255,255,255,.65)";ctx.stroke();ctx.restore();
 }
 
-function drawParticles(audio,radiusLimit=null){
+function drawParticles(audio,coreRadius){
  for(const p of particles){
   if(!audioElement.paused&&!audioElement.ended)p.a+=p.s*16;
-  const r=radiusLimit===null?p.r+energy*42*scale+audio.high/255*16*scale:
-   Math.min(radiusLimit-3*scale,p.r/(Math.min(w,h)*.47)*radiusLimit);
+  // Fixed annulus beyond the whole core, with a gap even at maximum dot size.
+  const r=coreRadius+6*scale+p.band*Math.min(w,h)*.055;
   const x=cx+Math.cos(p.a)*r,y=cy+Math.sin(p.a)*r;
   ctx.beginPath();ctx.arc(x,y,p.size+(audio.high/255)*.6,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${Math.min(.5,p.alpha*(.3+energy*2.1))})`;ctx.fill();
  }
@@ -544,12 +553,10 @@ function drawDigitalDigit(character,x){
  }
  ctx.restore();
 }
-function drawTimerFace(radius,remainingMs){
+function drawTimerFace(unit,remainingMs){
  const time=StageOpening.formatTime(remainingMs);
  // Clock coordinates are 236 wide by 84 high, with the colon between digits.
- const unit=radius*.012;
  ctx.save();
- ctx.translate(cx,cy);
  ctx.scale(unit,unit);
  ctx.translate(-118,-42);
  drawDigitalDigit(time[0],0);
@@ -587,6 +594,30 @@ function drawVoteCue(cue,opacity){
  if(lines[1]){ctx.font=`400 ${Math.min(w*.022,h*.033)}px sans-serif`;ctx.fillText(lines[1],w/2,y+bh*.73);}
  ctx.restore();
 }
+function graphicPlacement(frame,radius){
+ const openingRoom=!frame.background||frame.background==="opening";
+ const selection=frame.timer==="selection"||frame.caption?.startsWith("vote-");
+ const progress=openingRoom?frame.scene:frame.aiExpansion||0;
+ const home=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
+ if(!openingRoom){home.x=w*config.idleShape.x-home.width/2;home.y=h*config.idleShape.y-home.height/2;}
+ const full={x:w*.04,y:h*(selection ? .02 : .05),width:w*.92,height:h*(selection ? .76 : .9)};
+ const foreground={x:full.x+full.width*(1-config.voiceGraphicScale)/2,
+  y:full.y+full.height*(1-config.voiceGraphicScale)/2,
+  width:full.width*config.voiceGraphicScale,height:full.height*config.voiceGraphicScale};
+ return StageLayout.expandGraphicPose(home,foreground,radius,progress,
+  config.roomScreen.inset*home.width/config.roomScreen.width);
+}
+function clockPlacement(frame){
+ const unit=Math.min(w,h)*.23*.012;
+ if(frame.background&&frame.background!=="opening"){
+  return {x:w*config.idleShape.x,y:h*config.idleShape.y,scale:unit*config.idleShape.size,clip:null};
+ }
+ const screen=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
+ const rest=StageLayout.fitRectGraphic(screen,236,84,config.roomScreen.inset*screen.width/config.roomScreen.width);
+ const p=frame.scene,lerp=(a,b)=>a+(b-a)*p;
+ return {x:lerp(rest.x,cx),y:lerp(rest.y,cy),scale:lerp(rest.scale,unit),
+  clip:{x:lerp(rest.clip.x,0),y:lerp(rest.clip.y,0),width:lerp(rest.clip.width,w),height:lerp(rest.clip.height,h)}};
+}
 function draw(){
  requestAnimationFrame(draw);
  const now=performance.now();opening.getRemainingMs();updateTransitions(now);
@@ -602,58 +633,43 @@ function draw(){
  // The bright room also remains empty until the separate AI fade-in cue.
  if(!frame.room||(!frame.preview&&frame.background==="opening"&&roomHandoffProgress(now)<1))return;
  const hexR=Math.min(w,h)*.105+energy*10*scale;
- const waveBase=hexR+Math.min(w,h)*.095+pulse*scale;
+ const waveBase=Math.min(w,h)*.2;
  const ringR=frame.background==="memory"?waveBase+Math.min(w,h)*.075:waveBase-4*scale;
- const idle=config.idleShape,expansion=frame.timer==="selection"?0:frame.scene;
- const visualScale=idle.size+(1-idle.size)*expansion;
- const visualX=w*idle.x+(cx-w*idle.x)*expansion;
- const visualY=h*idle.y+(cy-h*idle.y)*expansion;
- const timerRadius=Math.min(w,h)*.23;
  const morph=frame.clock;
  const graphicOpacity=frame.ai*(1-easeInOutCubic(Math.min(1,morph/.55)));
  const clockOpacity=easeInOutCubic(Math.max(0,Math.min(1,(morph-.55)/.45)));
  if(graphicOpacity>0){
   const coils=createCoils(waveBase,now*.00045);
-  const bass=Math.pow(Math.min(1,a.low/255),2);
-  // Fit the actual strokes at their largest radius. Soft glow is clipped to
-  // the display interior, so a faint halo cannot shrink the main figure.
-  const outlineRadius=Math.max(ringR+8*scale,ringR+(8+bass*18)*scale,
-   ...coils.map(coil=>coil.radius),hexR*(1.52+energy*energy*.48)+bass*8*scale);
-  const radius=Math.max(ringR+8*scale+.5,
-   ringR+(8+bass*18+1.3)*scale,
-   ...coils.map(coil=>coil.radius+coil.line/2),
-   hexR+(bass*18+(1.2+energy*136)/2)*scale,
-   hexR*(1.52+energy*energy*.48)+bass*8*scale+(1.1+energy*3.2)*scale/2)+2*scale;
-  let pose={x:visualX,y:visualY,scale:visualScale},clip=null;
-  if(!frame.background||frame.background==="opening"){
-   const screen=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
-   pose=StageLayout.fitRadialGraphic(screen,radius,config.roomScreen.inset*screen.width/config.roomScreen.width,.98+.02*expansion);
-   clip=pose.clip;
-  }else{
-   // Keep the voice graphic independent from the background dim and clock.
-   const selection=frame.timer==="selection"||frame.caption?.startsWith("vote-");
-   const expansion=frame.aiExpansion||0;
-   const y=selection?h*idle.y:h*idle.y+(cy-h*idle.y)*expansion;
-   const area={x:2,y:2,width:w-4,height:h*(selection ? .8 : 1)-4};
-   const available=Math.max(0,Math.min(w*idle.x-area.x,area.x+area.width-w*idle.x,
-    y-area.y,area.y+area.height-y));
-   pose={x:w*idle.x,y,scale:Math.min(idle.size+(1-idle.size)*expansion,available/radius)};
-   clip=area;
-  }
+  // Camera scale depends only on the stage and cue, never on audio samples.
+  // Reserve the core stroke margin once; particles orbit beyond this boundary.
+  const radius=Math.max(ringR+10*scale,waveBase+16*scale,Math.min(w,h)*.105*1.52+3*scale)+2*scale;
+  const pose=graphicPlacement(frame,radius);
+  const clip=pose.clip;
+  // Waves keep their fixed base and full amplitude; only the canvas crops them.
+  ctx.save();
+  ctx.translate(pose.x,pose.y);ctx.scale(pose.scale,pose.scale);ctx.translate(-cx,-cy);
+  ctx.globalAlpha=graphicOpacity;graphicGlowScale=pose.scale*dpr;
+  drawParticles(a,radius);
+  for(const coil of coils)drawCoil(coil);
+  ctx.restore();
   ctx.save();
   if(clip){ctx.beginPath();ctx.rect(clip.x,clip.y,clip.width,clip.height);ctx.clip();}
   ctx.translate(pose.x,pose.y);ctx.scale(pose.scale,pose.scale);ctx.translate(-cx,-cy);
+  ctx.beginPath();ctx.arc(cx,cy,radius,0,Math.PI*2);ctx.clip();
   ctx.globalAlpha=graphicOpacity;graphicGlowScale=clip?pose.scale*dpr:1;
-  drawParticles(a,clip?outlineRadius:null);drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
+  drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
   drawSymmetricRing(ringR+8*scale,1,.025+energy*.065,energy*5*scale);
-  drawBassArcs(ringR+3*scale,a,now*.00065);for(const coil of coils)drawCoil(coil);
+  drawBassArcs(ringR+3*scale,a,now*.00065);
   drawOuterHex(hexR,rotation,a);drawHex(hexR,rotation,a);
   ctx.restore();graphicGlowScale=1;
  }
  if(clockOpacity>0){
-  ctx.save();ctx.translate(visualX,visualY);ctx.scale(visualScale,visualScale);ctx.translate(-cx,-cy);
+  const pose=clockPlacement(frame);
+  ctx.save();
+  if(pose.clip){ctx.beginPath();ctx.rect(pose.clip.x,pose.clip.y,pose.clip.width,pose.clip.height);ctx.clip();}
+  ctx.translate(pose.x,pose.y);
   const remaining=frame.timer==="selection"?(frame.preview?config.voting.durationMs:stage.voting.getRemainingMs()):opening.getRemainingMs();
-  ctx.globalAlpha=clockOpacity;drawTimerFace(timerRadius,remaining);ctx.restore();
+  ctx.globalAlpha=clockOpacity;drawTimerFace(pose.scale,remaining);ctx.restore();
  }
  if(cardReady&&frame.card>0){
   const width=Math.min(w*.8,h*.6),height=width*cardImage.naturalHeight/cardImage.naturalWidth;
