@@ -70,3 +70,13 @@ Use case: lighting-weather and precise-object-edit. Edit Image 1, the Memory Roo
 ![步驟檢視中的單門亮房間](memory-room-preview.jpg)
 
 ![開始後的實際投影，所有按鈕已隱藏](memory-room-live.jpg)
+
+## 原始語音實播（2026-10-14）
+
+分支 `feat/memory-room-voice` 使用上傳的原始 `Memory-room.m4a`，瀏覽器回報長度 3.7 秒，
+正常播放、無解碼錯誤。真正結束後 `ended=true`，畫面恢復原房間、AI 退場，
+仍停留 `memory-welcome` 等待下一次按鍵；原開場語音沒有重播。
+
+![記憶房間語音自然播完後，恢復房間並等待下一次按鍵](memory-original-voice-ended.jpg)
+
+記憶房間原始語音整合（`ed65649`）：[84 項控制／版面測試與 22 組 Chrome 檢查](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/38516525648)全部通過；3.7 秒原始 M4A 自然播放、音訊分析、放大與全黑背景、真正結束後退場、長按不跳步及倒數不重設均已驗證。

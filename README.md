@@ -1,6 +1,6 @@
 # Human Verification Test #67 — stage cues
 
-開場分支：`feat/one-key-opening`。重新整理頁面即可重跑排練。
+劇場投影與手動 cue 控制。重新整理頁面即可重跑排練。
 
 開啟 `index.html`，或在資料夾內執行 `python -m http.server 8765`。
 開始前有 **全頁／步驟檢視** 與螢幕底部固定漂浮的 **開始** 鍵。
@@ -265,3 +265,5 @@ AAC 44.1 kHz 雙聲道。保留原檔額外軌道，不剪輯、不轉碼；SHA-
 `eba45fdbb95d7ce1dda53f39f964ffd4b62f842566258db1947b08a322075af8`。
 播放時 AI 放大、原背景漸暗至全黑，真正結束後縮回並淡出；不重設十五分鐘期限。
 演員對話仍由下一次按鍵推進，不會在語音結束時自動跳步。
+
+記憶房間原始語音整合（`ed65649`）：[84 項控制／版面測試與 22 組 Chrome 檢查](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/38516525648)全部通過；3.7 秒原始 M4A 自然播放、音訊分析、放大與全黑背景、真正結束後退場、長按不跳步及倒數不重設均已驗證。
