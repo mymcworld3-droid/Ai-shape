@@ -1056,7 +1056,12 @@ async function fastVoting(page){
     await keys.keyboard.press('ArrowRight');await cue(keys,'door-kick');await flag(keys,'effectState','finished');
     await keys.keyboard.press('ArrowRight');await cue(keys,'clock');await keys.waitForTimeout(1300);
     await keys.keyboard.press('ArrowRight');await cue(keys,'card');await keys.waitForTimeout(450);
-    await keys.keyboard.press('ArrowLeft');await cue(keys,'clock');await checkClockPlacement(keys);
+    await keys.keyboard.press('ArrowLeft');await cue(keys,'clock');
+    await keys.waitForFunction(()=>transitions.card.value===0);
+    // Cue state changes synchronously; sample pixels after the restored frame
+    // has actually reached the canvas on both fast and slow CI renderers.
+    await keys.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await checkClockPlacement(keys);
     assert.equal(await keys.evaluate(()=>transitions.card.target),0);
     assert.equal(await keys.evaluate(()=>opening.deadline),keysDeadline);
     for(let i=0;i<25;i++)await keys.keyboard.press('ArrowDown');
