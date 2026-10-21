@@ -60,6 +60,17 @@ const stage=new StageOpening.StageCueController({
  votingScene:{...Object.fromEntries(Object.entries(selectionAudio).map(([kind,media])=>[kind,config.voting[kind]?media:null])),
   isReady:()=>memoryBackgroundReady,durationMs:config.voting.durationMs,fadeMs:config.voting.fadeMs,
   voiceExpandMs:config.voting.voiceExpandMs,voiceSettleMs:config.voting.voiceSettleMs},
+ capturePresentation(){
+  return {scene:document.body.dataset.scene,values:Object.fromEntries(Object.entries(transitions).map(([name,t])=>[name,t.target]))};
+ },
+ restorePresentation(saved){
+  if(!saved)return;
+  document.body.dataset.scene=saved.scene;
+  document.body.dataset.aiVoiceActive="none";
+  for(const [name,value] of Object.entries(saved.values))animate(name,value,0);
+  if(stage.room.state==="ready")roomReadyAt=performance.now()-config.revealFadeMs;
+  for(const key of Object.keys(document.body.dataset))if(key.endsWith("Error"))document.body.dataset[key]="false";
+ },
  onCue(cue){
   document.body.dataset.cue=cue;
   if(cue==="bright")roomReadyAt=performance.now();
@@ -107,6 +118,7 @@ const stage=new StageOpening.StageCueController({
    selectionPrompt:"selectionPromptState",selectionOne:"selectionOneState",
    selectionTwo:"selectionTwoState",selectionFinal:"selectionFinalState"}[kind];
   document.body.dataset[key]=state;
+  if(kind==="narration"&&state==="ready")animate("scene",0,config.settleDurationMs);
   if(kind==="memoryVoice"){
    if(state==="playing")animate("aiExpansion",1,config.memory.voiceExpandMs);
    if(state==="finished"||state==="error")animate("aiExpansion",0,config.memory.aiFadeMs);
@@ -295,7 +307,7 @@ function advanceStage(){
  if(stage.state==="clock"&&!cardReady)return;
  if(performance.now()<stage.busyUntil)return;
  if(stage.state==="dark")document.body.dataset.videoError="false";
- if(stage.state==="door-kick"&&!["starting","playing","error"].includes(stage.effectState)){
+ if(stage.state==="ai"||(stage.state==="welcome"&&stage.opening.state==="ready")){
   document.body.dataset.audioError="false";prepareAudio();
  }
  if(stage.state==="memory-light"&&config.memory.narration){
@@ -312,7 +324,18 @@ function advanceStage(){
  for(const kind of ["Prompt","One","Two","Final"])document.body.dataset["selection"+kind+"Error"]="false";
  stage.advance();requestStageFullscreen();
 }
-StageOpening.bindAdvanceKey(window,advanceStage,{isEnabled:()=>startGate.started});
+let masterVolume=100;
+function changeVolume(delta){
+ masterVolume=StageOpening.adjustVolume(masterVolume,delta);
+ for(const media of document.querySelectorAll("audio,video"))media.volume=masterVolume/100;
+ document.getElementById("volumeDisplay").textContent=masterVolume+"%";
+}
+StageOpening.bindStageKeys(window,{
+ start:()=>startGate.start(),next:advanceStage,
+ previous:()=>{if(startGate.started)stage.previous();},
+ volumeUp:()=>changeVolume(5),volumeDown:()=>changeVolume(-5),
+ isStarted:()=>startGate.started
+});
 StageOpening.bindAdvanceClick(projectionViewport,advanceStage);
 document.addEventListener("fullscreenchange",resizeCanvas);
 window.addEventListener("resize",resizeCanvas);

@@ -294,53 +294,45 @@ function cueSetup(withEffect = false) {
     async welcome() {
       await stage.advance(); video.end(); time += 1000;
       await stage.advance(); time += 1000;
-      await stage.advance(); if (effect) effect.end(); time += 1000;
       await stage.advance(); time += 2000;
     }
   };
 }
 
-test("all eight cues are separate; the clock replaces the graphic during speech but waits to count", async () => {
+test("opening cues play welcome before kick; only the genuine voice end starts the deadline", async () => {
   const c = cueSetup();
-  assert.equal(c.stage.state, "dark");
-  await c.stage.advance(); assert.equal(c.stage.state, "room-reveal");
-  assert.equal(await c.stage.advance(), false);
-  c.video.end(); assert.equal(c.stage.state, "bright");
-  assert.equal(c.audio.calls, 0);
-  assert.equal(await c.stage.advance(), false); // The final-frame handoff.
-  c.tick(300); await c.stage.advance(); assert.equal(c.stage.state, "ai");
-  assert.equal(c.audio.calls, 0);
-  c.tick(1000); await c.stage.advance(); assert.equal(c.stage.state, "door-kick");
-  assert.equal(c.stage.effectState, "missing");
-  c.tick(200); await c.stage.advance(); assert.equal(c.stage.state, "welcome");
+  await c.welcome();
+  assert.equal(c.stage.state, "welcome");
   assert.equal(c.audio.calls, 1);
-  c.tick(2000); await c.stage.advance(); assert.equal(c.stage.state, "clock");
   c.tick(10000);
-  assert.equal(c.stage.opening.getRemainingMs(), 900000);
+  assert.equal(await c.stage.advance(), false);
   assert.equal(c.stage.opening.deadline, null);
   c.audio.dispatchEvent(new Event("ended"));
   assert.equal(c.stage.opening.state, "narration");
-  assert.equal(await c.stage.advance(), false); // Cards wait for speech.
-  c.audio.end();
-  assert.equal(c.stage.state, "clock");
+  assert.equal(await c.stage.advance(), false);
+  c.audio.end(); const deadline = c.stage.opening.deadline;
+  assert.equal(c.stage.state, "welcome");
   assert.equal(c.stage.opening.getRemainingMs(), 900000);
-  assert.equal(c.completions.length, 1);
-  c.tick(1100); await c.stage.advance(); assert.equal(c.stage.state, "card");
+  assert.equal(await c.stage.advance(), false); // Wait for automatic shrink.
+  c.tick(1100); await c.stage.advance();
+  assert.equal(c.stage.state, "door-kick");
+  assert.equal(c.stage.effectState, "missing");
+  c.tick(200); await c.stage.advance(); assert.equal(c.stage.state, "clock");
+  c.tick(1300); await c.stage.advance(); assert.equal(c.stage.state, "card");
   c.tick(500); await c.stage.advance(); assert.equal(c.stage.state, "card-hidden");
   c.tick(500); await c.stage.advance(); assert.equal(c.stage.state, "blackout");
   c.tick(2000); assert.equal(await c.stage.advance(), false);
+  assert.equal(c.stage.opening.deadline, deadline);
   assert.equal(c.audio.calls, 1); assert.equal(c.video.calls, 1);
-  assert.deepEqual(c.cues, ["room-reveal","bright","ai","door-kick","welcome","clock","card","card-hidden","blackout"]);
+  assert.deepEqual(c.cues, ["room-reveal","bright","ai","welcome","door-kick","clock","card","card-hidden","blackout"]);
 });
 
-test("speech completion shrinks automatically without consuming the operator's clock cue", async () => {
+test("speech completion shrinks automatically without consuming the operator's kick cue", async () => {
   const c = cueSetup(); await c.welcome();
   c.audio.end(); const deadline = c.stage.opening.deadline;
-  assert.equal(c.stage.state, "welcome");
-  assert.equal(c.completions.length, 1);
   c.audio.end(); assert.equal(c.completions.length, 1);
-  c.tick(1100); await c.stage.advance();
-  assert.equal(c.stage.state, "clock");
+  assert.equal(c.stage.state, "welcome");
+  c.tick(1100); await c.stage.advance(); assert.equal(c.stage.state, "door-kick");
   assert.equal(c.stage.opening.deadline, deadline);
 });
 
@@ -357,10 +349,9 @@ test("animation presses are ignored rather than queued into later cues", async (
   c.tick(2000); assert.equal(c.stage.state, "welcome");
 });
 
-test("a supplied door effect plays once and gates welcome until its actual end", async () => {
+test("a supplied door effect follows speech once and gates the clock until its actual end", async () => {
   const c = cueSetup(true);
-  await c.stage.advance(); c.video.end(); c.tick(300);
-  await c.stage.advance(); c.tick(1000);
+  await c.welcome(); c.audio.end(); c.tick(1100);
   let resolve;
   c.effect.result = new Promise(done => { resolve = done; });
   const pending = c.stage.advance();
@@ -372,29 +363,29 @@ test("a supplied door effect plays once and gates welcome until its actual end",
   c.effect.dispatchEvent(new Event("ended"));
   assert.equal(c.stage.effectState, "playing");
   c.effect.end(); assert.equal(c.stage.effectState, "finished");
-  assert.equal(c.audio.calls, 0);
+  assert.equal(c.audio.calls, 1);
   await c.stage.advance();
-  assert.equal(c.stage.state, "welcome");
+  assert.equal(c.stage.state, "clock");
   assert.equal(c.effect.calls, 1); assert.equal(c.audio.calls, 1);
 });
 
-test("blocked door audio retries its own cue, without starting narration", async () => {
+test("blocked door audio retries its own cue, without replaying narration or resetting the deadline", async () => {
   const c = cueSetup(true);
-  await c.stage.advance(); c.video.end(); c.tick(300);
-  await c.stage.advance(); c.tick(1000);
+  await c.welcome(); c.audio.end(); c.tick(1100);
+  const deadline = c.stage.opening.deadline;
   c.effect.result = Promise.reject(new Error("NotAllowedError"));
   assert.equal(await c.stage.advance(), false);
   assert.equal(c.stage.state, "door-kick"); assert.equal(c.stage.effectState, "error");
-  assert.equal(c.audio.calls, 0);
+  assert.equal(c.audio.calls, 1);
   c.effect.result = Promise.resolve(); await c.stage.advance();
-  assert.equal(c.effect.calls, 2); assert.equal(c.audio.calls, 0);
+  assert.equal(c.effect.calls, 2); assert.equal(c.audio.calls, 1);
   c.effect.end(); await c.stage.advance(); assert.equal(c.audio.calls, 1);
+  assert.equal(c.stage.state, "clock"); assert.equal(c.stage.opening.deadline, deadline);
 });
 
 test("a genuine effect end wins over a late play rejection and late media error", async () => {
   const c = cueSetup(true);
-  await c.stage.advance(); c.video.end(); c.tick(300);
-  await c.stage.advance(); c.tick(1000);
+  await c.welcome(); c.audio.end(); c.tick(1100);
   let reject;
   c.effect.result = new Promise((_, no) => { reject = no; });
   const pending = c.stage.advance();
@@ -405,23 +396,23 @@ test("a genuine effect end wins over a late play rejection and late media error"
   await c.stage.advance(); assert.equal(c.audio.calls, 1);
 });
 
-test("narration failure rolls back to a retry without replaying the completed effect", async () => {
+test("narration failure retries welcome before any door effect can play", async () => {
   const c = cueSetup(true);
   c.audio.result = Promise.reject(new Error("NotAllowedError"));
   await c.welcome();
-  assert.equal(c.stage.state, "door-kick");
+  assert.equal(c.stage.state, "welcome");
   assert.equal(c.stage.opening.deadline, null);
   assert.equal(c.completions.length, 0);
   c.audio.result = Promise.resolve(); await c.stage.advance();
   assert.equal(c.stage.state, "welcome");
-  assert.equal(c.effect.calls, 1); assert.equal(c.audio.calls, 2);
+  assert.equal(c.effect.calls, 0); assert.equal(c.audio.calls, 2);
 });
 
-test("an audio error while the waiting clock is shown restores the welcome retry cue", async () => {
+test("an audio error during welcome retains its retry cue and cannot play the kick", async () => {
   const c = cueSetup(); await c.welcome(); await c.stage.advance();
-  assert.equal(c.stage.state, "clock");
+  assert.equal(c.stage.state, "welcome");
   c.audio.dispatchEvent(new Event("error"));
-  assert.equal(c.stage.state, "door-kick");
+  assert.equal(c.stage.state, "welcome");
   assert.equal(c.stage.opening.deadline, null);
   await c.stage.advance();
   assert.equal(c.stage.state, "welcome");
@@ -431,12 +422,13 @@ test("an audio error while the waiting clock is shown restores the welcome retry
 test("cards and complete blackout neither pause nor reset the audio-owned deadline", async () => {
   const c = cueSetup(); await c.welcome(); await c.stage.advance();
   c.audio.end(); const deadline = c.stage.opening.deadline;
-  c.tick(2000); await c.stage.advance();
+  c.tick(1100); await c.stage.advance(); c.tick(200); await c.stage.advance();
+  c.tick(1300); await c.stage.advance();
   assert.equal(c.stage.state, "card");
   c.tick(5000); await c.stage.advance();
   c.tick(5000); await c.stage.advance();
   assert.equal(c.stage.state, "blackout");
-  assert.equal(c.stage.opening.getRemainingMs(), 888000);
+  assert.equal(c.stage.opening.getRemainingMs(), 887400);
   assert.equal(c.stage.opening.deadline, deadline);
   c.tick(900000); assert.equal(c.stage.opening.getRemainingMs(), 0);
   assert.equal(c.stage.opening.state, "finished");
@@ -445,15 +437,15 @@ test("cards and complete blackout neither pause nor reset the audio-owned deadli
   assert.equal(c.stage.state, "blackout");
 });
 
-test("a held key across narration completion cannot spill into the card cue", async () => {
+test("a held key across narration completion cannot spill into the door cue", async () => {
   const c = cueSetup(); await c.welcome();
   const target = new EventTarget(), unbind = bindAdvanceKey(target, () => c.stage.advance());
-  key(target, "keydown"); assert.equal(c.stage.state, "clock");
+  key(target, "keydown"); assert.equal(c.stage.state, "welcome");
   c.audio.end(); c.tick(2000);
   key(target, "keydown", {repeat:true}); key(target, "keydown");
-  assert.equal(c.stage.state, "clock");
+  assert.equal(c.stage.state, "welcome");
   key(target, "keyup"); key(target, "keydown");
-  assert.equal(c.stage.state, "card");
+  assert.equal(c.stage.state, "door-kick");
   unbind();
 });
 

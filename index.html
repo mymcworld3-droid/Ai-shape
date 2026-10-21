@@ -28,13 +28,14 @@
       <audio id="selectionFinalAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
     </div>
   </div>
+  <output id="volumeDisplay" aria-label="播放音量" aria-live="off">100%</output>
   <aside id="stepsPanel" aria-label="演出步驟檢視" hidden>
     <header><h1>演出步驟<span>25</span></h1><p>點選預覽，不播放影音</p></header>
     <ol id="stepList">
       <li><button type="button" data-preview="bright" aria-pressed="true"><span class="step-number">01</span><span>暗 → 亮<small>影片播完，接回原本房間</small></span></button></li>
       <li><button type="button" data-preview="ai" aria-pressed="false"><span class="step-number">02</span><span>AI 漸顯<small>電視正中央 · 填滿內框</small></span></button></li>
-      <li><button type="button" data-preview="door-kick" aria-pressed="false"><span class="step-number">03</span><span>踢門音效<small>音效待補</small></span></button></li>
-      <li><button type="button" data-preview="welcome" aria-pressed="false"><span class="step-number">04</span><span>歡迎語音<small>圖形放大、背景漸至全黑</small></span></button></li>
+      <li><button type="button" data-preview="welcome" aria-pressed="false"><span class="step-number">03</span><span>歡迎語音<small>圖形放大、背景漸至全黑</small></span></button></li>
+      <li><button type="button" data-preview="door-kick" aria-pressed="false"><span class="step-number">04</span><span>踢門音效<small>語音播完後，按一下播放</small></span></button></li>
       <li><button type="button" data-preview="clock" aria-pressed="false"><span class="step-number">05</span><span>顯示碼錶<small>語音播完才開始倒數</small></span></button></li>
       <li><button type="button" data-preview="card" aria-pressed="false"><span class="step-number">06</span><span>顯示卡片<small>MEMORY ACCESS</small></span></button></li>
       <li><button type="button" data-preview="card-hidden" aria-pressed="false"><span class="step-number">07</span><span>隱藏卡片<small>倒數繼續</small></span></button></li>
@@ -69,7 +70,7 @@
   <button type="button" id="stepsViewButton" aria-pressed="false">步驟檢視</button>
 </nav>
 <div id="startDock">
-  <button type="button" id="startButton" disabled><span class="play-mark" aria-hidden="true"></span><span id="startLabel">載入中…</span></button>
+  <button type="button" id="startButton" aria-keyshortcuts="F" disabled><span class="play-mark" aria-hidden="true"></span><span id="startLabel">載入中…</span></button>
   <p id="startStatus" role="status" aria-live="polite"></p>
 </div>
 <script src="opening-config.js"></script>

@@ -41,3 +41,5 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
  #stepsPanel header p{margin-bottom:12px}
  #stepList button{padding:10px 12px}
 }
+
+#volumeDisplay{position:fixed;z-index:5;right:max(16px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));color:#fff;opacity:.38;font-size:clamp(10px,1vw,13px);font-weight:400;font-variant-numeric:tabular-nums;line-height:1;pointer-events:none;user-select:none}
