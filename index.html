@@ -28,6 +28,7 @@
       <audio id="selectionFinalAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
     </div>
   </div>
+  <output id="volumeDisplay" aria-label="播放音量" aria-live="off">100%</output>
   <aside id="stepsPanel" aria-label="演出步驟檢視" hidden>
     <header><h1>演出步驟<span>25</span></h1><p>點選預覽，不播放影音</p></header>
     <ol id="stepList">
@@ -69,7 +70,7 @@
   <button type="button" id="stepsViewButton" aria-pressed="false">步驟檢視</button>
 </nav>
 <div id="startDock">
-  <button type="button" id="startButton" disabled><span class="play-mark" aria-hidden="true"></span><span id="startLabel">載入中…</span></button>
+  <button type="button" id="startButton" aria-keyshortcuts="F" disabled><span class="play-mark" aria-hidden="true"></span><span id="startLabel">載入中…</span></button>
   <p id="startStatus" role="status" aria-live="polite"></p>
 </div>
 <script src="opening-config.js"></script>

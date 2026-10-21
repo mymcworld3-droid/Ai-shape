@@ -108,23 +108,21 @@
     finishNarration() {
       if (!this.audio.ended || !["starting", "narration"].includes(this.state)) return;
       ++this.run;
-      this.deadline = this.now() + this.durationMs;
+      if (this.deadline === null) this.deadline = this.now() + this.durationMs;
       this.setState("countdown");
     }
 
     getRemainingMs() {
-      if (this.state === "finished") return 0;
-      if (this.state !== "countdown") return this.durationMs;
+      if (this.deadline === null) return this.durationMs;
       // A deadline, rather than interval ticks, survives background-tab throttling.
       const remaining = Math.max(0, this.deadline - this.now());
-      if (remaining === 0) this.setState("finished");
+      if (remaining === 0 && this.state === "countdown") this.setState("finished");
       return remaining;
     }
 
     fail(error) {
-      if (["countdown", "finished"].includes(this.state)) return;
+      if (!["starting", "narration"].includes(this.state)) return;
       ++this.run;
-      this.deadline = null;
       this.audio.pause();
       this.setState("ready");
       this.onError(error);
@@ -437,11 +435,13 @@
       cardFadeMs = 400, blackoutMs = 1200,
       onCue = () => {}, onMediaState = () => {},
       onNarrationEnd = () => {}, onError = () => {}, memoryScene = null, officeScene = null, votingScene = null,
-      onMemoryNarrationEnd = () => {} }) {
+      onMemoryNarrationEnd = () => {}, capturePresentation = () => null,
+      restorePresentation = () => {} }) {
       Object.assign(this, { now, effect, revealFadeMs, aiFadeMs, expandMs,
         morphMs, settleMs, cardFadeMs, blackoutMs, onCue, onMediaState,
-        onNarrationEnd, onError });
+        onNarrationEnd, onError, capturePresentation, restorePresentation });
       this.state = "dark";
+      this.history = [];
       this.busyUntil = 0;
       this.effectState = "idle";
       this.effectRun = 0;
@@ -486,6 +486,64 @@
     setEffectState(state) { this.effectState = state; this.onMediaState("effect", state); }
     lock(ms) { this.busyUntil = Math.max(this.busyUntil, this.now() + ms); }
 
+    checkpoint() {
+      return {
+        state: this.state, room: this.room.state, opening: this.opening.state,
+        effect: this.effectState,
+        memory: this.memory && { state: this.memory.state, mediaStates: { ...this.memory.mediaStates } },
+        office: this.office && { state: this.office.state, bangState: this.office.bangState },
+        voting: this.voting && { state: this.voting.state, mediaStates: { ...this.voting.mediaStates } },
+        presentation: this.capturePresentation()
+      };
+    }
+
+    previous() {
+      if (this.destroyed || !this.history.length) return false;
+      const saved = this.history.pop();
+      // Cancel pending play promises before pausing, so late completions cannot
+      // restore a departed cue. A rewind never changes either timer deadline.
+      ++this.room.run; ++this.opening.run; ++this.effectRun;
+      this.room.state = "dark"; this.opening.state = "ready"; this.effectState = "idle";
+      const media = [this.room.video, this.opening.audio, this.effect];
+      for (const scene of [this.memory, this.voting]) {
+        if (!scene) continue;
+        for (const kind of Object.keys(scene.runs)) ++scene.runs[kind];
+        media.push(...Object.values(scene.media));
+        scene.busyUntil = 0;
+      }
+      if (this.office) { ++this.office.run; this.office.busyUntil = 0; media.push(this.office.bang); }
+      for (const item of media) item?.pause();
+      this.busyUntil = 0;
+      this.room.state = saved.room;
+      this.opening.state = saved.opening;
+      this.setEffectState(saved.effect);
+      this.onMediaState("room", saved.room);
+      this.onMediaState("narration", saved.opening);
+      for (const [scene, snapshot] of [[this.memory, saved.memory], [this.voting, saved.voting]]) {
+        if (!scene || !snapshot) continue;
+        scene.state = snapshot.state;
+        for (const [kind, value] of Object.entries(snapshot.mediaStates)) scene.setMediaState(kind, value);
+      }
+      if (this.office && saved.office) {
+        this.office.state = saved.office.state;
+        this.office.setBangState(saved.office.bangState);
+      }
+      this.setCue(saved.state);
+      this.restorePresentation(saved.presentation);
+      return true;
+    }
+
+    advance() {
+      if (this.destroyed || this.now() < this.busyUntil) return Promise.resolve(false);
+      const saved = this.checkpoint();
+      const result = this.advanceCue();
+      // Video completion belongs to the first cue, not a second history entry.
+      // A failed video retry must not accumulate duplicate dark checkpoints.
+      if (this.state !== saved.state &&
+          !(saved.state === "dark" && this.history.at(-1)?.state === "dark")) this.history.push(saved);
+      return result;
+    }
+
     async playEffect() {
       if (!this.effect) { this.setEffectState("missing"); this.lock(150); return true; }
       const run = ++this.effectRun;
@@ -511,7 +569,7 @@
       this.onError("effect", error);
     }
 
-    async advance() {
+    async advanceCue() {
       if (this.destroyed || this.now() < this.busyUntil) return false;
       switch (this.state) {
         case "dark": return this.room.advance();
@@ -620,6 +678,40 @@
     };
   }
 
+  function bindStageKeys(target, { start, next, previous, volumeUp, volumeDown, isStarted }) {
+    const held = new Set();
+    const actionFor = event => ({ Space: "next", ArrowRight: "next", ArrowLeft: "previous",
+      ArrowUp: "volumeUp", ArrowDown: "volumeDown", KeyF: "start" })[event.code] ||
+      ({ " ": "next", ArrowRight: "next", ArrowLeft: "previous", ArrowUp: "volumeUp",
+        ArrowDown: "volumeDown", f: "start", F: "start" })[event.key];
+    const actions = { start, next, previous, volumeUp, volumeDown };
+    const down = event => {
+      const action = actionFor(event), element = event.target;
+      if (!action || event.ctrlKey || event.altKey || event.metaKey || event.isComposing ||
+          (event.shiftKey && action !== "start") || element?.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(element?.tagName)) return;
+      if ((action === "next" || action === "previous") && !isStarted()) return;
+      if (action === "start" && isStarted()) return;
+      event.preventDefault();
+      if (action === "volumeUp" || action === "volumeDown") { actions[action](); return; }
+      if (event.repeat || held.size) return;
+      held.add(event.code || event.key);
+      actions[action]();
+    };
+    const up = event => held.delete(event.code || event.key);
+    const blur = () => held.clear();
+    target.addEventListener("keydown", down); target.addEventListener("keyup", up);
+    target.addEventListener("blur", blur);
+    return () => {
+      target.removeEventListener("keydown", down); target.removeEventListener("keyup", up);
+      target.removeEventListener("blur", blur);
+    };
+  }
+
+  function adjustVolume(percent, delta) {
+    return Math.max(0, Math.min(100, Math.round(percent + delta)));
+  }
+
   function bindAdvanceClick(target, advance) {
     const click = event => {
       if (event.button !== 0 || event.detail > 1 || event.ctrlKey || event.altKey ||
@@ -630,5 +722,5 @@
     return () => target.removeEventListener("click", click);
   }
 
-  return { RoomRevealController, OpeningController, MemorySceneController, OfficeSceneController, VotingSceneController, StageCueController, StartGate, formatTime, bindAdvanceKey, bindAdvanceClick };
+  return { RoomRevealController, OpeningController, MemorySceneController, OfficeSceneController, VotingSceneController, StageCueController, StartGate, formatTime, bindAdvanceKey, bindStageKeys, adjustVolume, bindAdvanceClick };
 });
