@@ -30,17 +30,17 @@ BANG 配置後等待音訊真正播完，仍須再按一鍵才能進第三場。
 
 | 項目 | 狀態／建議位置 |
 | --- | --- |
-| 辦公室背景 | 已完成：`assets/backgrounds/office-memory.png`；16:9、明亮中性白光、左後方桌子、中央與右側留白，僅一扇左門。 |
+| 辦公室背景 | 已完成：`assets/backgrounds/office-memory.png`；16:9、明亮中性白光、左後方矮櫃、中央與右側留白，僅一扇左門；辦公桌與椅子已移除。 |
 | 辦公室 BANG | **待提供**：`assets/audio/office-bang.mp3`，短門撞擊聲、無長前置靜音；在 `opening-config.js` 設定 `office.bang`。 |
 | 文件與資料夾 | **實體道具**：供 Christopher、Liam、Boss 持取；可使用空白內容，背景不生成可讀文件。 |
-| 辦公桌 | 背景已有左後方桌子；若演員需拿取桌上文件，另備實體桌配合舞台站位。 |
+| 辦公桌 | 背景不再含桌子；若劇情仍需桌上文件，使用實體桌配合舞台站位。 |
 | 中央追光 | 實際舞台燈，由燈光操作員配合上述台詞。 |
 
 先前待補的踢門音效、記憶室 click／歡迎語音、正式卡片與相框道具，
 請見 README。第二幕沒有新增 AI 語音，不需要預錄演員台詞。
 `office.bang: null` 不請求不存在的檔案，也不以測試音當正式音效。
 
-## 辦公室背景生成
+## 原始辦公室背景生成（歷史記錄）
 
 使用內建 imagegen，以 `assets/backgrounds/IMG_0165.png` 作為材質、亮度與視角參考。
 新增一張正常企業辦公室，不修改原背景。輸出為 1672×941 PNG；
@@ -53,7 +53,7 @@ BANG 配置後等待音訊真正播完，仍須再按一鍵才能進第三場。
 Create ONE finished theatrical projection background for Act II, Scene II, Christopher's office memory in a live play. Use the attached room image ONLY as reference for photorealistic architectural realism, bright readable lighting, fixed straight-on eye-level camera, neutral light gray palette and clean perspective. Create a DIFFERENT location: an ordinary modern corporate office, not the test room. Wide landscape 16:9 composition. Bright neutral daylight with gentle warm office ceiling lights, pale gray walls, a restrained glass partition along the rear, matte medium gray floor. Place one modest business desk against the BACK LEFT of the image, a small tidy stack of paper files and folders on top, a compact desk lamp, and a low filing cabinet behind it. The desk must remain a secondary background detail, leave the entire center, right side, and foreground spacious and clear for four LIVE actors to stand in front of the projection. Include only one simple left-side doorway; do not add a second door. Plain realistic corporate setting, no futuristic architecture, no dramatic darkness, no tinted blue light. Horizontal camera, straight vertical lines, controlled wide perspective with no fisheye distortion. No people, no silhouettes, no human shadows, no television or screen, no AI shapes, no countdown, no signage, no company logos, no room numbers, no readable text, no watermark. Crisp cinematic architectural photograph, believable proportions, balanced bright exposure. Output one 16:9 background ready to fill a theater projection.
 ```
 
-## 驗證
+## 原始版本驗證（歷史畫面，包含舊桌子）
 
 62 項控制與版面測試通過。Chrome 測試保留開場完整影片與語音自然播完、
 AI 電視內框最大尺寸及三種比例的檢查，新增第二幕六步操作、獨立像素
@@ -70,3 +70,29 @@ AI 電視內框最大尺寸及三種比例的檢查，新增第二幕六步操�
 確認第二幕三場順序及辦公室填滿畫框，所有按鈕隱藏，背景沒有上一幕覆蓋物。
 
 ![開始後的辦公室實際投影](office-memory-live.jpg)
+
+## 2026-10-29：移除辦公桌
+
+以內建 imagegen 精準編輯原圖，移除辦公桌、桌燈、桌上文件與辦公椅，
+保留矮櫃、盆栽、書本、左門、玻璃隔間、視角與中性明亮照明。
+目前正式素材：`assets/backgrounds/office-memory.png`，1670×941 PNG。
+仍以 cover 等比例填滿固定 16:9 畫框；辦公室回憶與 BANG 共用此圖。
+
+實際編輯提示詞：
+
+```text
+Use case: precise-object-edit. Edit target: the attached existing office-memory theatrical projection background. Remove the office DESK completely (left lower area), including tabletop, front panel, legs, desktop lamp, all papers, folders, pen holder and all objects resting on the desk, plus the office chair that belongs to the desk. Fill those removed regions seamlessly with the existing pale gray floor and underlying wall/glass partition; match perspective, frosted glass bands, baseboards and floor reflections. Preserve the low filing cabinet, plant and books behind the former desk, and preserve the single left door. Keep all architecture, glass frames, windows, ceiling lights, original bright neutral daylight exposure, original straight-on camera, dimensions/aspect ratio 1672x941 and composition unchanged. Clear spacious theater backdrop without a desk or table. No people, no text, no watermark, no new objects. Make only this object removal, no redesign.
+```
+
+生成輸出為 1670×941，直接沿用，不拉伸改圖；與原圖的微小比例差異由既有 cover 裁切處理。
+
+目前版本實際 HTTPS 播放驗證：從 F 開始，完整播放 22.360816 秒最新語音，
+語音真正結束後按右鍵進入 `clock`；此時踢門仍暫停、播放位置為 0。
+下一次右鍵才播放原始踢門 WAV，碼錶保持可見。
+之後以右鍵經記憶室、獨白、全暗進入辦公室，確認桌子與椅子已移除、16:9 填滿、所有按鈕隱藏。
+
+![碼錶已顯示，踢門尚未播放](office-update-clock-first.jpg)
+![已移除桌子的實際辦公室投影](office-no-desk-live.jpg)
+
+版本 `39cb4b8` 的 91 項控制／版面測試與完整 Chrome 檢查通過：
+[GitHub Actions](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/40827342995)。

@@ -355,7 +355,10 @@ async function fastVoting(page){
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Held Space cannot spill into kick');
     assert.equal(await page.evaluate(()=>transitions.scene.value),0);
     await page.keyboard.up("Space");await page.keyboard.press('Space');await cue(page,'clock');
-    await page.waitForTimeout(1400);await checkClockPlacement(page);
+    // A fresh press during the clock morph must not start or queue the kick.
+    await page.keyboard.press('Space');await cue(page,'clock');
+    assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0);
+    await page.waitForTimeout(1400);await cue(page,'clock');await checkClockPlacement(page);
     assert.equal(await page.evaluate(()=>transitions.clock.value),1);
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Clock is displayed BEFORE any kick sound');
     await page.screenshot({path:path.join(output,"05-clock-before-kick.png")});
@@ -377,7 +380,7 @@ async function fastVoting(page){
     const remaining=await page.evaluate(()=>stageOpening.remainingMs);
     assert.ok(remaining>890000&&remaining<900000);
     await page.screenshot({path:path.join(output,"06-countdown.png")});
-    results.push("explicit Start gate, hidden controls, doorless dark-to-bright MP4, full 29-second welcome, clock BEFORE the original 0.5102-second kick; held Space cannot skip either recording; unchanged deadline and automatic shrink");
+    results.push("explicit Start gate, hidden controls, doorless dark-to-bright MP4, full latest uploaded welcome, clock BEFORE the original 0.5102-second kick; held Space cannot skip either recording; unchanged deadline and automatic shrink");
 
     await page.keyboard.press("Escape");
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]) {
