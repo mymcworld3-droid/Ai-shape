@@ -97,7 +97,7 @@ test("crossing into the memory scene preserves the opening's running deadline an
  const step=async(ms=0)=>{time+=ms;return stage.advance();};
  await step();video.end();await step(300);await step(1000);await step(200);
  await step(2000);audio.end();const deadline=stage.opening.deadline;
- await step(1100);await step(200);
+ await step(1100);await step(1300);
  await step(1300);await step(500);await step(500);
  assert.equal(stage.state,"blackout");assert.equal(await step(500),false);
  await step(800);assert.equal(stage.state,"memory-light");

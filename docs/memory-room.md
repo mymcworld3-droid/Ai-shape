@@ -44,7 +44,7 @@ lightClick: null,
 
 已用內建生圖工具，以原本 `IMG_0165.png` 為參考，製作
 `assets/backgrounds/memory-room.png`。照明與原本亮房間一致，使用明亮白光、
-淺灰牆面與清楚可辨的地板；只保留左側一扇門，右側是完整牆面。
+淺灰牆面與清楚可辨的地板；目前已移除所有門，左右兩側都是完整牆面。
 左後方仍是一座小台與空相框。實際使用時等比例填滿 16:9，超出置中裁切。
 
 最終使用的提示詞：
@@ -67,7 +67,7 @@ Use case: lighting-weather and precise-object-edit. Edit Image 1, the Memory Roo
 新影片與開場語音各播放一次，明亮背景只保留左門，AI 退場後可停留對話。
 語音與音效尚未提供的記憶室欄位仍留空，未冒充已完成配音。
 
-![步驟檢視中的單門亮房間](memory-room-preview.jpg)
+![先前版本：步驟檢視中的單門亮房間](memory-room-preview.jpg)
 
 ![開始後的實際投影，所有按鈕已隱藏](memory-room-live.jpg)
 
@@ -80,3 +80,5 @@ Use case: lighting-weather and precise-object-edit. Edit Image 1, the Memory Roo
 ![記憶房間語音自然播完後，恢復房間並等待下一次按鍵](memory-original-voice-ended.jpg)
 
 記憶房間原始語音整合（`ed65649`）：[84 項控制／版面測試與 22 組 Chrome 檢查](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/38516525648)全部通過；3.7 秒原始 M4A 自然播放、音訊分析、放大與全黑背景、真正結束後退場、長按不跳步及倒數不重設均已驗證。
+
+2026-10-29：左門、門框、門窗、門把與門禁均已移除，保留小台與空相框，見 [最新無門背景](doorless-rooms.md)。上方舊生圖提示詞及舊截圖為歷史紀錄。

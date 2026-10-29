@@ -67,7 +67,7 @@ test('rewinding a pending voice pauses it, ignores late failure and permits a fr
 test('rewind restores the departing frame and replay never resets a running opening deadline',async()=>{
  const c=setup();c.setPresentation({scene:'opening',value:1});await c.welcome();c.audio.end();
  const deadline=c.stage.opening.deadline;c.tick(2000);await c.stage.advance();
- assert.equal(c.stage.state,'door-kick');c.stage.previous();assert.equal(c.stage.state,'welcome');
+ assert.equal(c.stage.state,'clock');c.stage.previous();assert.equal(c.stage.state,'welcome');
  c.stage.previous();assert.equal(c.stage.state,'ai');assert.deepEqual(c.getPresentation(),{scene:'opening',value:1});
  c.tick(1500);const remaining=c.stage.opening.getRemainingMs();assert.ok(remaining<900000);
  await c.next();assert.equal(c.stage.opening.state,'narration');assert.equal(c.stage.opening.deadline,deadline);

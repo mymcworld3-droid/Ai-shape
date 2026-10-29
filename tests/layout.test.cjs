@@ -127,12 +127,13 @@ test("a static frame has no fade delay and invalid fade timing is rejected",()=>
  assert.throws(()=>fadeInProgress(0,-1),RangeError);
 });
 test("silent step frames cover every cue and cannot mutate the playback transition data",()=>{
- const expected=["bright","ai","welcome","door-kick","clock","card","card-hidden","blackout",
+ const expected=["bright","ai","welcome","clock","door-kick","card","card-hidden","blackout",
   "memory-light","memory-welcome","memory-room","memory-blackout",
   "past-intro","past-isolate","office-light","office-bang","past-reflection","memory-return",
   "discussion","vote-prompt","vote-clock","vote-one","vote-two","vote-final","vote-blackout"];
  for(const cue of expected){const frame=previewFrame(cue);assert.ok(frame);assert.equal(Object.isFrozen(frame),true);}
  assert.equal(previewFrame("clock").clock,1);
+ assert.equal(previewFrame("door-kick").clock,1);
  assert.equal(previewFrame("clock").scene,0);
  assert.equal(previewFrame("card").card,1);
  assert.equal(previewFrame("card").scene,0);
