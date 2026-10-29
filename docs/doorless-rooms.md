@@ -40,3 +40,21 @@ Use case: lighting-weather. Image 1 is the EDIT TARGET: the bright doorless test
 ## 開場影片
 
 由新暗圖、亮圖各自以 cover 等比例裁切至 910 × 512；前 0.4 秒維持暗圖，中間約 3.4667 秒交叉漸亮，最後維持亮圖。編碼為 H.264／yuv420p 並設定 faststart，播放完接回同一張無門亮圖，不依賴外站。舊的大小寫不同、未被設定引用的 Start_animation.MP4 不參與播放。
+
+## HTTPS 實播驗證
+
+以 F 開始，新的無門 H.264 影片自然播放至 ended，瀏覽器回報長度 4.266667 秒且無解碼錯誤。
+原始歡迎錄音自然播放至 29 秒結束，下一次右鍵先進入 clock；此時踢門播放器仍 paused=true、currentTime=0。
+再按右鍵才播放原始 0.510204 秒踢門 WAV，碼錶保持可見。音效真正結束後，卡片顯示、隱藏、全暗與記憶室亮起皆依新按鍵推進。
+
+![實播：無門密室先顯示碼錶，踢門尚未播放](doorless-clock-before-kick.jpg)
+![實播：無門記憶室保留小台與相框](doorless-memory-room-live.jpg)
+
+## 自動檢查
+
+執行版本 d47057bfacaae9ff4c0b40f3956981ca5a176c61：91 項控制與版面測試、24 組 Chrome 回歸檢查均通過。
+分支與 PR 的完整檢查皆成功：
+- https://github.com/mymcworld3-droid/Ai-shape/actions/runs/40824794942
+- https://github.com/mymcworld3-droid/Ai-shape/actions/runs/40824798231
+
+包含原始錄音自然播放、碼錶先於踢門、音效期間碼錶持續顯示、音訊失敗重試、鍵盤前進返回、0–100% 音量、兩個期限不重設、三種螢幕比例及所有既有場景與圖形效果。最後紀錄提交只補充本文件與實播截圖，不改動已驗證的程式、測試與執行素材。
