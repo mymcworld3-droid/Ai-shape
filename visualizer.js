@@ -76,7 +76,7 @@ const stage=new StageOpening.StageCueController({
   if(cue==="bright")roomReadyAt=performance.now();
   if(cue==="ai"){animate("ai",0,0);animate("ai",1,config.aiFadeMs);}
   if(cue==="door-kick"){
-   animate("clock",0,0);animate("scene",0,config.settleDurationMs);
+   animate("clock",1,0);animate("scene",0,config.settleDurationMs);
   }
   if(cue==="welcome")animate("scene",1,config.sceneDurationMs);
   if(cue==="clock")animate("clock",1,config.morphDurationMs);
@@ -304,7 +304,7 @@ function requestStageFullscreen(){
 function advanceStage(){
  if(!startGate.started)return;
  if(!backgroundReady||!darkBackgroundReady)return;
- if(stage.state==="clock"&&!cardReady)return;
+ if(stage.state==="door-kick"&&!cardReady)return;
  if(performance.now()<stage.busyUntil)return;
  if(stage.state==="dark")document.body.dataset.videoError="false";
  if(stage.state==="ai"||(stage.state==="welcome"&&stage.opening.state==="ready")){

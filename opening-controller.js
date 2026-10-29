@@ -584,13 +584,13 @@
             return this.opening.advance();
           }
           if (!["countdown", "finished"].includes(this.opening.state)) return false;
+          this.lock(this.morphMs); this.setCue("clock"); return true;
+        case "clock":
+          if (!["countdown", "finished"].includes(this.opening.state)) return false;
           this.setCue("door-kick"); return this.playEffect();
         case "door-kick":
           if (["starting", "playing"].includes(this.effectState)) return false;
           if (this.effectState === "error") return this.playEffect();
-          this.lock(this.morphMs); this.setCue("clock"); return true;
-        case "clock":
-          if (!["countdown", "finished"].includes(this.opening.state)) return false;
           this.lock(this.cardFadeMs); this.setCue("card"); return true;
         case "card":
           this.lock(this.cardFadeMs); this.setCue("card-hidden"); return true;

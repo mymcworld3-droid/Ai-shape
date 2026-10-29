@@ -265,8 +265,8 @@ async function checkVoiceCoreForeground(page,voting=false,opening=false,{centere
 async function fastMemory(page){
  await fastReveal(page);await prepareWelcome(page);
  await page.keyboard.press('Space');await state(page,'narration');await naturalAudioEnd(page);
- await page.keyboard.press('Space');await cue(page,'door-kick');await flag(page,'effectState','finished');
  await page.keyboard.press('Space');await cue(page,'clock');await page.waitForTimeout(1300);
+ await page.keyboard.press('Space');await cue(page,'door-kick');await flag(page,'effectState','finished');
  await page.keyboard.press('Space');await cue(page,'card');await page.waitForTimeout(450);
  await page.keyboard.press('Space');await cue(page,'card-hidden');await page.waitForTimeout(450);
  await page.keyboard.press('Space');await cue(page,'blackout');await page.waitForTimeout(1300);
@@ -354,25 +354,30 @@ async function fastVoting(page){
     await page.waitForTimeout(1200); await page.keyboard.down("Space"); await cue(page,"welcome");
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Held Space cannot spill into kick');
     assert.equal(await page.evaluate(()=>transitions.scene.value),0);
-    await page.keyboard.up("Space");await page.keyboard.press('Space');await cue(page,'door-kick');
+    await page.keyboard.up("Space");await page.keyboard.press('Space');await cue(page,'clock');
+    await page.waitForTimeout(1400);await checkClockPlacement(page);
+    assert.equal(await page.evaluate(()=>transitions.clock.value),1);
+    assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Clock is displayed BEFORE any kick sound');
+    await page.screenshot({path:path.join(output,"05-clock-before-kick.png")});
+    await page.keyboard.press('Space');await cue(page,'door-kick');
     await flag(page,'effectState','playing');
     assert.equal(await page.locator('#doorKickAudio').getAttribute('src'),'assets/audio/door-kick.wav');
     const kick=await page.locator('#doorKickAudio').evaluate(a=>({duration:a.duration,paused:a.paused}));
     assert.ok(Math.abs(kick.duration-22500/44100)<.002,'Play the exact supplied 0.5102-second WAV');
     assert.equal(kick.paused,false);
+    assert.equal(await page.evaluate(()=>transitions.clock.value),1,'The clock remains visible during the kick');
     await page.keyboard.down('Space');await cue(page,'door-kick');
     await flag(page,'effectState','finished');
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.ended),true);
     await page.keyboard.down('Space');await cue(page,'door-kick');
-    await page.keyboard.up('Space');await page.keyboard.press('Space');await cue(page,'clock');
-    await page.waitForTimeout(1400);
+    await page.keyboard.up('Space');await cue(page,'door-kick');
     assert.equal(await page.evaluate(()=>transitions.clock.value),1);
     assert.equal(await page.evaluate(()=>opening.deadline),deadline,'Kick and clock must preserve the speech-owned deadline');
     await checkClockPlacement(page); await noControls(page);
     const remaining=await page.evaluate(()=>stageOpening.remainingMs);
     assert.ok(remaining>890000&&remaining<900000);
     await page.screenshot({path:path.join(output,"06-countdown.png")});
-    results.push("explicit Start gate, hidden controls, natural MP4 and full 29-second welcome BEFORE the original 0.5102-second kick; held Space cannot skip either recording; unchanged deadline and automatic shrink");
+    results.push("explicit Start gate, hidden controls, doorless dark-to-bright MP4, full 29-second welcome, clock BEFORE the original 0.5102-second kick; held Space cannot skip either recording; unchanged deadline and automatic shrink");
 
     await page.keyboard.press("Escape");
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]) {
@@ -579,7 +584,7 @@ async function fastVoting(page){
     await review.waitForTimeout(100);await fixedFrame(review);
     assert.equal(await review.locator('#stepList button').count(),25);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
-    for(const preview of ['welcome','clock','card','card-hidden','blackout','ai','door-kick','bright',
+    for(const preview of ['welcome','clock','door-kick','card','card-hidden','blackout','ai','bright',
       'memory-light','memory-welcome','memory-room','memory-blackout',
       'past-intro','past-isolate','office-light','office-bang','past-reflection','memory-return',
       'discussion','vote-prompt','vote-clock','vote-one','vote-two','vote-final','vote-blackout']){
@@ -803,9 +808,10 @@ async function fastVoting(page){
     await naturalAudioEnd(failedFullscreen); await cue(failedFullscreen,"welcome");
     assert.equal(await failedFullscreen.evaluate(()=>transitions.scene.value),0);
     await checkAiScreen(failedFullscreen,{centered:true,large:true});
+    await failedFullscreen.keyboard.press("Space"); await cue(failedFullscreen,"clock");
+    await failedFullscreen.waitForTimeout(1300);
     await failedFullscreen.keyboard.press("Space"); await cue(failedFullscreen,"door-kick");
     await flag(failedFullscreen,"effectState","finished");
-    await failedFullscreen.keyboard.press("Space"); await cue(failedFullscreen,"clock");
     await noControls(failedFullscreen); await failedFullscreen.close();
     results.push("Space-only operation and fullscreen rejection; automatic shrink also works before the manual clock cue");
 
@@ -848,6 +854,7 @@ async function fastVoting(page){
     await effectPage.keyboard.press("Space"); await cue(effectPage,"ai"); await settleLiveAi(effectPage);
     await effectPage.keyboard.press("Space"); await state(effectPage,"narration"); await naturalAudioEnd(effectPage);
     const effectDeadline=await effectPage.evaluate(()=>opening.deadline);
+    await effectPage.keyboard.press("Space");await cue(effectPage,"clock");await effectPage.waitForTimeout(1300);
     await effectPage.keyboard.press("Space"); await flag(effectPage,"effectState","error");
     assert.equal(await effectPage.locator('#openingAudio').evaluate(a=>a.ended),true);
     await effectPage.keyboard.press("Space"); await flag(effectPage,"effectState","playing");
@@ -855,7 +862,7 @@ async function fastVoting(page){
     await flag(effectPage,"effectState","finished");
     assert.equal(await effectPage.locator('#doorKickAudio').evaluate(a=>a.ended),true);
     assert.equal(await effectPage.locator('#openingAudio').evaluate(a=>a.ended),true);
-    await effectPage.keyboard.press("Space"); await cue(effectPage,"clock");
+    await effectPage.keyboard.press("Space"); await cue(effectPage,"card");
     assert.equal(await effectPage.evaluate(()=>opening.deadline),effectDeadline);
     await noControls(effectPage); await effectPage.close();
     results.push("door-kick failure/retry after completed welcome, preserving the countdown tested with a longer real PCM fixture; production uses the supplied original WAV");
@@ -1013,13 +1020,14 @@ async function fastVoting(page){
     await matchesStill(touch,"assets/backgrounds/IMG_0165.png");
     await touch.touchscreen.tap(190,420); await cue(touch,"ai"); await settleLiveAi(touch);
     await touch.touchscreen.tap(190,420); await state(touch,"narration"); await naturalAudioEnd(touch);
+    await touch.touchscreen.tap(190,420); await cue(touch,"clock"); await touch.waitForTimeout(1300);
     await touch.touchscreen.tap(190,420); await cue(touch,"door-kick"); await touch.waitForTimeout(200);
     // A second tap inside Chrome's double-click interval is intentionally
     // filtered. A fresh tap, after releasing that gesture, is a new cue.
     await touch.touchscreen.tap(190,420); await cue(touch,"door-kick");
     assert.equal(await touch.locator('#openingAudio').evaluate(a=>a.ended),true);
     await touch.waitForTimeout(650);
-    await touch.touchscreen.tap(190,420); await cue(touch,"clock");
+    await touch.touchscreen.tap(190,420); await cue(touch,"card");
     await noControls(touch); await touch.close();
     results.push("mobile step review and fixed Start; touch advances cues, filters double taps and retains a 16:9 projection without visible controls");
 
@@ -1053,16 +1061,17 @@ async function fastVoting(page){
     assert.equal(await keys.evaluate(()=>opening.deadline),keysDeadline);
     assert.ok(await keys.evaluate(()=>stageOpening.remainingMs)<900000,'The deadline keeps running during voice replay');
     await naturalAudioEnd(keys);assert.equal(await keys.evaluate(()=>opening.deadline),keysDeadline);
-    await keys.keyboard.press('ArrowRight');await cue(keys,'door-kick');await flag(keys,'effectState','finished');
     await keys.keyboard.press('ArrowRight');await cue(keys,'clock');await keys.waitForTimeout(1300);
+    await keys.keyboard.press('ArrowRight');await cue(keys,'door-kick');await flag(keys,'effectState','finished');
     await keys.keyboard.press('ArrowRight');await cue(keys,'card');await keys.waitForTimeout(450);
-    await keys.keyboard.press('ArrowLeft');await cue(keys,'clock');
+    await keys.keyboard.press('ArrowLeft');await cue(keys,'door-kick');
     await keys.waitForFunction(()=>transitions.card.value===0);
     // Cue state changes synchronously; sample pixels after the restored frame
     // has actually reached the canvas on both fast and slow CI renderers.
     await keys.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     await checkClockPlacement(keys);
     assert.equal(await keys.evaluate(()=>transitions.card.target),0);
+    await keys.keyboard.press('ArrowLeft');await cue(keys,'clock');
     assert.equal(await keys.evaluate(()=>opening.deadline),keysDeadline);
     for(let i=0;i<25;i++)await keys.keyboard.press('ArrowDown');
     assert.equal(await keys.locator('#volumeDisplay').textContent(),'0%');
@@ -1084,7 +1093,7 @@ async function fastVoting(page){
     await rewind.keyboard.press('ArrowRight');await cue(rewind,'vote-clock');await rewind.waitForTimeout(700);
     const rewindOpening=await rewind.evaluate(()=>opening.deadline),rewindSelection=await rewind.evaluate(()=>stage.voting.deadline);
     const preceding=['vote-prompt','discussion','memory-return','past-reflection','office-bang','office-light','past-isolate','past-intro',
-      'memory-blackout','memory-room','memory-welcome','memory-light','blackout','card-hidden','card','clock','door-kick','welcome','ai','bright','dark'];
+      'memory-blackout','memory-room','memory-welcome','memory-light','blackout','card-hidden','card','door-kick','clock','welcome','ai','bright','dark'];
     for(const previous of preceding){
       await rewind.keyboard.press('ArrowLeft');await cue(rewind,previous);
       assert.ok(await rewind.locator('audio,video').evaluateAll(items=>items.every(m=>m.paused)));
