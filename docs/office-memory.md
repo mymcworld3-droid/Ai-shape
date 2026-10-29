@@ -85,3 +85,14 @@ Use case: precise-object-edit. Edit target: the attached existing office-memory 
 ```
 
 生成輸出為 1670×941，直接沿用，不拉伸改圖；與原圖的微小比例差異由既有 cover 裁切處理。
+
+目前版本實際 HTTPS 播放驗證：從 F 開始，完整播放 22.360816 秒最新語音，
+語音真正結束後按右鍵進入 `clock`；此時踢門仍暫停、播放位置為 0。
+下一次右鍵才播放原始踢門 WAV，碼錶保持可見。
+之後以右鍵經記憶室、獨白、全暗進入辦公室，確認桌子與椅子已移除、16:9 填滿、所有按鈕隱藏。
+
+![碼錶已顯示，踢門尚未播放](office-update-clock-first.jpg)
+![已移除桌子的實際辦公室投影](office-no-desk-live.jpg)
+
+版本 `39cb4b8` 的 91 項控制／版面測試與完整 Chrome 檢查通過：
+[GitHub Actions](https://github.com/mymcworld3-droid/Ai-shape/actions/runs/40827342995)。
