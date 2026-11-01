@@ -515,10 +515,10 @@
       for (const item of media) item?.pause();
       this.busyUntil = 0;
       this.room.state = saved.room;
-      this.opening.state = saved.opening;
+      this.opening.state = ["starting", "narration"].includes(saved.opening) ? "ready" : saved.opening;
       this.setEffectState(saved.effect);
       this.onMediaState("room", saved.room);
-      this.onMediaState("narration", saved.opening);
+      this.onMediaState("narration", this.opening.state);
       for (const [scene, snapshot] of [[this.memory, saved.memory], [this.voting, saved.voting]]) {
         if (!scene || !snapshot) continue;
         scene.state = snapshot.state;
@@ -583,7 +583,7 @@
             this.lock(this.expandMs); this.setCue("welcome");
             return this.opening.advance();
           }
-          if (!["countdown", "finished"].includes(this.opening.state)) return false;
+          if (!["narration", "countdown", "finished"].includes(this.opening.state)) return false;
           this.lock(this.morphMs); this.setCue("clock"); return true;
         case "clock":
           if (!["countdown", "finished"].includes(this.opening.state)) return false;

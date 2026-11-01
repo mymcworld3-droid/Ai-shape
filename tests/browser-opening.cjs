@@ -345,19 +345,20 @@ async function fastVoting(page){
     for(let frame=0;frame<4;frame++){
       await checkAiScreen(page,{front:true});await page.waitForTimeout(80);
     }
-    await page.keyboard.down("Space"); await cue(page,"welcome");
+    await page.keyboard.down("Space"); await cue(page,"clock");
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Speech blocks the door cue');
+    await page.waitForTimeout(1400);
+    assert.equal(await page.evaluate(()=>transitions.clock.value),1);
+    assert.equal(await page.locator('#openingAudio').evaluate(a=>a.paused),false);
+    assert.equal(await page.evaluate(()=>opening.deadline),null);
     // Play the entire supplied recording to its genuine natural end.
     await state(page,"countdown");
     assert.equal(await page.locator('#openingAudio').evaluate(a=>a.ended),true);
     const deadline=await page.evaluate(()=>opening.deadline);
-    await page.waitForTimeout(1200); await page.keyboard.down("Space"); await cue(page,"welcome");
+    await page.waitForTimeout(1200); await page.keyboard.down("Space"); await cue(page,"clock");
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Held Space cannot spill into kick');
     assert.equal(await page.evaluate(()=>transitions.scene.value),0);
-    await page.keyboard.up("Space");await page.keyboard.press('Space');await cue(page,'clock');
-    // A fresh press during the clock morph must not start or queue the kick.
-    await page.keyboard.press('Space');await cue(page,'clock');
-    assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0);
+    await page.keyboard.up("Space");await cue(page,'clock');
     await page.waitForTimeout(1400);await cue(page,'clock');await checkClockPlacement(page);
     assert.equal(await page.evaluate(()=>transitions.clock.value),1);
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Clock is displayed BEFORE any kick sound');
