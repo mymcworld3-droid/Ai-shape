@@ -78,7 +78,7 @@ const stage=new StageOpening.StageCueController({
   if(cue==="door-kick"){
    animate("clock",1,0);animate("scene",0,config.settleDurationMs);
   }
-  if(cue==="welcome")animate("scene",1,config.sceneDurationMs);
+  if(cue==="welcome"){animate("clock",0,0);animate("scene",1,config.sceneDurationMs);}
   if(cue==="clock")animate("clock",1,config.morphDurationMs);
   if(cue==="card")animate("card",1,config.cardFadeMs);
   if(cue==="card-hidden")animate("card",0,config.cardFadeMs);
