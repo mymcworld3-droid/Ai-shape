@@ -1,0 +1,77 @@
+"""Build deterministic manual subtitles from the supplied Word manuscript.
+Usage: python tools/build-script.py [manuscript.docx]
+"""
+import re, json, sys, hashlib
+from pathlib import Path
+root=Path(__file__).resolve().parents[1]
+source=root/'docs/script-source.json'
+if len(sys.argv)>1:
+ from zipfile import ZipFile
+ from xml.etree import ElementTree as ET
+ path=Path(sys.argv[1]); ns={'w':'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+ with ZipFile(path) as z:
+  doc=ET.fromstring(z.read('word/document.xml'))
+  paragraphs=[''.join(p.itertext()) if False else ''.join(t.text or '' for t in p.findall('.//w:t',ns)) for p in doc.findall('./w:body/w:p',ns)]
+ source.write_text(json.dumps({'filename':path.name,'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'paragraphs':paragraphs},ensure_ascii=False,indent=2)+'\n')
+data=json.loads(source.read_text()); ps=data['paragraphs']
+# Stage directions stay in the operator's review, never inside spoken subtitles.
+def spoken(s):
+ s=re.sub(r'\([^)]*\)|\[[^]]*\]|\{[^}]*\}', '',s)
+ return re.sub(r'\s+',' ',s).strip()
+def sentences(s):
+ # Preserve ellipses and abbreviations; do not silently rewrite spelling or punctuation.
+ protected=s.replace('...','\ue000')
+ for ab in ['Mr.','Mrs.','Ms.','Dr.']:
+  protected=protected.replace(ab,ab[:-1]+'\ue001')
+ chunks=re.split(r'(?<=[.!?])\s+|(?<=[.!?])(?=[A-Z0-9])',protected)
+ return [x.replace('\ue000','...').replace('\ue001','.').strip() for x in chunks if x.strip()]
+look=dict(background='opening',room=False,ai=0,scene=0,clock=0,card=0,blackout=0,aiExpansion=0,vote=0,timer='opening')
+# Only meaningful projection/sound changes and pauses add a blank subtitle step.
+actions={17:('opening-dark',{}),23:('reveal',{'room':True}),27:('ai',{'ai':1}),33:('doorKick',{}),42:('opening-dim',{'scene':.35}),53:('opening-full',{'scene':0}),46:('timerClick',{}),
+83:('card',{'card':1}),85:('card-hide',{'card':0}),87:('doorOpen',{}),99:('blackout',{'blackout':1}),
+109:('memory-light',{'background':'memory','room':True,'ai':0,'clock':0,'scene':0,'card':0,'blackout':0,'aiExpansion':0}),
+185:('past-intro',{'blackout':0,'scene':.35,'ai':0}),188:('past-isolate',{'blackout':1}),191:('blackout',{'blackout':1}),
+195:('office-light',{'background':'office','room':True,'scene':.35,'blackout':0}),199:('office-full',{'scene':0}),221:('office-dim',{'scene':.35}),213:('officeBang',{}),
+269:('past-reflection',{'blackout':1}),284:('blackout',{'blackout':1}),
+290:('discussion',{'background':'memory','room':True,'blackout':0,'scene':.2,'clock':0,'ai':0}),
+385:('selection-button',{}),386:('selection-flash',{}),403:('blackout',{'blackout':1,'ai':0,'clock':0}),
+407:('ending-light',{'background':'memory','room':True,'scene':0,'blackout':0,'ai':0,'clock':0}),416:('end-blackout',{'blackout':1,'ai':0,'clock':0})}
+voices={28:'opening',115:'memory',388:'prompt',390:'one',395:'two',402:'final',409:'complete',414:'revealTruth'}
+entries=[];speaker='';act='I';scene='I'
+def add(p,text='',action=None,group=None,kind='dialogue',note=''):
+ entries.append(dict(id=f'p{p}-{sum(e["paragraph"]==p for e in entries)}',paragraph=p,act=act,scene=scene,speaker=speaker if text else '',text=text,action=action,group=group,kind=kind,note=note,look=dict(look)))
+for p,raw in enumerate(ps):
+ if p<11: continue
+ raw=raw.strip()
+ if raw.startswith('ACT '):act=raw.split()[1];scene='I';speaker='';continue
+ if raw.startswith('SCENE '):scene=raw.split()[1];speaker='';continue
+ if not raw or raw.startswith(('SETTING:','AT RISE:','END OF PLAY')):continue
+ m=re.match(r'^(AI VOICE|EVERYONE ELSE|RACHEL|MEGAN|ETHAN|CHRISTOPHER|LIAM|BOSS|Ben):',raw)
+ if m:speaker=m[1];raw=raw[m.end():]
+ # The source's AH! after the opening door has no explicit speaker: do not invent one.
+ if p==88:speaker=''
+ text=spoken(raw)
+ if p in actions:
+  action,patch=actions[p];look.update(patch)
+  add(p,action=action,kind='cue',note=ps[p].strip())
+ if p in voices:
+  group=voices[p]
+  if group=='opening':look.update(ai=1,clock=0)
+  elif group in ('prompt','one','two','final'):look.update(ai=1,clock=0,timer='selection')
+  else:look.update(ai=1,clock=0)
+  for n,line in enumerate(sentences(text)):
+   # Operator controls the clock switch during the last opening sentence.
+   action='opening-clock' if group=='opening' and n==len(sentences(text))-1 else None
+   if action:look['clock']=1
+   add(p,line,action,group)
+  look.update(ai=1 if group=='opening' else 0,clock=1 if group in ('opening','prompt','one','two') else 0)
+ elif text:
+  # Bare prose stage direction in Act IV is not dialogue.
+  if p==405:add(p,kind='cue',note=ps[p].strip());continue
+  for line in sentences(text):add(p,line)
+ elif re.search(r'\((?:a heavy |long )?(?:silence|pause)\)',raw,re.I):
+  add(p,kind='pause',note=ps[p].strip())
+# Final blackout remains reachable and cannot wrap to the start.
+out={'source':{k:data[k] for k in ('filename','sha256')},'entries':entries}
+(root/'script-data.js').write_text('/* Generated by tools/build-script.py; do not hand-edit dialogue. */\n(function(root){const data='+json.dumps(out,ensure_ascii=False,separators=(',',':'))+';if(typeof module==="object"&&module.exports)module.exports=data;else root.SHOW_SCRIPT=data;})(typeof globalThis!=="undefined"?globalThis:this);\n')
+print(len(entries),'steps;',sum(bool(e['text']) for e in entries),'spoken sentences')

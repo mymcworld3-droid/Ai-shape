@@ -37,6 +37,8 @@ window.OPENING_CONFIG = Object.freeze({
     voiceSettleMs: 600,
     discussionDim: 0.2
   }),
+  ending: Object.freeze({complete: null, revealTruth: null}),
+  scriptEffects: Object.freeze({doorOpen: null, timerClick: null, selectionButton: null}),
   countdownMs: 15 * 60 * 1000,
   // Black display interior in IMG_0165.png's source pixels; excludes its bezel.
   roomScreen: Object.freeze({ x: 552, y: 310, width: 430, height: 195, inset: 2 }),

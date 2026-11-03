@@ -1,0 +1,61 @@
+'use strict';
+if(scriptMode){
+ const voices={opening:audioElement,memory:memoryAudio,...selectionAudio};
+ for(const name of ['complete','revealTruth']){
+  const media=document.createElement('audio');media.id=name+'Audio';media.preload='auto';media.hidden=true;
+  visualizerWrap.append(media);narrationMedia.push(media);
+  if(config.ending[name]){media.src=config.ending[name];media.load();}
+  voices[name]=config.ending[name]?media:null;
+ }
+ for(const name of ['prompt','one','two','final'])if(!config.voting[name])voices[name]=null;
+ const effects={doorKick:effectElement};
+ for(const [name,path] of Object.entries({doorOpen:config.scriptEffects.doorOpen,timerClick:config.scriptEffects.timerClick,
+  selectionButton:config.scriptEffects.selectionButton,memoryLight:config.memory.lightClick,officeBang:config.office.bang})){
+  const media=document.createElement('audio');media.id='scriptEffect-'+name;media.hidden=true;media.preload='auto';visualizerWrap.append(media);
+  if(path){media.src=path;media.load();effects[name]=media;}
+ }
+ let previewEntry=null,flashUntil=0;
+ const applyEntry=(entry,direction=1)=>{
+  if(!entry)return;
+  document.body.dataset.scene=entry.look.background;
+  document.body.dataset.scriptIndex=String(transcript?.index??-1);
+  document.body.dataset.scriptParagraph=String(entry.paragraph);
+  document.body.dataset.scriptAction=entry.action||'';
+  document.body.dataset.cue='script-'+entry.id;
+  const active=transcript?.active;
+  const speaking=entry.group&&(!startGate.started||active?.group===entry.group&&['starting','playing','missing'].includes(active.state));
+  const values={...entry.look};
+  if(entry.group){
+   if(speaking){values.ai=1;if(entry.group==='opening')values.scene=1;else values.aiExpansion=1;}
+   else if(active?.state==='finished'||active?.state==='error'){
+    if(entry.group==='opening')values.scene=0;
+    else{values.ai=0;values.aiExpansion=0;if(['prompt','one','two'].includes(entry.group))values.clock=1;}
+   }
+  }
+  const duration=direction<0||!startGate.started?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
+  for(const name of Object.keys(transitions))animate(name,values[name]||0,duration);
+  document.getElementById('subtitleSpeaker').textContent=entry.speaker;
+  document.getElementById('subtitleText').textContent=entry.text;
+  document.getElementById('subtitles').hidden=!entry.text;
+  document.getElementById('subtitleSpeaker').hidden=!entry.speaker;
+  if(entry.action==='selection-flash'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
+ };
+ transcript=new ScriptShow.Controller({entries:SHOW_SCRIPT.entries,voices,effects:{...effects,'memory-light':effects.memoryLight},video:revealVideo,
+  onEntry(entry,{direction}){applyEntry(entry,direction);},
+  onVoice(group,state){document.body.dataset.scriptVoice=group+':'+state;
+   if(state==='starting'&&voices[group])prepareAudio(voices[group]);
+   if(transcript?.entry?.group===group)applyEntry(transcript.entry);},
+  onVideo(playing){scriptVideoPlaying=playing;},
+  onError(kind,error){document.body.dataset.scriptMediaError=kind;console.error('[Script]',kind,error);}
+ });
+ window.scriptShow=transcript;
+ window.scriptProjectionFrame=()=>{
+  const entry=startGate.started?transcript.entry:previewEntry;
+  if(!entry)return null;
+  return {...entry.look,preview:!startGate.started,caption:null,script:true,
+   ...Object.fromEntries(Object.entries(transitions).map(([name,t])=>[name,t.value])),
+   flash:Math.max(0,(flashUntil-performance.now())/280)};
+ };
+ window.previewScriptEntry=index=>{if(startGate.started)return;previewEntry=SHOW_SCRIPT.entries[index]||null;
+  if(previewEntry)applyEntry(previewEntry,0);else{document.getElementById('subtitles').hidden=true;}};
+}

@@ -1,0 +1,71 @@
+# 手動逐句字幕與劇本對照
+
+預設為逐句字幕模式。按 F 或開始後，空白鍵、→、單擊／單次觸碰各前進一個步驟；← 回上一個步驟。↑／↓ 調整音量。開始後所有控制按鈕隱藏，字幕固定在 16:9 投影內下方。
+
+依使用者上傳的 `Power playyyy.docx`，目前共 **375 句英文字幕、417 個手動步驟**，涵蓋四幕。每句手動換，不以語音秒數或字幕長度自動跳句。純舞台動作不印成字幕；停頓、全暗及重要影音切換保留空白字幕步驟，操作員可在開始前的步驟檢視讀到原舞台指示。
+
+字幕沿用原文，包括大小寫、用字與標點，未替劇本校正文法。角色名與動作分離；跨段續說繼承角色。第 88 段開門後的「AH!」在原稿沒有標明說話者，因此投影只顯示 AH!，不自行指定角色。卡片本身保留使用者指定的 `Access to One’s Memory`；Ethan 讀卡的字幕保留原稿 `“Access to one's memory.”`。
+
+## 操作與影音
+
+- F 從開場開始；即使先預覽第四幕，也會回到第一個步驟。
+- 歡迎語音首句啟動原 M4A，字幕可在播放中逐句前進。走到 `You have 15 minutes.` 時切成碼錶；語音期間維持 15:00，真正播完才開始倒數並縮回。
+- AI 語音播完不會自動換字幕。到最後一句仍在播放時，前進按鍵忽略、不排隊；播完再按才進下一位演員台詞。
+- ← 暫停影音並回上一句／動作；不重播音效，也不重設兩個倒數期限。仍留在同一段 AI 配音時，下一次前進會從暫停位置繼續；返回配音首句之前，再重新走入首句才從頭播放。字幕倒退不對錄音做逐句定位。
+- 尚未提供的 AI 配音以手動字幕完成，缺檔不造成卡住、假播放或自動跳步。選擇提示未配音時，在讀完提示、前進至下一句時開始獨立一分鐘。
+- 第四幕接回記憶房間慢慢亮起，保留兩名守衛進場及最後沉默的操作步驟；兩段 AI 配音預留欄位，最後一句 `You may leave.` 後可進入沉默，再全暗結束。
+- 原本 25 步的場景操作模式可在開始前按「場景模式」切換，也可用 `?mode=cues` 開啟；該模式沒有逐句字幕。
+
+## 背景與聲音對照
+
+| 原稿段落 | 對應事件 |
+| --- | --- |
+| 23 | 房間從暗變亮，播放開場動畫 |
+| 27–28 | AI 漸顯，歡迎語音與逐句字幕 |
+| 33 | Megan 踢門，原 WAV 音效 |
+| 42、53 | 開場背景稍暗／恢復明亮；實體追光由燈控執行 |
+| 46 | timer clicks，預留時鐘提示聲 |
+| 83、85 | Ethan 翻讀白卡／Megan 收回卡片，卡片顯示／隱藏 |
+| 87 | 左門 click／開門聲，獨立於記憶室亮燈 |
+| 99、109 | 進場全暗／記憶室亮起與 click |
+| 115 | 記憶室歡迎語音，圖形放大、背景全黑，播完退場 |
+| 185、188 | Christopher 獨白，稍暗房間／投影全暗 |
+| 195、199、221 | 辦公室亮起／全亮／配合三追光稍暗，保留無桌背景 |
+| 213 | 辦公室 BANG |
+| 269、284、290 | 自白投影全暗／幕間全暗／回記憶室討論 |
+| 385–388 | 按鈕、單次短暫亮光、AI 選擇提示 |
+| 389–395 | Christopher 投 Ethan 一票；Megan 投 Ethan 第二票；各自 AI 確認 |
+| 400–403 | Rachel? → 沒有回答 → 最後選擇提示 → 全暗 |
+| 405–409 | 守衛進場 → 慢慢亮起 → Ethan 台詞 → 測試完成提示 |
+| 413–416 | 沉默 → 沒有機器人的揭露 → 沉默 → 最後全暗 |
+
+## 缺少的音效
+
+尚未提供的欄位維持 null，不會請求不存在的檔案。新增素材後需填入相應設定，檔名建議如下。
+
+| 音效 | 建議檔名 | 設定欄位 | 劇本位置 |
+| --- | --- | --- | --- |
+| 時鐘 click／短提示 | `assets/audio/timer-click.wav` | `scriptEffects.timerClick` | 第 46 段 `{timer clicks}` |
+| 左門解鎖／開啟 click | `assets/audio/door-open.wav` | `scriptEffects.doorOpen` | 第 87 段讀卡後 |
+| 記憶室亮燈 click | `assets/audio/light-click.wav` | `memory.lightClick` | 第 110 段；與左門聲可共用素材，但觸發時機獨立 |
+| 辦公室 BANG | `assets/audio/office-bang.wav` | `office.bang` | 第 213 段 Ben 進場 |
+| 按鈕拍擊（可選） | `assets/audio/selection-button.wav` | `scriptEffects.selectionButton` | 第 385 段；若實體按鈕已有聲音可不加 |
+
+開場踢門 `door-kick.wav` 已有。打響指、拍手、敲門、腳步等可由演員實際動作完成，沒有強制新增預錄聲。背景音樂目前尚未接入，本次不生成或代找聲音。
+
+## 另缺的六段 AI 配音
+
+| 建議檔名 | 設定欄位 | 原稿台詞 |
+| --- | --- | --- |
+| `selection-prompt.m4a` | `voting.prompt` | Please make your selection.One by one, state the name of the person you believe to be the robot. 1 minute remaining. |
+| `selection-one.m4a` | `voting.one` | Subject Ethan. One vote. |
+| `selection-two.m4a` | `voting.two` | Subject Ethan. Two votes. |
+| `selection-final.m4a` | `voting.final` | Please make your final selection. |
+| `test-complete.m4a` | `ending.complete` | HUMAN VERIFICATION TEST NUMBER #67 complete. Please proceed to the exit. The next test will begin in 5 minutes. |
+| `test-truth.m4a` | `ending.revealTruth` | There is no robot in the room.This test does not measure artificial intelligence.It measures how quickly human beings choose to sacrifice one another under pressure.Test completed. You may leave. |
+
+以上皆建議放入 `assets/audio/`。開場 `ai-opening.m4a` 與記憶室 `Memory-room.m4a` 沿用現有檔案，未修改內容，也未做新的逐字語音辨識。
+
+## 核對方式
+
+`docs/script-source.json` 保存這份 Word 的段落與 SHA-256；`tools/build-script.py` 由該來源產生 `script-data.js`。測試逐段還原所有台詞、檢查角色繼承、375 句順序、四幕背景邊界、兩票順序與終場。不是用舊版 PDF 或對話記憶生成字幕。
