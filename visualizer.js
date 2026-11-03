@@ -626,7 +626,7 @@ function drawVoteCue(cue,opacity){
 function graphicPlacement(frame,radius){
  const openingRoom=!frame.background||frame.background==="opening";
  const selection=frame.script||frame.timer==="selection"||frame.caption?.startsWith("vote-");
- const progress=openingRoom?frame.scene:frame.aiExpansion||0;
+ const progress=openingRoom?(frame.script&&!frame.voiceGroup?0:frame.scene):frame.aiExpansion||0;
  const home=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
  if(!openingRoom){home.x=w*config.idleShape.x-home.width/2;home.y=h*config.idleShape.y-home.height/2;}
  const full={x:w*.04,y:h*(selection ? .02 : .05),width:w*.92,height:h*(selection ? .76 : .9)};
@@ -643,7 +643,7 @@ function clockPlacement(frame){
  }
  const screen=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
  const rest=StageLayout.fitRectGraphic(screen,236,84,config.roomScreen.inset*screen.width/config.roomScreen.width);
- const p=frame.scene,lerp=(a,b)=>a+(b-a)*p;
+ const p=frame.script&&!frame.voiceGroup?0:frame.scene,lerp=(a,b)=>a+(b-a)*p;
  return {x:lerp(rest.x,cx),y:lerp(rest.y,cy),scale:lerp(rest.scale,unit),
   clip:{x:lerp(rest.clip.x,0),y:lerp(rest.clip.y,0),width:lerp(rest.clip.width,w),height:lerp(rest.clip.height,h)}};
 }
