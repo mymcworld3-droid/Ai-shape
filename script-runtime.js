@@ -50,7 +50,7 @@ if(scriptMode){
  window.scriptProjectionFrame=()=>{
   const entry=startGate.started?transcript.entry:previewEntry;
   if(!entry)return null;
-  return {...entry.look,preview:!startGate.started,caption:null,script:true,
+  return {...entry.look,voiceGroup:entry.group,preview:!startGate.started,caption:null,script:true,
    ...Object.fromEntries(Object.entries(transitions).map(([name,t])=>[name,t.value])),
    flash:Math.max(0,(flashUntil-performance.now())/280)};
  };

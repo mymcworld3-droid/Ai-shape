@@ -52,6 +52,19 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i,'entry '+i);
    assert.equal(await page.locator('#subtitleText').textContent(),to.text);
    if(to.text)assert.equal(await page.locator('#subtitles').isVisible(),true);
+   if(to.action==='opening-dim'){
+    await page.waitForTimeout(650);
+    const pose=await page.evaluate(()=>{
+     const frame=projectionFrame(),bright={...frame,scene:0};
+     return {dim:frame.scene,group:frame.voiceGroup,
+      clock:clockPlacement(frame),restClock:clockPlacement(bright),
+      ai:graphicPlacement(frame,100),restAi:graphicPlacement(bright,100)};
+    });
+    assert.equal(pose.dim,.35);assert.equal(pose.group,null);
+    assert.deepEqual(pose.clock,pose.restClock,'Middle spotlight only dims the background; clock stays fitted to TV');
+    assert.deepEqual(pose.ai,pose.restAi,'Middle spotlight never enlarges AI');
+   }
+
    if([83,109,195,290,407,414,416].includes(to.paragraph)){
     await page.waitForTimeout(650);
     assert.equal(await page.locator('body').getAttribute('data-scene'),to.look.background);
