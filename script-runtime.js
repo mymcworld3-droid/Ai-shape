@@ -1,5 +1,6 @@
 'use strict';
 if(scriptMode){
+ const subtitleRenderer=new SubtitleMotion.Renderer({element:document.getElementById('subtitles')});
  const voices={opening:audioElement,memory:memoryAudio,...selectionAudio};
  for(const name of ['complete','revealTruth']){
   const media=document.createElement('audio');media.id=name+'Audio';media.preload='auto';media.hidden=true;
@@ -34,10 +35,7 @@ if(scriptMode){
   }
   const duration=direction<0||!startGate.started?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
   for(const name of Object.keys(transitions))animate(name,values[name]||0,duration);
-  document.getElementById('subtitleSpeaker').textContent=entry.speaker;
-  document.getElementById('subtitleText').textContent=entry.text;
-  document.getElementById('subtitles').hidden=!entry.text;
-  document.getElementById('subtitleSpeaker').hidden=!entry.speaker;
+  subtitleRenderer.render(entry);
   if(entry.action==='selection-flash'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
  };
  transcript=new ScriptShow.Controller({entries:SHOW_SCRIPT.entries,voices,effects:{...effects,'memory-light':effects.memoryLight},video:revealVideo,
@@ -57,5 +55,5 @@ if(scriptMode){
    flash:Math.max(0,(flashUntil-performance.now())/280)};
  };
  window.previewScriptEntry=index=>{if(startGate.started)return;previewEntry=SHOW_SCRIPT.entries[index]||null;
-  if(previewEntry)applyEntry(previewEntry,0);else{document.getElementById('subtitles').hidden=true;}};
+  if(previewEntry)applyEntry(previewEntry,0);else subtitleRenderer.render(null);};
 }
