@@ -701,9 +701,9 @@ function draw(){
   ctx.globalAlpha=clockOpacity;drawTimerFace(pose.scale,remaining);ctx.restore();
  }
  if(cardReady&&frame.card>0){
-  const width=Math.min(w*.8,h*.6),height=width*cardImage.naturalHeight/cardImage.naturalWidth;
+  const width=Math.min(w*.8,h*(frame.script ? .48 : .6)),height=width*cardImage.naturalHeight/cardImage.naturalWidth;
   ctx.save();ctx.globalAlpha=frame.card;ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=24;
-  ctx.drawImage(cardImage,(w-width)/2,h*(frame.script ? .64 : .72)-height/2,width,height);ctx.restore();
+  ctx.drawImage(cardImage,(w-width)/2,h*(frame.script ? .68 : .72)-height/2,width,height);ctx.restore();
  }
  drawVoteCue(frame.caption,frame.vote||0);
  if(frame.flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(.3,frame.flash*.3)})`;ctx.fillRect(0,0,w,h);}
