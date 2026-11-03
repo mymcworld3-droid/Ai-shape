@@ -39,6 +39,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm run test:subtitle-motion
       - run: npm run test:subtitles
       - uses: actions/upload-artifact@v4
         if: always()

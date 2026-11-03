@@ -4,7 +4,8 @@
   "scripts": {
     "test": "node --test tests/*.test.cjs",
     "test:browser": "node tests/browser-opening.cjs",
-    "test:subtitles": "node tests/browser-subtitles.cjs"
+    "test:subtitles": "node tests/browser-subtitles.cjs",
+    "test:subtitle-motion": "node tests/browser-subtitle-motion.cjs"
   },
   "devDependencies": {
     "playwright": "1.56.1"
