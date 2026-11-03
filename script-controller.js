@@ -21,7 +21,7 @@
    if(kind&&this.deadlines[kind]===null)this.deadlines[kind]=this.now()+(kind==='opening'?900000:60000);
    this.onVoice(group,'finished');
   }
-  fail(group,error){if(this.active?.group!==group)return;this.active.media?.pause();this.active.state='error';++this.token;this.onVoice(group,'error');this.onError(group,error);}
+  fail(group,error){if(this.active?.group!==group||this.active.state==='finished')return;this.active.media?.pause();this.active.state='error';++this.token;this.onVoice(group,'error');this.onError(group,error);}
   play(group,resume=false){
    const media=this.voices[group];const run=++this.token;
    this.active={group,media,state:media?'starting':'missing'};

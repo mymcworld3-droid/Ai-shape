@@ -37,7 +37,7 @@ test('each next changes exactly one sentence; narration continues and only real 
  c.next();assert.equal(c.index,1);assert.equal(opening.calls,1);assert.equal(opening.paused,false);
  assert.equal(c.deadlines.opening,null);assert.equal(c.next(),false);assert.equal(effect.calls,0);
  opening.dispatchEvent(new Event('ended'));assert.equal(c.deadlines.opening,null);
- opening.end();assert.equal(c.index,1);assert.equal(c.remaining('opening'),900000);
+ opening.end();opening.dispatchEvent(new Event('error'));assert.equal(c.active.state,'finished');assert.equal(c.index,1);assert.equal(c.remaining('opening'),900000);
  c.next();assert.equal(c.index,2);assert.equal(effect.calls,1);tick(5000);c.previous();
  assert.equal(c.index,1);assert.equal(c.remaining('opening'),895000);
  c.next();assert.equal(c.index,2);assert.equal(c.remaining('opening'),895000);
