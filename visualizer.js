@@ -1,5 +1,7 @@
 "use strict";
 const config=window.OPENING_CONFIG;
+const scriptMode=new URLSearchParams(location.search).get("mode")!=="cues";
+let transcript=null,scriptVideoPlaying=false;
 const audioElement=document.getElementById("openingAudio");
 const effectElement=document.getElementById("doorKickAudio");
 const memoryAudio=document.getElementById("memoryWelcomeAudio");
@@ -159,7 +161,7 @@ const startGate=new StageOpening.StartGate({
   visualizerWrap.focus({preventScroll:true});
   resizeCanvas();
   // This is the first real cue, still inside the Start button's click event.
-  advanceStage();
+  if(scriptMode){transcript.start();requestStageFullscreen();}else advanceStage();
  }
 });
 document.body.dataset.cue="dark";
@@ -204,6 +206,7 @@ function setProjectionPreview(cue){
  document.body.dataset.previewCue=previewCue||"dark";
 }
 function projectionFrame(){
+ if(scriptMode){const frame=window.scriptProjectionFrame?.();if(frame)return frame;}
  if(!startGate.started&&previewCue){
   const frame={...StageLayout.previewFrame(previewCue),preview:true};
   if(frame.ai>0&&frame.clock===0){
@@ -303,6 +306,7 @@ function requestStageFullscreen(){
 }
 function advanceStage(){
  if(!startGate.started)return;
+ if(scriptMode){transcript.next();requestStageFullscreen();return;}
  if(!backgroundReady||!darkBackgroundReady)return;
  if(stage.state==="door-kick"&&!cardReady)return;
  if(performance.now()<stage.busyUntil)return;
@@ -332,7 +336,7 @@ function changeVolume(delta){
 }
 StageOpening.bindStageKeys(window,{
  start:()=>startGate.start(),next:advanceStage,
- previous:()=>{if(startGate.started)stage.previous();},
+ previous:()=>{if(startGate.started){if(scriptMode)transcript.previous();else stage.previous();}},
  volumeUp:()=>changeVolume(5),volumeDown:()=>changeVolume(-5),
  isStarted:()=>startGate.started
 });
@@ -360,9 +364,11 @@ function drawBackground(now,frame){
  if(frame.room?ready:openingRoom&&darkBackgroundReady){
   const b=StageLayout.coverLayout(w,h,image.naturalWidth,image.naturalHeight);ctx.drawImage(image,b.x,b.y,b.width,b.height);
  }
- if(openingRoom&&!frame.preview&&roomReveal.state==="playing"){
+ if(frame.script&&scriptVideoPlaying){
+  drawRevealVideo(1);
+ }else if(!frame.script&&openingRoom&&!frame.preview&&roomReveal.state==="playing"){
   drawRevealVideo(easeInOutCubic(Math.min(1,revealVideo.currentTime*1000/config.revealFadeMs)));
- }else if(openingRoom&&!frame.preview&&roomReveal.state==="ready"){
+ }else if(!frame.script&&openingRoom&&!frame.preview&&roomReveal.state==="ready"){
   drawRevealVideo(1-roomHandoffProgress(now));
  }
  const expansion=openingRoom?frame.scene:frame.aiExpansion||0;
@@ -619,7 +625,7 @@ function drawVoteCue(cue,opacity){
 }
 function graphicPlacement(frame,radius){
  const openingRoom=!frame.background||frame.background==="opening";
- const selection=frame.timer==="selection"||frame.caption?.startsWith("vote-");
+ const selection=frame.script||frame.timer==="selection"||frame.caption?.startsWith("vote-");
  const progress=openingRoom?frame.scene:frame.aiExpansion||0;
  const home=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
  if(!openingRoom){home.x=w*config.idleShape.x-home.width/2;home.y=h*config.idleShape.y-home.height/2;}
@@ -654,7 +660,7 @@ function draw(){
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
  updateHexRotation(now);drawBackground(now,frame);
  // The bright room also remains empty until the separate AI fade-in cue.
- if(!frame.room||(!frame.preview&&frame.background==="opening"&&roomHandoffProgress(now)<1))return;
+ if(!frame.room||(!frame.script&&!frame.preview&&frame.background==="opening"&&roomHandoffProgress(now)<1))return;
  const hexR=Math.min(w,h)*.105+energy*10*scale;
  const waveBase=Math.min(w,h)*.2;
  const ringR=frame.background==="memory"?waveBase+Math.min(w,h)*.075:waveBase-4*scale;
@@ -691,15 +697,16 @@ function draw(){
   ctx.save();
   if(pose.clip){ctx.beginPath();ctx.rect(pose.clip.x,pose.clip.y,pose.clip.width,pose.clip.height);ctx.clip();}
   ctx.translate(pose.x,pose.y);
-  const remaining=frame.timer==="selection"?(frame.preview?config.voting.durationMs:stage.voting.getRemainingMs()):opening.getRemainingMs();
+  const remaining=frame.script?transcript.remaining(frame.timer):frame.timer==="selection"?(frame.preview?config.voting.durationMs:stage.voting.getRemainingMs()):opening.getRemainingMs();
   ctx.globalAlpha=clockOpacity;drawTimerFace(pose.scale,remaining);ctx.restore();
  }
  if(cardReady&&frame.card>0){
-  const width=Math.min(w*.8,h*.6),height=width*cardImage.naturalHeight/cardImage.naturalWidth;
+  const width=Math.min(w*.8,h*(frame.script ? .48 : .6)),height=width*cardImage.naturalHeight/cardImage.naturalWidth;
   ctx.save();ctx.globalAlpha=frame.card;ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=24;
-  ctx.drawImage(cardImage,(w-width)/2,h*.72-height/2,width,height);ctx.restore();
+  ctx.drawImage(cardImage,(w-width)/2,h*(frame.script ? .68 : .72)-height/2,width,height);ctx.restore();
  }
  drawVoteCue(frame.caption,frame.vote||0);
+ if(frame.flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(.3,frame.flash*.3)})`;ctx.fillRect(0,0,w,h);}
  if(frame.blackout>0){
   ctx.fillStyle=`rgba(0,0,0,${frame.blackout})`;ctx.fillRect(0,0,w,h);
  }

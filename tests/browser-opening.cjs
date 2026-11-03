@@ -89,7 +89,7 @@ function gradualPixels(samples,label) {
   assert.ok(samples[3].mean>full*.65,`${label}: opacity must increase through the fade`);
 }
 async function ready(page, url) {
-  await page.goto(url);
+  await page.goto(url+"?mode=cues");
   try {
     await page.waitForSelector('body[data-background-ready="true"][data-dark-background-ready="true"][data-video-ready="true"][data-audio-ready="true"][data-card-ready="true"]', {timeout:15000});
     await page.waitForFunction(()=>!document.getElementById('startButton').disabled);
@@ -558,7 +558,7 @@ async function fastVoting(page){
     let releaseFadeBackground;
     const heldFadeBackground=new Promise(done=>releaseFadeBackground=done);
     await fadePage.route('**/assets/backgrounds/IMG_0165.png',async route=>{await heldFadeBackground;await route.continue();});
-    await fadePage.goto(url,{waitUntil:'domcontentloaded'});
+    await fadePage.goto(url+"?mode=cues",{waitUntil:'domcontentloaded'});
     await fadePage.locator('#stepsViewButton').click();await fadePage.locator('[data-preview="ai"]').click();
     await fadePage.waitForTimeout(1700);
     assert.equal(await fadePage.locator('#startButton').isDisabled(),true);
@@ -792,7 +792,7 @@ async function fastVoting(page){
     await slow.route('**/assets/audio/ai-opening.m4a',async route=>{
       await heldAudio;await route.fulfill({contentType:'audio/mp4',body:fs.readFileSync(path.join(root,'assets/audio/ai-opening.m4a'))});
     });
-    await slow.goto(url,{waitUntil:'domcontentloaded'});
+    await slow.goto(url+"?mode=cues",{waitUntil:'domcontentloaded'});
     await slow.locator('#startButton').waitFor({state:'visible'});
     assert.equal(await slow.locator('#startButton').isDisabled(),true);
     await slow.keyboard.press('Space');await slow.locator('#visualizer').click();
@@ -939,7 +939,7 @@ async function fastVoting(page){
     const officeLoad=await browser.newPage();let releaseOffice;
     const officePending=new Promise(done=>releaseOffice=done);
     await officeLoad.route('**/assets/backgrounds/office-memory.png',async route=>{await officePending;await route.continue();});
-    await officeLoad.goto(url,{waitUntil:'domcontentloaded'});
+    await officeLoad.goto(url+"?mode=cues",{waitUntil:'domcontentloaded'});
     await officeLoad.waitForSelector('body[data-memory-background-ready="true"][data-audio-ready="true"][data-video-ready="true"]');
     assert.equal(await officeLoad.locator('#startButton').isDisabled(),true);
     await officeLoad.locator('#stepsViewButton').click();await officeLoad.locator('[data-preview="office-light"]').click();
@@ -951,7 +951,7 @@ async function fastVoting(page){
     await matchesStill(officeLoad,'assets/backgrounds/office-memory.png');await officeLoad.close();
     const officeMissing=await browser.newPage();
     await officeMissing.route('**/assets/backgrounds/office-memory.png',route=>route.abort());
-    await officeMissing.goto(url);await flag(officeMissing,'officeBackgroundReady','false');
+    await officeMissing.goto(url+"?mode=cues");await flag(officeMissing,'officeBackgroundReady','false');
     assert.equal(await officeMissing.locator('#startButton').isDisabled(),true);
     assert.equal(await officeMissing.locator('#startStatus').textContent(),'素材未載入，請重新整理');
     await officeMissing.close();

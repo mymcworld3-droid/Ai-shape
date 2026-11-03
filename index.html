@@ -15,7 +15,8 @@
 <main id="showShell">
   <div id="projectionViewport">
     <div id="visualizerWrap" tabindex="-1">
-      <canvas id="visualizer" aria-label="16:9 劇場投影；開始後按空白鍵或點一下畫面推進"></canvas>
+      <canvas id="visualizer" aria-label="16:9 劇場投影；開始後空白鍵、右鍵或點一下換下一句，左鍵上一句"></canvas>
+      <div id="subtitles" aria-live="off" hidden><div id="subtitleSpeaker"></div><div id="subtitleText"></div></div>
       <video id="roomRevealVideo" preload="auto" muted playsinline disablepictureinpicture aria-hidden="true" tabindex="-1"></video>
       <audio id="openingAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
       <audio id="doorKickAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
@@ -68,6 +69,7 @@
 <nav id="reviewControls" aria-label="檢視模式">
   <button type="button" id="pageViewButton" aria-pressed="true">全頁</button>
   <button type="button" id="stepsViewButton" aria-pressed="false">步驟檢視</button>
+  <button type="button" id="modeButton">場景模式</button>
 </nav>
 <div id="startDock">
   <button type="button" id="startButton" aria-keyshortcuts="F" disabled><span class="play-mark" aria-hidden="true"></span><span id="startLabel">載入中…</span></button>
@@ -76,7 +78,10 @@
 <script src="opening-config.js"></script>
 <script src="stage-layout.js"></script>
 <script src="opening-controller.js"></script>
+<script src="script-data.js"></script>
+<script src="script-controller.js"></script>
 <script src="visualizer.js"></script>
+<script src="script-runtime.js"></script>
 <script src="stage-review.js"></script>
 </body>
 </html>
