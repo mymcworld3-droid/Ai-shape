@@ -161,7 +161,7 @@ const startGate=new StageOpening.StartGate({
   visualizerWrap.focus({preventScroll:true});
   resizeCanvas();
   // This is the first real cue, still inside the Start button's click event.
-  if(scriptMode)transcript.start();else advanceStage();
+  if(scriptMode){transcript.start();requestStageFullscreen();}else advanceStage();
  }
 });
 document.body.dataset.cue="dark";

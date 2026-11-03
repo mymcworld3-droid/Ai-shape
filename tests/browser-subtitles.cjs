@@ -21,6 +21,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('417 quiet previews never play media or start either timer; exact curly-quoted manuscript card subtitle');
   await page.locator('#startButton').press('f');await page.waitForFunction(()=>scriptShow.started);
   assert.equal(await page.evaluate(()=>scriptShow.index),0);assert.equal(await page.locator('button:visible').count(),0);
+  assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),'showShell');
   await page.keyboard.press('ArrowDown');assert.equal(await page.locator('#volumeDisplay').textContent(),'95%');
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.volume===.95)));await page.keyboard.press('ArrowUp');
   // Walk every actual forward input; no synthetic timeline jump.
