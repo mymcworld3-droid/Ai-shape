@@ -15,11 +15,14 @@ if(scriptMode){
   const media=document.createElement('audio');media.id='scriptEffect-'+name;media.hidden=true;media.preload='auto';visualizerWrap.append(media);
   if(path){media.src=path;media.load();effects[name]=media;}
  }
- // The Act I soundtrack follows the operator's 1-based subtitle cue number.
- // A single media element prevents any overlapping background tracks.
+ // The Act I soundtrack follows manual subtitle cues. Two hidden elements
+ // overlap for 1.4s only while crossfading; the second is not an extra song.
  const actOneMusic=new ActOneMusic.Controller({
   audio:document.getElementById('actOneBgm'),
+  alternateAudio:document.getElementById('actOneBgmAlt'),
   tracks:config.actOneMusic,
+  fadeMs:1400,
+  fadeOutMs:1100,
   onError(error){document.body.dataset.musicError='true';console.error('[Act I BGM]',error);}
  });
  window.actOneBackgroundMusic=actOneMusic;
