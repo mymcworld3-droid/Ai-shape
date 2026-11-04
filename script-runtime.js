@@ -38,11 +38,14 @@ if(scriptMode){
   if(entry.group){
    if(speaking){values.ai=1;if(entry.group==='opening')values.scene=1;else values.aiExpansion=1;}
    else if(active?.state==='finished'||active?.state==='error'){
-    if(entry.group==='opening')values.scene=0;
+    // After the final reveal voice, keep its dark AI scene on screen.
+    // The next manual cue cuts directly to black; never flash the lit room.
+    if(entry.group==='revealTruth'){values.ai=1;values.aiExpansion=1;}
+    else if(entry.group==='opening')values.scene=0;
     else{values.ai=0;values.aiExpansion=0;if(['prompt','one','two'].includes(entry.group))values.clock=1;}
    }
   }
-  const duration=direction<0||!startGate.started?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
+  const duration=direction<0||!startGate.started||entry.action==='end-blackout'?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
   for(const name of Object.keys(transitions))animate(name,values[name]||0,duration);
   subtitleRenderer.render(entry);
   if(entry.action==='selection-flash'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
