@@ -15,6 +15,15 @@ if(scriptMode){
   const media=document.createElement('audio');media.id='scriptEffect-'+name;media.hidden=true;media.preload='auto';visualizerWrap.append(media);
   if(path){media.src=path;media.load();effects[name]=media;}
  }
+ // The Act I soundtrack follows the operator's 1-based subtitle cue number.
+ // A single media element prevents any overlapping background tracks.
+ const actOneMusic=new ActOneMusic.Controller({
+  audio:document.getElementById('actOneBgm'),
+  tracks:config.actOneMusic,
+  onError(error){document.body.dataset.musicError='true';console.error('[Act I BGM]',error);}
+ });
+ window.actOneBackgroundMusic=actOneMusic;
+ applyVolumes(); // Include ending voices and newly constructed scripted effects.
  let previewEntry=null,flashUntil=0;
  const applyEntry=(entry,direction=1)=>{
   if(!entry)return;
@@ -39,7 +48,11 @@ if(scriptMode){
   if(entry.action==='selection-flash'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
  };
  transcript=new ScriptShow.Controller({entries:SHOW_SCRIPT.entries,voices,effects:{...effects,'memory-light':effects.memoryLight},video:revealVideo,
-  onEntry(entry,{direction}){applyEntry(entry,direction);},
+  onEntry(entry,{direction,index}){
+   document.body.dataset.musicError='false';
+   actOneMusic.setStep(index+1);
+   applyEntry(entry,direction);
+  },
   onVoice(group,state){document.body.dataset.scriptVoice=group+':'+state;
    if(state==='starting'&&voices[group])prepareAudio(voices[group]);
    if(transcript?.entry?.group===group)applyEntry(transcript.entry);},
