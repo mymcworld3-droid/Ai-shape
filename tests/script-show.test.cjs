@@ -31,6 +31,11 @@ test('all four acts, source-specific two-vote order, card, door, room, office an
  assert.equal(e.filter(x=>x.group==='two').at(-1).text,'Two votes.');assert.ok(!e.some(x=>/Three votes/.test(x.text)));
  assert.ok(e.some(x=>x.group==='prompt'&&x.text==='1 minute remaining.'));
  assert.equal(e.filter(x=>x.group==='revealTruth').at(-1).text,'You may leave.');
+ assert.equal(e.length,416);
+ assert.equal(e.at(-2).text,'You may leave.');
+ assert.equal(e.at(-1).action,'end-blackout');
+ assert.equal(e.at(-1).look.blackout,1);
+ assert.equal(e.some(x=>x.paragraph===415),false,'No extra silence or relighting after the final line');
 });
 class Media extends EventTarget{constructor(){super();this.ended=false;this.currentTime=0;this.calls=0;this.paused=true;}play(){this.calls++;this.paused=false;this.ended=false;return Promise.resolve();}pause(){this.paused=true;}end(){this.ended=true;this.dispatchEvent(new Event('ended'));}load(){}}
 function setup(){let time=0;const opening=new Media(),effect=new Media(),events=[];const entries=[{text:'first',group:'opening'},{text:'last',group:'opening'},{text:'actor',action:'doorKick'},{text:'end'}];const c=new Controller({entries,voices:{opening},effects:{doorKick:effect},now:()=>time,onEntry:(e,m)=>events.push(m.index)});return {c,opening,effect,events,tick:n=>time+=n};}
