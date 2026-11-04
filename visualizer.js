@@ -665,7 +665,11 @@ function draw(){
  const frame=projectionFrame();
  // Complete blackout includes the room, clock, card and letterbox pixels.
  // The audio-owned deadline continues even while nothing is projected.
- if(frame.blackout===1){ctx.fillStyle="#000";ctx.fillRect(0,0,w,h);return;}
+ // Before Start and when returning to the initial dark cue, show true black:
+ // never show Start_dark.PNG as a dimly visible room.
+ if(frame.blackout===1||(!frame.script&&!frame.preview&&stage.state==="dark")){
+  ctx.fillStyle="#000";ctx.fillRect(0,0,w,h);return;
+ }
  const a=analyze(),target=Math.min(1,a.avg/68);
  energy+=(target-energy)*.15;bassEnergy+=(a.low-bassEnergy)*.20;
  midEnergy+=(a.mid-midEnergy)*.16;highEnergy+=(a.high-highEnergy)*.25;
