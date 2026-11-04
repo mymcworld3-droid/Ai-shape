@@ -6,9 +6,10 @@ window.OPENING_CONFIG = Object.freeze({
   roomReveal: "assets/videos/Start_animation.mp4",
   revealFadeMs: 240,
   // Cue numbers account for deleted p64 dialogue and added p110 light-click cue.
-  // Audio filenames mark start-to-next-cue boundaries.
+  // Audio filenames mark the original boundaries; cues 1-3 remain silent and black.
+  // The first track starts only when the room-reveal cue (step 4) is advanced.
   actOneMusic: Object.freeze([
-    Object.freeze({ from: 1, to: 14, src: "assets/audio/background/act-1/1-14.mp3" }),
+    Object.freeze({ from: 4, to: 14, src: "assets/audio/background/act-1/1-14.mp3" }),
     Object.freeze({ from: 15, to: 90, src: "assets/audio/background/act-1/15-91.mp3" }),
     Object.freeze({ from: 91, to: 91, src: "assets/audio/background/act-1/91-92(轉場).mp3", loop: false }),
     Object.freeze({ from: 92, to: 173, src: "assets/audio/background/act-1/92-174.mp3" }),
