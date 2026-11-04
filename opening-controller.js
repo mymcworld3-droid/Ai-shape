@@ -678,25 +678,36 @@
     };
   }
 
-  function bindStageKeys(target, { start, next, previous, volumeUp, volumeDown, isStarted }) {
+  function bindStageKeys(target, { start, next, previous, voiceUp, voiceDown,
+    otherUp, otherDown, toggleVolumeDisplay, isStarted }) {
     const held = new Set();
-    const actionFor = event => ({ Space: "next", ArrowRight: "next", ArrowLeft: "previous",
-      ArrowUp: "volumeUp", ArrowDown: "volumeDown", KeyF: "start" })[event.code] ||
-      ({ " ": "next", ArrowRight: "next", ArrowLeft: "previous", ArrowUp: "volumeUp",
-        ArrowDown: "volumeDown", f: "start", F: "start" })[event.key];
-    const actions = { start, next, previous, volumeUp, volumeDown };
+    const actionFor = event => ({
+      Space: "next", ArrowRight: "next", ArrowLeft: "previous",
+      Digit1: "voiceUp", Numpad1: "voiceUp", KeyQ: "voiceDown",
+      Digit2: "otherUp", Numpad2: "otherUp", KeyW: "otherDown",
+      KeyO: "toggleVolumeDisplay", KeyF: "start"
+    })[event.code] || ({
+      " ": "next", ArrowRight: "next", ArrowLeft: "previous",
+      "1": "voiceUp", q: "voiceDown", Q: "voiceDown",
+      "2": "otherUp", w: "otherDown", W: "otherDown",
+      o: "toggleVolumeDisplay", O: "toggleVolumeDisplay", f: "start", F: "start"
+    })[event.key];
+    const actions = { start, next, previous, voiceUp, voiceDown, otherUp,
+      otherDown, toggleVolumeDisplay };
+    const volumeActions = new Set(["voiceUp", "voiceDown", "otherUp", "otherDown"]);
     const down = event => {
       const action = actionFor(event), element = event.target;
       if (!action || event.ctrlKey || event.altKey || event.metaKey || event.isComposing ||
-          (event.shiftKey && action !== "start") || element?.isContentEditable ||
+          event.shiftKey || element?.isContentEditable ||
           ["INPUT", "TEXTAREA", "SELECT"].includes(element?.tagName)) return;
       if ((action === "next" || action === "previous") && !isStarted()) return;
       if (action === "start" && isStarted()) return;
       event.preventDefault();
-      if (action === "volumeUp" || action === "volumeDown") { actions[action](); return; }
+      // Holding a volume key continuously adjusts only its own audio channel.
+      if (volumeActions.has(action)) { actions[action]?.(); return; }
       if (event.repeat || held.size) return;
       held.add(event.code || event.key);
-      actions[action]();
+      actions[action]?.();
     };
     const up = event => held.delete(event.code || event.key);
     const blur = () => held.clear();
