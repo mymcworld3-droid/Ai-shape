@@ -24,7 +24,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),'showShell');
   assert.equal(await page.locator('#actOneBgm').getAttribute('src'),'assets/audio/background/act-1/1-14.mp3');
   await page.keyboard.press('q');
-  assert.equal(await page.locator('#volumeDisplay').textContent(),'語音 95%\\n其他 100%');
+  assert.equal(await page.locator('#volumeDisplay').textContent(),'語音 95%\n其他 100%');
   assert.equal(await page.locator('#openingAudio').evaluate(a=>a.volume),.95);
   assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.volume),.4);
   await page.keyboard.press('w');
