@@ -35,9 +35,11 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await page.keyboard.press('q');
   assert.equal(await page.locator('#volumeDisplay').textContent(),'語音 95%\n其他 100%');
   assert.equal(await page.locator('#openingAudio').evaluate(a=>a.volume),.95);
-  assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.volume),.4);
+  assert.equal(await page.evaluate(()=>actOneBackgroundMusic.masterVolume),.4);
+  assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.volume),0);
   await page.keyboard.press('w');
-  assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.volume),.38);
+  assert.equal(await page.evaluate(()=>actOneBackgroundMusic.masterVolume),.38);
+  assert.equal(await page.locator('#actOneBgmAlt').evaluate(a=>a.volume),0);
   assert.equal(await page.locator('#openingAudio').evaluate(a=>a.volume),.95);
   await page.keyboard.press('1');await page.keyboard.press('2');
   await page.keyboard.press('o');assert.equal(await page.locator('#volumeDisplay').isHidden(),true);
@@ -53,7 +55,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.paused),true);
    }
    if(data.entries[i].action==='reveal'){
-    assert.equal(await page.locator('#actOneBgm').getAttribute('src'),'assets/audio/background/act-1/1-14.mp3');
+    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current?.src),'assets/audio/background/act-1/1-14.mp3');
     await page.waitForFunction(()=>document.querySelector('#roomRevealVideo').ended);
    }
   }
@@ -84,8 +86,15 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     175:null
    };
    if(Object.prototype.hasOwnProperty.call(soundtrackByStep,i+1)){
-    assert.equal(await page.locator('#actOneBgm').getAttribute('src'),soundtrackByStep[i+1],
+    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current?.src||null),soundtrackByStep[i+1],
       'Act I music must follow the subtitle step '+(i+1));
+    if(i+1!==175){
+      assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio?.getAttribute('src')),soundtrackByStep[i+1]);
+    } else {
+      // After crossing into Act II, let the outgoing track fade for 1.1s.
+      await page.waitForFunction(()=>!actOneBackgroundMusic.stopping);
+      assert.ok(await page.locator('#actOneBgm, #actOneBgmAlt').evaluateAll(xs=>xs.every(x=>x.paused)));
+    }
    }
    const expectedEffects={
     doorOpen:['scriptEffect-doorOpen','assets/audio/effects/door-open.mp3'],
