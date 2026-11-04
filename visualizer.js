@@ -328,16 +328,28 @@ function advanceStage(){
  for(const kind of ["Prompt","One","Two","Final"])document.body.dataset["selection"+kind+"Error"]="false";
  stage.advance();requestStageFullscreen();
 }
-let masterVolume=100;
-function changeVolume(delta){
- masterVolume=StageOpening.adjustVolume(masterVolume,delta);
- for(const media of document.querySelectorAll("audio,video"))media.volume=masterVolume/100;
- document.getElementById("volumeDisplay").textContent=masterVolume+"%";
+let voiceVolume=100,otherVolume=100;
+const volumeDisplay=document.getElementById("volumeDisplay");
+function applyVolumes(){
+ for(const media of document.querySelectorAll("audio,video")){
+  // Voice includes opening, memory, selection and late-created ending recordings.
+  const isVoice=narrationMedia.includes(media);
+  // Background music is kept below dialogue level even at 100% group volume.
+  const gain=media.id==="actOneBgm"?.4:1;
+  media.volume=(isVoice?voiceVolume:otherVolume)/100*gain;
+ }
+ volumeDisplay.textContent="語音 "+voiceVolume+"%\\n其他 "+otherVolume+"%";
 }
+function changeVoiceVolume(delta){voiceVolume=StageOpening.adjustVolume(voiceVolume,delta);applyVolumes();}
+function changeOtherVolume(delta){otherVolume=StageOpening.adjustVolume(otherVolume,delta);applyVolumes();}
+function toggleVolumeDisplay(){volumeDisplay.hidden=!volumeDisplay.hidden;}
+applyVolumes();
 StageOpening.bindStageKeys(window,{
  start:()=>startGate.start(),next:advanceStage,
  previous:()=>{if(startGate.started){if(scriptMode)transcript.previous();else stage.previous();}},
- volumeUp:()=>changeVolume(5),volumeDown:()=>changeVolume(-5),
+ voiceUp:()=>changeVoiceVolume(5),voiceDown:()=>changeVoiceVolume(-5),
+ otherUp:()=>changeOtherVolume(5),otherDown:()=>changeOtherVolume(-5),
+ toggleVolumeDisplay,
  isStarted:()=>startGate.started
 });
 StageOpening.bindAdvanceClick(projectionViewport,advanceStage);
