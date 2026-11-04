@@ -66,7 +66,7 @@
     return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
   }
   const previews = Object.freeze({
-    dark: { room: false, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
+    dark: { room: false, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     bright: { room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     ai: { room: true, ai: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
     welcome: { room: true, ai: 1, scene: 1, clock: 0, card: 0, blackout: 0 },
