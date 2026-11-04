@@ -19,6 +19,7 @@
       this.onError = onError;
       this.current = null;
       this.run = 0;
+      this.failed = false;
     }
 
     setStep(step) {
@@ -27,7 +28,10 @@
         this.stop();
         return;
       }
-      if (track === this.current) return;
+      if (track === this.current) {
+        if (this.failed) this.play(); // A later operator cue may retry blocked audio.
+        return;
+      }
       ++this.run;
       this.audio.pause();
       this.current = track;
@@ -40,18 +44,20 @@
 
     play() {
       const run = ++this.run;
+      this.failed = false;
       try {
         // Invoked directly from the operator's Start / next / previous gesture.
         Promise.resolve(this.audio.play()).catch(error => {
-          if (run === this.run) this.onError(error);
+          if (run === this.run) { this.failed = true; this.onError(error); }
         });
       } catch (error) {
-        if (run === this.run) this.onError(error);
+        if (run === this.run) { this.failed = true; this.onError(error); }
       }
     }
 
     stop() {
       ++this.run;
+      this.failed = false;
       if (!this.current) return;
       this.audio.pause();
       this.current = null;
