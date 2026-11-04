@@ -29,7 +29,7 @@ look=dict(background='opening',room=False,ai=0,scene=0,clock=0,card=0,blackout=0
 # Only meaningful projection/sound changes and pauses add a blank subtitle step.
 actions={17:('opening-dark',{}),23:('reveal',{'room':True}),27:('ai',{'ai':1}),33:('doorKick',{}),42:('opening-dim',{'scene':.35}),53:('opening-full',{'scene':0}),46:('timerClick',{}),
 83:('card',{'card':1}),85:('card-hide',{'card':0}),87:('doorOpen',{}),99:('blackout',{'blackout':1}),
-109:('memory-light',{'background':'memory','room':True,'ai':0,'clock':0,'scene':0,'card':0,'blackout':0,'aiExpansion':0}),
+109:('memory-light',{'background':'memory','room':True,'ai':0,'clock':0,'scene':0,'card':0,'blackout':0,'aiExpansion':0}),110:('memoryClick',{}),
 185:('past-intro',{'blackout':0,'scene':.35,'ai':0}),188:('past-isolate',{'blackout':1}),191:('blackout',{'blackout':1}),
 195:('office-light',{'background':'office','room':True,'scene':.35,'blackout':0}),199:('office-full',{'scene':0}),221:('office-dim',{'scene':.35}),213:('officeBang',{}),
 269:('past-reflection',{'blackout':1}),284:('blackout',{'blackout':1}),
