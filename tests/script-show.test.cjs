@@ -9,7 +9,7 @@ test('every spoken Word paragraph is reproduced once and in order, without stage
  source.paragraphs.forEach((raw,p)=>{
   if(p<11||!raw.trim())return;raw=raw.trim();
   if(/^(ACT |SCENE |SETTING:|AT RISE:|END OF PLAY)/.test(raw)||p===405)return;
-  const m=raw.match(/^(AI VOICE|EVERYONE ELSE|RACHEL|MEGAN|ETHAN|CHRISTOPHER|LIAM|BOSS|Ben):/);
+  const m=raw.match(/^(AI VOICE|EVERYONE ELSE|RACHEL|MEGAN|ETHAN|CHRISTOPHER|LIAM|CEO|Ben):/);
   if(m){speaker=m[1];raw=raw.slice(m[0].length);}
   if(p===88)speaker='';
   const text=clean(raw);if(!text)return;
@@ -18,6 +18,9 @@ test('every spoken Word paragraph is reproduced once and in order, without stage
  });
  assert.deepEqual([...actual.keys()],expected);
  assert.equal(entries.filter(x=>x.text).length,374);
+ assert.ok(!entries.some(x=>/\\bboss\\b/i.test(x.speaker+' '+x.text)),'Boss is renamed CEO everywhere');
+ assert.ok(entries.some(x=>x.speaker==='CEO'));
+
  assert.ok(!entries.some(x=>x.text==="It's empty."));
  assert.ok(entries.some(x=>x.paragraph===110&&x.action==='memoryClick'));
  assert.equal(entries.at(-1).action,'end-blackout');
