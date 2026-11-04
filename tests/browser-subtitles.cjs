@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),http=require('node:http'),fs=require('node:fs'),path=require('node:path');
 const {chromium}=require('playwright');const data=require('../script-data');
 const root=path.resolve(__dirname,'..'),out=path.join(root,'test-results');fs.mkdirSync(out,{recursive:true});
-const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.m4a':'audio/mp4','.wav':'audio/wav','.mp4':'video/mp4'};
+const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.m4a':'audio/mp4','.mp3':'audio/mpeg','.wav':'audio/wav','.mp4':'video/mp4'};
 const server=http.createServer((req,res)=>{let p;try{p=path.resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));}catch{res.writeHead(400).end();return;}if(p===root)p=path.join(root,'index.html');if(!p.startsWith(root+path.sep)||!fs.existsSync(p)){res.writeHead(404).end();return;}res.writeHead(200,{'Content-Type':types[path.extname(p)]||'application/octet-stream'});fs.createReadStream(p).pipe(res);});
 const checks=[];let browser;
 const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.text===text));
@@ -22,8 +22,17 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await page.locator('#startButton').press('f');await page.waitForFunction(()=>scriptShow.started);
   assert.equal(await page.evaluate(()=>scriptShow.index),0);assert.equal(await page.locator('button:visible').count(),0);
   assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),'showShell');
-  await page.keyboard.press('ArrowDown');assert.equal(await page.locator('#volumeDisplay').textContent(),'95%');
-  assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.volume===.95)));await page.keyboard.press('ArrowUp');
+  assert.equal(await page.locator('#actOneBgm').getAttribute('src'),'assets/audio/background/act-1/1-14.mp3');
+  await page.keyboard.press('q');
+  assert.equal(await page.locator('#volumeDisplay').textContent(),'語音 95%\\n其他 100%');
+  assert.equal(await page.locator('#openingAudio').evaluate(a=>a.volume),.95);
+  assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.volume),.4);
+  await page.keyboard.press('w');
+  assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.volume),.38);
+  assert.equal(await page.locator('#openingAudio').evaluate(a=>a.volume),.95);
+  await page.keyboard.press('1');await page.keyboard.press('2');
+  await page.keyboard.press('o');assert.equal(await page.locator('#volumeDisplay').isHidden(),true);
+  await page.keyboard.press('o');assert.equal(await page.locator('#volumeDisplay').isVisible(),true);
   // Walk every actual forward input; no synthetic timeline jump.
   const firstVoice=data.entries.findIndex(x=>x.group==='opening');
   for(let i=1;i<=firstVoice;i++){
@@ -50,6 +59,17 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
    const from=data.entries[i-1],to=data.entries[i];
    if(from.group!==to.group&&from.group){await page.waitForFunction(()=>!['starting','playing'].includes(scriptShow.active?.state),null,{timeout:12000});}
    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i,'entry '+i);
+   const soundtrackByStep={
+    15:'assets/audio/background/act-1/15-92.mp3',
+    92:'assets/audio/background/act-1/92-93(轉場).mp3',
+    93:'assets/audio/background/act-1/93-174.mp3',
+    174:'assets/audio/background/act-1/92-93(轉場).mp3',
+    175:null
+   };
+   if(Object.prototype.hasOwnProperty.call(soundtrackByStep,i+1)){
+    assert.equal(await page.locator('#actOneBgm').getAttribute('src'),soundtrackByStep[i+1],
+      'Act I music must follow the subtitle step '+(i+1));
+   }
    assert.equal(await page.locator('#subtitleText').textContent(),to.text);
    if(to.text)assert.equal(await page.locator('#subtitles').isVisible(),true);
    if(to.action==='opening-dim'){
