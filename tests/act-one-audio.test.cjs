@@ -70,3 +70,21 @@ test("Playback errors are reported instead of blocking the subtitle cue", async 
   await Promise.resolve();
   assert.deepEqual(errors, ["blocked"]);
 });
+
+test("After a rejected playback, the next cue in the same range retries once", async () => {
+  const audio = new FakeAudio(), errors = [];
+  let attempts = 0;
+  audio.play = () => {
+    attempts++;
+    return attempts === 1 ? Promise.reject(new Error("blocked")) : Promise.resolve();
+  };
+  const music = new Controller({ audio, tracks, onError: e => errors.push(e.message) });
+  music.setStep(1);
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(music.failed, true);
+  music.setStep(2);
+  assert.equal(attempts, 2);
+  assert.equal(music.failed, false);
+  assert.deepEqual(errors, ["blocked"]);
+});
