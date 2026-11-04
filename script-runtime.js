@@ -11,7 +11,7 @@ if(scriptMode){
  for(const name of ['prompt','one','two','final'])if(!config.voting[name])voices[name]=null;
  const effects={doorKick:effectElement};
  for(const [name,path] of Object.entries({doorOpen:config.scriptEffects.doorOpen,timerClick:config.scriptEffects.timerClick,
-  selectionButton:config.scriptEffects.selectionButton,memoryLight:config.memory.lightClick,officeBang:config.office.bang})){
+  selectionButton:config.scriptEffects.selectionButton,memoryClick:config.memory.lightClick,officeBang:config.office.bang})){
   const media=document.createElement('audio');media.id='scriptEffect-'+name;media.hidden=true;media.preload='auto';visualizerWrap.append(media);
   if(path){media.src=path;media.load();effects[name]=media;}
  }
@@ -47,7 +47,7 @@ if(scriptMode){
   subtitleRenderer.render(entry);
   if(entry.action==='selection-flash'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
  };
- transcript=new ScriptShow.Controller({entries:SHOW_SCRIPT.entries,voices,effects:{...effects,'memory-light':effects.memoryLight},video:revealVideo,
+ transcript=new ScriptShow.Controller({entries:SHOW_SCRIPT.entries,voices,effects,video:revealVideo,
   onEntry(entry,{direction,index}){
    document.body.dataset.musicError='false';
    actOneMusic.setStep(index+1);
