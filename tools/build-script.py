@@ -46,7 +46,7 @@ for p,raw in enumerate(ps):
  if raw.startswith('ACT '):act=raw.split()[1];scene='I';speaker='';continue
  if raw.startswith('SCENE '):scene=raw.split()[1];speaker='';continue
  if not raw or raw.startswith(('SETTING:','AT RISE:','END OF PLAY')):continue
- m=re.match(r'^(AI VOICE|EVERYONE ELSE|RACHEL|MEGAN|ETHAN|CHRISTOPHER|LIAM|BOSS|Ben):',raw)
+ m=re.match(r'^(AI VOICE|EVERYONE ELSE|RACHEL|MEGAN|ETHAN|CHRISTOPHER|LIAM|CEO|Ben):',raw)
  if m:speaker=m[1];raw=raw[m.end():]
  # The source's AH! after the opening door has no explicit speaker: do not invent one.
  if p==88:speaker=''
