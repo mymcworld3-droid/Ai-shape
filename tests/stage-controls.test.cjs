@@ -22,23 +22,33 @@ function setup(){
 function key(target,type,code,extra={}){
  const e=new Event(type,{cancelable:true});Object.assign(e,{code,key:code,repeat:false,...extra});target.dispatchEvent(e);return e;
 }
-test('F starts once, arrows and Space share a release gate, volume repeats without navigating',()=>{
+test('F starts once, arrows navigate, 1/Q and 2/W change separate volumes, O toggles HUD',()=>{
  const target=new EventTarget(),calls=[];let started=false;
- const unbind=bindStageKeys(target,{start:()=>{calls.push('start');started=true;},next:()=>calls.push('next'),previous:()=>calls.push('previous'),
-  volumeUp:()=>calls.push('up'),volumeDown:()=>calls.push('down'),isStarted:()=>started});
+ const unbind=bindStageKeys(target,{start:()=>{calls.push('start');started=true;},
+  next:()=>calls.push('next'),previous:()=>calls.push('previous'),
+  voiceUp:()=>calls.push('voice+'),voiceDown:()=>calls.push('voice-'),
+  otherUp:()=>calls.push('other+'),otherDown:()=>calls.push('other-'),
+  toggleVolumeDisplay:()=>calls.push('toggle'),isStarted:()=>started});
  assert.equal(key(target,'keydown','ArrowRight').defaultPrevented,false);
  key(target,'keydown','KeyF');key(target,'keydown','KeyF',{repeat:true});key(target,'keydown','ArrowRight');
  assert.deepEqual(calls,['start']);key(target,'keyup','KeyF');
  key(target,'keydown','ArrowRight');key(target,'keydown','Space');key(target,'keydown','ArrowLeft');
- assert.deepEqual(calls,['start','next']);key(target,'keyup','ArrowRight');key(target,'keydown','ArrowLeft');
- key(target,'keydown','ArrowDown');key(target,'keydown','ArrowDown',{repeat:true});key(target,'keydown','ArrowUp');
- assert.deepEqual(calls,['start','next','previous','down','down','up']);
+ assert.deepEqual(calls,['start','next']);
+ key(target,'keyup','ArrowRight');key(target,'keydown','ArrowLeft');key(target,'keyup','ArrowLeft');
+ key(target,'keydown','Digit1');key(target,'keydown','Digit1',{repeat:true});
+ key(target,'keydown','KeyQ');key(target,'keydown','Digit2');key(target,'keydown','KeyW');
+ assert.equal(key(target,'keydown','ArrowDown').defaultPrevented,false);
+ assert.equal(key(target,'keydown','ArrowUp').defaultPrevented,false);
+ key(target,'keydown','KeyO');key(target,'keydown','KeyO',{repeat:true});
+ assert.deepEqual(calls,['start','next','previous','voice+','voice+','voice-','other+','other-','toggle']);
+ key(target,'keyup','KeyO');key(target,'keydown','KeyO');
+ assert.equal(calls.at(-1),'toggle');
  target.dispatchEvent(new Event('blur'));key(target,'keydown','Space');assert.equal(calls.at(-1),'next');
- unbind();key(target,'keyup','Space');key(target,'keydown','ArrowRight');assert.equal(calls.length,7);
+ unbind();key(target,'keyup','Space');key(target,'keydown','ArrowRight');assert.equal(calls.length,11);
 });
 test('F during loading never queues Start; shortcuts and composing input are ignored',()=>{
  const target=new EventTarget();let ready=false,starts=0,next=0;
- bindStageKeys(target,{start:()=>{if(ready)++starts;},next:()=>++next,previous:()=>{},volumeUp:()=>{},volumeDown:()=>{},isStarted:()=>false});
+ bindStageKeys(target,{start:()=>{if(ready)++starts;},next:()=>++next,previous:()=>{},voiceUp:()=>{},voiceDown:()=>{},otherUp:()=>{},otherDown:()=>{},toggleVolumeDisplay:()=>{},isStarted:()=>false});
  key(target,'keydown','KeyF');ready=true;key(target,'keydown','KeyF',{repeat:true});assert.equal(starts,0);
  key(target,'keyup','KeyF');key(target,'keydown','KeyF');assert.equal(starts,1);key(target,'keyup','KeyF');
  for(const extra of [{ctrlKey:true},{metaKey:true},{altKey:true},{isComposing:true}]){
@@ -46,7 +56,7 @@ test('F during loading never queues Start; shortcuts and composing input are ign
  }
  assert.equal(starts,1);assert.equal(next,0);
 });
-test('master volume changes by five percentage points and clamps at silence and full volume',()=>{
+test('each volume channel changes by five percentage points and clamps at silence and full volume',()=>{
  assert.equal(adjustVolume(100,-5),95);assert.equal(adjustVolume(95,5),100);
  assert.equal(adjustVolume(0,-5),0);assert.equal(adjustVolume(100,5),100);
 });
