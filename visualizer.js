@@ -335,10 +335,10 @@ function applyVolumes(){
   // Voice includes opening, memory, selection and late-created ending recordings.
   const isVoice=narrationMedia.includes(media);
   // Background music is kept below dialogue level even at 100% group volume.
-  const gain=media.id==="actOneBgm"?.4:1;
+  const gain=media.id==="actOneBgm" ? 0.4 : 1;
   media.volume=(isVoice?voiceVolume:otherVolume)/100*gain;
  }
- volumeDisplay.textContent="語音 "+voiceVolume+"%\\n其他 "+otherVolume+"%";
+ volumeDisplay.textContent="語音 "+voiceVolume+"%\n其他 "+otherVolume+"%";
 }
 function changeVoiceVolume(delta){voiceVolume=StageOpening.adjustVolume(voiceVolume,delta);applyVolumes();}
 function changeOtherVolume(delta){otherVolume=StageOpening.adjustVolume(otherVolume,delta);applyVolumes();}
