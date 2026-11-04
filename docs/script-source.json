@@ -417,7 +417,7 @@
     "ETHAN:Then who is the robot?",
     "(A heavy silence)",
     "AI VOICE:There is no robot in the room.This test does not measure artificial intelligence.It measures how quickly human beings choose to sacrifice one another under pressure.Test completed. You may leave.",
-    "(Silence)",
+    "",
     "[blackout]",
     "END OF PLAY"
   ],
@@ -425,6 +425,11 @@
     {
       "paragraph": 64,
       "change": "Remove Christopher's line: It's empty.",
+      "date": "2026-11-04"
+    },
+    {
+      "paragraph": 415,
+      "change": "Remove separate silence cue after 'You may leave.'; advance immediately to blackout.",
       "date": "2026-11-04"
     }
   ]
