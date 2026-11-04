@@ -127,3 +127,20 @@ test("failed next-track playback reports error and retries without abruptly stop
  assert.equal(a.paused,true);
  assert.equal(b.paused,false);
 });
+
+test("quickly advancing while the new file buffers keeps the audible old song",async()=>{
+ const {music,a,b,tick}=setup();
+ music.setStep(4);await flush();tick(1400);
+ let attempts=0;
+ b.play=function(){attempts++;if(attempts===1){this.paused=false;return new Promise(()=>{});}return FakeAudio.prototype.play.call(this);};
+ music.setStep(15);
+ close(a.volume,.4);
+ music.setStep(91);await flush();
+ assert.equal(music.current.src,"transition.mp3");
+ assert.equal(a.paused,false,"audible song survives rapid jump");
+ tick(700);
+ assert.ok(a.volume>0&&b.volume>0);
+ tick(700);
+ assert.equal(a.paused,true);
+ assert.equal(b.paused,false);
+});
