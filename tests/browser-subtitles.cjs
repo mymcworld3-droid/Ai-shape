@@ -18,7 +18,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.equal(await page.locator('#subtitleText').textContent(),'“Access to one\'s memory.”');
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
-  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('417 quiet previews never play media or start either timer; exact curly-quoted manuscript card subtitle');
+  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('416 quiet previews never play media or start either timer; exact curly-quoted manuscript card subtitle');
   await page.locator('#startButton').press('f');await page.waitForFunction(()=>scriptShow.started);
   assert.equal(await page.evaluate(()=>scriptShow.index),0);assert.equal(await page.locator('button:visible').count(),0);
   assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),'showShell');
@@ -80,6 +80,22 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     const [id,src]=expectedEffects[to.action];
     assert.equal(await page.locator('#'+id).getAttribute('src'),src,'Effect at paragraph '+to.paragraph);
    }
+   if(to.text==='You may leave.') {
+    assert.equal(data.entries[i+1]?.action,'end-blackout','Next operator input must go straight to black');
+    // Natural completion of the last AI recording must not brighten the room.
+    await page.evaluate(()=>{
+     if(transcript.active?.group==='revealTruth'){
+      transcript.active.state='finished';
+      transcript.onVoice('revealTruth','finished');
+     }
+    });
+    assert.equal(await page.evaluate(()=>transitions.ai.target),1);
+    assert.equal(await page.evaluate(()=>transitions.aiExpansion.target),1);
+   }
+   if(to.action==='end-blackout') {
+    assert.equal(await page.evaluate(()=>transitions.blackout.target),1);
+    assert.equal(await page.evaluate(()=>transitions.blackout.duration),0,'Final blackout must be an instant cut');
+   }
    assert.equal(await page.locator('#subtitleText').textContent(),to.text);
    if(to.text)assert.equal(await page.locator('#subtitles').isVisible(),true);
    if(to.action==='opening-dim'){
@@ -108,7 +124,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   const deadlines=await page.evaluate(()=>({...scriptShow.deadlines}));
   for(let i=last-1;i>=0;i--){await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>scriptShow.index),i);assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);}
   assert.deepEqual(await page.evaluate(()=>({...scriptShow.deadlines})),deadlines);assert.equal(await page.locator('button:visible').count(),0);
-  checks.push('all 417 forward and reverse inputs preserve exact 374 sentences, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
+  checks.push('all 416 forward and reverse inputs preserve exact 374 sentences, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
   // Check every subtitle at all ratios, including review pane. No text leaves the fixed projection frame.
   await page.reload();await page.waitForFunction(()=>!document.querySelector('#startButton').disabled);await page.locator('#stepsViewButton').click();
   for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
