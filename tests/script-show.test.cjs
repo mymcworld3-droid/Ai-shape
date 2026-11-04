@@ -18,7 +18,7 @@ test('every spoken Word paragraph is reproduced once and in order, without stage
  });
  assert.deepEqual([...actual.keys()],expected);
  assert.equal(entries.filter(x=>x.text).length,374);
- assert.ok(!entries.some(x=>/\\bboss\\b/i.test(x.speaker+' '+x.text)),'Boss is renamed CEO everywhere');
+ assert.ok(!entries.some(x=>/\bboss\b/i.test(x.speaker+' '+x.text)),'Boss is renamed CEO everywhere');
  assert.ok(entries.some(x=>x.speaker==='CEO'));
 
  assert.ok(!entries.some(x=>x.text==="It's empty."));
