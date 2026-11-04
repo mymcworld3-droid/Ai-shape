@@ -66,7 +66,7 @@
     "ETHAN:I...",
     "RACHEL:Wait(hands reach pocket) Cut it, everyone, check your pocket.(checks pockets)Oh… I don’t have a pocket.",
     "ETHAN:Hehe, well I have nothing.",
-    "CHRISTOPHER:It's empty.",
+    "",
     "(Megan notices something, pulls it out and shows it to the audience)",
     "MEGAN:Nothing, too.(says it with fear of difference)",
     "(everyone gathers in the middle)",
@@ -420,5 +420,12 @@
     "(Silence)",
     "[blackout]",
     "END OF PLAY"
+  ],
+  "editorialChanges": [
+    {
+      "paragraph": 64,
+      "change": "Remove Christopher's line: It's empty.",
+      "date": "2026-11-04"
+    }
   ]
 }
