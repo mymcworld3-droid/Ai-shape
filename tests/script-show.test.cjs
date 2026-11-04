@@ -17,14 +17,16 @@ test('every spoken Word paragraph is reproduced once and in order, without stage
   assert.ok(entries.filter(x=>x.paragraph===p&&x.text).every(x=>x.speaker===speaker),'speaker '+p);
  });
  assert.deepEqual([...actual.keys()],expected);
- assert.equal(entries.filter(x=>x.text).length,375);
+ assert.equal(entries.filter(x=>x.text).length,374);
+ assert.ok(!entries.some(x=>x.text==="It's empty."));
+ assert.ok(entries.some(x=>x.paragraph===110&&x.action==='memoryClick'));
  assert.equal(entries.at(-1).action,'end-blackout');
  assert.equal(data.source.sha256,source.sha256);
 });
 test('all four acts, source-specific two-vote order, card, door, room, office and ending boundaries match',()=>{
  const e=data.entries;
  assert.deepEqual([...new Set(e.map(x=>x.act))],['I','II','III','IV']);
- for(const [p,action] of [[23,'reveal'],[27,'ai'],[33,'doorKick'],[83,'card'],[85,'card-hide'],[87,'doorOpen'],[109,'memory-light'],[213,'officeBang'],[386,'selection-flash'],[407,'ending-light'],[416,'end-blackout']])assert.ok(e.some(x=>x.paragraph===p&&x.action===action));
+ for(const [p,action] of [[23,'reveal'],[27,'ai'],[33,'doorKick'],[83,'card'],[85,'card-hide'],[87,'doorOpen'],[109,'memory-light'],[110,'memoryClick'],[213,'officeBang'],[386,'selection-flash'],[407,'ending-light'],[416,'end-blackout']])assert.ok(e.some(x=>x.paragraph===p&&x.action===action));
  const votes=e.filter(x=>[389,393].includes(x.paragraph));assert.deepEqual(votes.map(x=>x.speaker),['CHRISTOPHER','MEGAN']);
  assert.equal(e.filter(x=>x.group==='two').at(-1).text,'Two votes.');assert.ok(!e.some(x=>/Three votes/.test(x.text)));
  assert.ok(e.some(x=>x.group==='prompt'&&x.text==='1 minute remaining.'));
