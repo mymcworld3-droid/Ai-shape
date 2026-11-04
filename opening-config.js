@@ -5,6 +5,16 @@ window.OPENING_CONFIG = Object.freeze({
   darkBackground: "assets/backgrounds/Start_dark.PNG",
   roomReveal: "assets/videos/Start_animation.mp4",
   revealFadeMs: 240,
+  // One-based subtitle steps in Act I. A new cue switches tracks immediately.
+  // The 174-175 transition upload is identical to 92-93 but has an invalid
+  // .mp3_ suffix, so use the playable .mp3 copy for both transitions.
+  actOneMusic: Object.freeze([
+    Object.freeze({ from: 1, to: 14, src: "assets/audio/background/act-1/1-14.mp3" }),
+    Object.freeze({ from: 15, to: 91, src: "assets/audio/background/act-1/15-92.mp3" }),
+    Object.freeze({ from: 92, to: 92, src: "assets/audio/background/act-1/92-93(轉場).mp3", loop: false }),
+    Object.freeze({ from: 93, to: 173, src: "assets/audio/background/act-1/93-174.mp3" }),
+    Object.freeze({ from: 174, to: 174, src: "assets/audio/background/act-1/92-93(轉場).mp3", loop: false })
+  ]),
   narration: "assets/audio/ai-opening.m4a",
   // Original user-supplied WAV, stored locally for offline playback.
   doorKick: "assets/audio/door-kick.wav",
@@ -38,7 +48,7 @@ window.OPENING_CONFIG = Object.freeze({
     discussionDim: 0.2
   }),
   ending: Object.freeze({complete: null, revealTruth: null}),
-  scriptEffects: Object.freeze({doorOpen: null, timerClick: null, selectionButton: null}),
+  scriptEffects: Object.freeze({doorOpen: "assets/audio/background/act-1/開門聲.mp3", timerClick: null, selectionButton: null}),
   countdownMs: 15 * 60 * 1000,
   // Black display interior in IMG_0165.png's source pixels; excludes its bezel.
   roomScreen: Object.freeze({ x: 552, y: 310, width: 430, height: 195, inset: 2 }),
