@@ -419,7 +419,7 @@ async function fastVoting(page){
       'The previous clock, card and AI must not leak into the new room');
     assert.equal(await page.locator('#memoryWelcomeAudio').getAttribute('src'),'assets/audio/Memory-room.m4a');
     assert.equal(await page.locator('#memoryWelcomeAudio').evaluate(a=>a.paused&&a.currentTime===0),true,'Memory voice must wait for its own cue');
-    assert.equal(await page.locator('#memoryLightAudio').getAttribute('src'),null);
+    assert.equal(await page.locator('#memoryLightAudio').getAttribute('src'),'assets/audio/effects/light-click.wav');
     await page.screenshot({path:path.join(output,'11-memory-light.png')});
     await page.keyboard.up('Space');await page.keyboard.press('Space');await cue(page,'memory-welcome');
     await flag(page,'memoryVoiceState','playing');
@@ -473,10 +473,10 @@ async function fastVoting(page){
     }
     await page.setViewportSize({width:1280,height:720});await page.waitForTimeout(1200);
     await cue(page,'office-light');await matchesStill(page,'assets/backgrounds/office-memory.png');
-    assert.equal(await page.locator('#officeBangAudio').getAttribute('src'),null);
-    await flag(page,'officeBangAvailable','false');
+    assert.equal(await page.locator('#officeBangAudio').getAttribute('src'),'assets/audio/effects/office-bang.wav');
+    await flag(page,'officeBangAvailable','true');
     await page.screenshot({path:path.join(output,'16-office-light.png')});
-    await page.keyboard.press('Space');await cue(page,'office-bang');await flag(page,'officeBangState','missing');
+    await page.keyboard.press('Space');await cue(page,'office-bang');await flag(page,'officeBangState','finished');
     await page.waitForTimeout(300);await cue(page,'office-bang');await matchesStill(page,'assets/backgrounds/office-memory.png');
     await page.keyboard.press('Space');await cue(page,'past-reflection');await page.waitForTimeout(1300);
     assert.equal(await page.locator('#visualizer').evaluate(c=>{
@@ -875,7 +875,7 @@ async function fastVoting(page){
     await memoryMedia.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:
       fs.readFileSync(path.join(root,'opening-config.js'),'utf8')
         .replace('narration: "assets/audio/Memory-room.m4a"','narration: "test-fixtures/memory-welcome.wav"')
-        .replace('lightClick: null','lightClick: "test-fixtures/door-kick.wav"')}));
+        .replace('lightClick: "assets/audio/effects/light-click.wav"','lightClick: "test-fixtures/door-kick.wav"')}));
     await memoryMedia.addInitScript(()=>{
       const play=HTMLMediaElement.prototype.play;const blocked=new Set(['memoryLightAudio','memoryWelcomeAudio']);
       HTMLMediaElement.prototype.play=function(){
@@ -910,7 +910,7 @@ async function fastVoting(page){
 
     const officeMedia=await browser.newPage();
     await officeMedia.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:
-      fs.readFileSync(path.join(root,'opening-config.js'),'utf8').replace('bang: null','bang: "test-fixtures/memory-welcome.wav"')}));
+      fs.readFileSync(path.join(root,'opening-config.js'),'utf8').replace('bang: "assets/audio/effects/office-bang.wav"','bang: "test-fixtures/memory-welcome.wav"')}));
     await officeMedia.addInitScript(()=>{
       const play=HTMLMediaElement.prototype.play;let blocked=true;
       HTMLMediaElement.prototype.play=function(){
@@ -934,7 +934,7 @@ async function fastVoting(page){
     await matchesStill(officeMedia,'assets/backgrounds/memory-room.png');await noControls(officeMedia);
     assert.equal(await officeMedia.evaluate(()=>opening.deadline),officeDeadline);
     await officeMedia.close();
-    results.push('office BANG uses real PCM fixture playback, retries only its own failure and requires genuine end plus a released operator key before reflection; production sound stays null');
+    results.push('office BANG uses real PCM fixture playback, retries only its own failure and requires genuine end plus a released operator key before reflection; production sound reuses a recorded impact WAV');
 
     const officeLoad=await browser.newPage();let releaseOffice;
     const officePending=new Promise(done=>releaseOffice=done);
