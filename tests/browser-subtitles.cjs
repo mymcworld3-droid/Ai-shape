@@ -18,11 +18,20 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.equal(await page.locator('#subtitleText').textContent(),'“Access to one\'s memory.”');
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
-  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('416 quiet previews never play media or start either timer; exact curly-quoted manuscript card subtitle');
+  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('416 quiet previews never play media; first three live cues are pixel-black and fully silent until room reveal');
   await page.locator('#startButton').press('f');await page.waitForFunction(()=>scriptShow.started);
   assert.equal(await page.evaluate(()=>scriptShow.index),0);assert.equal(await page.locator('button:visible').count(),0);
   assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),'showShell');
-  assert.equal(await page.locator('#actOneBgm').getAttribute('src'),'assets/audio/background/act-1/1-14.mp3');
+  const canvasIsBlack=()=>page.locator('#visualizer').evaluate(canvas=>{
+    const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+    for(let i=0;i<pixels.length;i+=4)if(pixels[i]||pixels[i+1]||pixels[i+2])return false;
+    return true;
+  });
+  await page.waitForFunction(()=>document.getElementById('visualizer').getContext('2d').getImageData(0,0,1,1).data[3]===255);
+  assert.equal(await canvasIsBlack(),true,'Start must leave the whole canvas genuinely black');
+  assert.equal(await page.locator('#actOneBgm').getAttribute('src'),null);
+  assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.paused),true);
+  assert.equal(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused)),true,'No sound before room reveal');
   await page.keyboard.press('q');
   assert.equal(await page.locator('#volumeDisplay').textContent(),'語音 95%\n其他 100%');
   assert.equal(await page.locator('#openingAudio').evaluate(a=>a.volume),.95);
@@ -38,7 +47,15 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   for(let i=1;i<=firstVoice;i++){
    if(i===1)await page.locator('#visualizer').click();else await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i);
    assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);
-   if(data.entries[i].action==='reveal')await page.waitForFunction(()=>document.querySelector('#roomRevealVideo').ended);
+   if(i<3){
+    assert.equal(await canvasIsBlack(),true,'Black room must not show a dim background in steps 1-3');
+    assert.equal(await page.locator('#actOneBgm').getAttribute('src'),null);
+    assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.paused),true);
+   }
+   if(data.entries[i].action==='reveal'){
+    assert.equal(await page.locator('#actOneBgm').getAttribute('src'),'assets/audio/background/act-1/1-14.mp3');
+    await page.waitForFunction(()=>document.querySelector('#roomRevealVideo').ended);
+   }
   }
   await page.waitForFunction(()=>!document.querySelector('#openingAudio').paused);
   const clock=data.entries.findIndex(x=>x.action==='opening-clock');
