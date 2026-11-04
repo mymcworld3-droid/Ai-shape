@@ -96,6 +96,15 @@
       }
     }
 
+    audiblePlayer() {
+      // If the user advances again before the next file has buffered, keep the
+      // song that is actually audible, not a silent pending player.
+      return this.players.filter(player => !player.paused).reduce((best, player) => {
+        return !best || (this.levels.get(player) || 0) > (this.levels.get(best) || 0)
+          ? player : best;
+      }, null);
+    }
+
     setStep(step) {
       const track = trackForStep(step, this.tracks);
       if (!track) {
@@ -110,7 +119,7 @@
 
       this.cancelFade();
       ++this.run;
-      const outgoing = this.activeAudio || this.stoppingAudio;
+      const outgoing = this.audiblePlayer() || this.activeAudio || this.stoppingAudio;
       const incoming = this.players.find(player => player !== outgoing);
       incoming.pause(); // The inactive player may still contain an earlier fade tail.
       this.setLevel(incoming, 0);
@@ -159,7 +168,7 @@
       if (!this.current && !this.activeAudio && !this.stoppingAudio && !this.stopping) return;
       ++this.run;
       this.cancelFade();
-      const outgoing = this.activeAudio || this.stoppingAudio || this.outgoingAudio;
+      const outgoing = this.audiblePlayer() || this.activeAudio || this.stoppingAudio || this.outgoingAudio;
       this.current = null;
       this.activeAudio = null;
       this.outgoingAudio = null;
