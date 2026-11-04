@@ -308,7 +308,13 @@ async function fastVoting(page){
     assert.equal(await page.locator('#startButton').isVisible(),true);
     assert.equal(await page.locator('#stepsPanel').isVisible(),false);
     assert.equal(await page.locator('#startDock').evaluate(e=>getComputedStyle(e).position),"fixed");
-    await matchesStill(page,"assets/backgrounds/Start_dark.PNG");
+    await page.waitForFunction(()=>{
+      const c=document.getElementById('visualizer');
+      const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+      for(let i=0;i<d.length;i+=4)if(d[i]||d[i+1]||d[i+2])return false;
+      return true;
+    });
+    assert.equal(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused)),true,'Initial cue must be silent');
     assert.equal(await page.locator('body').getAttribute('data-cue'),"dark");
     await page.screenshot({path:path.join(output,"00-dark.png")});
     await page.keyboard.press("Space"); await page.keyboard.press("Enter"); await page.keyboard.press("Shift+Space");
@@ -619,7 +625,10 @@ async function fastVoting(page){
     await review.locator('[data-preview="vote-two"]').click();await settlePreview(review);await fixedFrame(review);
     await review.screenshot({path:path.join(output,'22-voting-step-review.png')});
     await review.locator('#pageViewButton').click();await flag(review,'view','page');await review.waitForTimeout(100);
-    await matchesStill(review,'assets/backgrounds/Start_dark.PNG');await fixedFrame(review);
+    await review.waitForFunction(()=>{
+      const c=document.getElementById('visualizer'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+      for(let i=0;i<d.length;i+=4)if(d[i]||d[i+1]||d[i+2])return false;return true;
+    });await fixedFrame(review);
     await review.locator('#stepsViewButton').click();await review.locator('[data-preview="vote-blackout"]').click();
     await flag(review,'previewCue','vote-blackout');
     // Starting after inspecting the last cue must still play the first clip.
@@ -826,14 +835,17 @@ async function fastVoting(page){
     });
     await ready(videoRetry,url); await videoRetry.locator('#startButton').click();
     await flag(videoRetry,"videoError","true"); await cue(videoRetry,"dark");
-    await matchesStill(videoRetry,"assets/backgrounds/Start_dark.PNG");
+    await videoRetry.waitForFunction(()=>{
+      const c=document.getElementById('visualizer'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+      for(let i=0;i<d.length;i+=4)if(d[i]||d[i+1]||d[i+2])return false;return true;
+    });
     await videoRetry.mouse.dblclick(30,30); await roomState(videoRetry,"playing");
     await videoRetry.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
     await cue(videoRetry,"bright"); await videoRetry.waitForTimeout(400);
     await matchesStill(videoRetry,"assets/backgrounds/IMG_0165.png");
     assert.equal(await videoRetry.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await videoRetry.close();
-    results.push("blocked video returns to the original dark PNG; retry and double-click cannot spill into AI or speech");
+    results.push("blocked video returns to full black; retry and double-click cannot spill into AI or speech");
 
     const audioRetry=await browser.newPage();
     await audioRetry.addInitScript(()=>{
