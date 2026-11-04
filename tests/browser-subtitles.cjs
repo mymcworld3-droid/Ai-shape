@@ -60,15 +60,25 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
    if(from.group!==to.group&&from.group){await page.waitForFunction(()=>!['starting','playing'].includes(scriptShow.active?.state),null,{timeout:12000});}
    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i,'entry '+i);
    const soundtrackByStep={
-    15:'assets/audio/background/act-1/15-92.mp3',
-    92:'assets/audio/background/act-1/92-93(轉場).mp3',
-    93:'assets/audio/background/act-1/93-174.mp3',
-    174:'assets/audio/background/act-1/92-93(轉場).mp3',
+    15:'assets/audio/background/act-1/15-91.mp3',
+    91:'assets/audio/background/act-1/91-92(轉場).mp3',
+    92:'assets/audio/background/act-1/92-174.mp3',
+    174:'assets/audio/background/act-1/174-175(轉場).mp3',
     175:null
    };
    if(Object.prototype.hasOwnProperty.call(soundtrackByStep,i+1)){
     assert.equal(await page.locator('#actOneBgm').getAttribute('src'),soundtrackByStep[i+1],
       'Act I music must follow the subtitle step '+(i+1));
+   }
+   const expectedEffects={
+    doorOpen:['scriptEffect-doorOpen','assets/audio/effects/door-open.mp3'],
+    timerClick:['scriptEffect-timerClick','assets/audio/effects/timer-click.wav'],
+    memoryClick:['scriptEffect-memoryClick','assets/audio/effects/light-click.wav'],
+    officeBang:['scriptEffect-officeBang','assets/audio/effects/office-bang.wav']
+   };
+   if(expectedEffects[to.action]){
+    const [id,src]=expectedEffects[to.action];
+    assert.equal(await page.locator('#'+id).getAttribute('src'),src,'Effect at paragraph '+to.paragraph);
    }
    assert.equal(await page.locator('#subtitleText').textContent(),to.text);
    if(to.text)assert.equal(await page.locator('#subtitles').isVisible(),true);
@@ -98,7 +108,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   const deadlines=await page.evaluate(()=>({...scriptShow.deadlines}));
   for(let i=last-1;i>=0;i--){await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>scriptShow.index),i);assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);}
   assert.deepEqual(await page.evaluate(()=>({...scriptShow.deadlines})),deadlines);assert.equal(await page.locator('button:visible').count(),0);
-  checks.push('all 417 forward and reverse inputs preserve exact 375 sentences, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
+  checks.push('all 417 forward and reverse inputs preserve exact 374 sentences, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
   // Check every subtitle at all ratios, including review pane. No text leaves the fixed projection frame.
   await page.reload();await page.waitForFunction(()=>!document.querySelector('#startButton').disabled);await page.locator('#stepsViewButton').click();
   for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
@@ -109,7 +119,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     assert.ok(Math.abs(boxes.ratio-16/9)<.01);assert.ok(boxes.bx>=boxes.ax&&boxes.br<=boxes.ar+1&&boxes.by>=boxes.ay&&boxes.bb<=boxes.ab+1,JSON.stringify({i,viewport,boxes}));
    }
   }
-  checks.push('all 375 subtitles fit inside 16:9 projection at three screen ratios in step review');
+  checks.push('all 374 subtitles fit inside 16:9 projection at three screen ratios in step review');
   assert.deepEqual(errors,[]);for(const x of checks)console.log('PASS',x);
   fs.writeFileSync(path.join(out,'subtitle-results.json'),JSON.stringify({passed:true,checks},null,2));
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
