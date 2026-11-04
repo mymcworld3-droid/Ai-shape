@@ -4,10 +4,10 @@ const assert = require("node:assert/strict");
 const { Controller, trackForStep } = require("../act-one-audio.js");
 
 const tracks = [
-  { from: 1, to: 14, src: "intro.mp3" },
-  { from: 15, to: 91, src: "dialogue.mp3" },
-  { from: 92, to: 92, src: "transition.mp3", loop: false },
-  { from: 93, to: 173, src: "memory.mp3" },
+  { from: 4, to: 14, src: "intro.mp3" },
+  { from: 15, to: 90, src: "dialogue.mp3" },
+  { from: 91, to: 91, src: "transition.mp3", loop: false },
+  { from: 92, to: 173, src: "memory.mp3" },
   { from: 174, to: 174, src: "transition.mp3", loop: false }
 ];
 class FakeAudio {
@@ -21,7 +21,15 @@ class FakeAudio {
 test("Act I soundtrack follows every script cue range, stopping at Act II", () => {
   const audio = new FakeAudio(), music = new Controller({ audio, tracks });
   assert.equal(trackForStep(0, tracks), null);
-  music.setStep(1);
+  // Entire pre-reveal interval must be silent, including Start.
+  for (const step of [1,2,3]) {
+    assert.equal(trackForStep(step, tracks), null);
+    music.setStep(step);
+    assert.equal(audio.paused,true);
+    assert.equal(audio.src,"");
+  }
+  assert.equal(audio.events.filter(x=>x.startsWith("play:")).length,0);
+  music.setStep(4);
   assert.equal(audio.src, "intro.mp3");
   assert.equal(audio.loop, true);
   const events = audio.events.length;
@@ -29,12 +37,12 @@ test("Act I soundtrack follows every script cue range, stopping at Act II", () =
   assert.equal(audio.events.length, events, "Same range must not restart its song");
   music.setStep(15);
   assert.equal(audio.src, "dialogue.mp3");
-  music.setStep(91);
+  music.setStep(90);
   assert.equal(audio.src, "dialogue.mp3");
-  music.setStep(92);
+  music.setStep(91);
   assert.equal(audio.src, "transition.mp3");
   assert.equal(audio.loop, false);
-  music.setStep(93);
+  music.setStep(92);
   assert.equal(audio.src, "memory.mp3");
   music.setStep(173);
   assert.equal(audio.src, "memory.mp3");
@@ -48,9 +56,9 @@ test("Act I soundtrack follows every script cue range, stopping at Act II", () =
 test("Rewind restores the matching song, and each switch pauses the old one", () => {
   const audio = new FakeAudio(), music = new Controller({ audio, tracks });
   music.setStep(93);
-  music.setStep(92);
-  assert.equal(audio.src, "transition.mp3");
   music.setStep(91);
+  assert.equal(audio.src, "transition.mp3");
+  music.setStep(90);
   assert.equal(audio.src, "dialogue.mp3");
   music.setStep(14);
   assert.equal(audio.src, "intro.mp3");
@@ -65,7 +73,7 @@ test("Playback errors are reported instead of blocking the subtitle cue", async 
   const audio = new FakeAudio(), errors = [];
   audio.play = () => Promise.reject(new Error("blocked"));
   const music = new Controller({ audio, tracks, onError: e => errors.push(e.message) });
-  music.setStep(1);
+  music.setStep(4);
   await Promise.resolve();
   await Promise.resolve();
   assert.deepEqual(errors, ["blocked"]);
@@ -79,12 +87,23 @@ test("After a rejected playback, the next cue in the same range retries once", a
     return attempts === 1 ? Promise.reject(new Error("blocked")) : Promise.resolve();
   };
   const music = new Controller({ audio, tracks, onError: e => errors.push(e.message) });
-  music.setStep(1);
+  music.setStep(4);
   await Promise.resolve();
   await Promise.resolve();
   assert.equal(music.failed, true);
-  music.setStep(2);
+  music.setStep(5);
   assert.equal(attempts, 2);
   assert.equal(music.failed, false);
   assert.deepEqual(errors, ["blocked"]);
+});
+
+test("rewinding to the first three black cues stops and clears previously playing music", () => {
+ const audio=new FakeAudio(),music=new Controller({audio,tracks});
+ music.setStep(4);
+ assert.equal(audio.paused,false);
+ music.setStep(3);
+ assert.equal(audio.paused,true);
+ assert.equal(audio.src,"");
+ music.setStep(1);
+ assert.equal(audio.events.filter(x=>x.startsWith("play:")).length,1);
 });
