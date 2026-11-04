@@ -332,11 +332,17 @@ let voiceVolume=100,otherVolume=100;
 const volumeDisplay=document.getElementById("volumeDisplay");
 function applyVolumes(){
  for(const media of document.querySelectorAll("audio,video")){
-  // Voice includes opening, memory, selection and late-created ending recordings.
+  // Music crossfades own the gain of both soundtrack players.
+  if(media.id==="actOneBgm"||media.id==="actOneBgmAlt")continue;
   const isVoice=narrationMedia.includes(media);
-  // Background music is kept below dialogue level even at 100% group volume.
-  const gain=media.id==="actOneBgm" ? 0.4 : 1;
-  media.volume=(isVoice?voiceVolume:otherVolume)/100*gain;
+  media.volume=(isVoice?voiceVolume:otherVolume)/100;
+ }
+ // 2/W changes the common master without interrupting either fade.
+ const soundtrackLevel=otherVolume/100*.4;
+ if(window.actOneBackgroundMusic)window.actOneBackgroundMusic.setMasterVolume(soundtrackLevel);
+ else{
+  document.getElementById("actOneBgm").volume=soundtrackLevel;
+  document.getElementById("actOneBgmAlt").volume=0;
  }
  volumeDisplay.textContent="語音 "+voiceVolume+"%\n其他 "+otherVolume+"%";
 }
