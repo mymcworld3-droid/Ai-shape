@@ -33,7 +33,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
   assert.match(await page.locator('#startLabel').textContent(),/從第 .* 步開始/);
-  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('395 quiet previews never play media; first two live cues are pixel-black and silent until room reveal');
+  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('393 quiet previews never play media; first two live cues are pixel-black and silent until room reveal');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
@@ -174,8 +174,17 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     doorOpen:['scriptEffect-doorOpen','assets/audio/effects/heavy-auto-door.mp3'],
     timerClick:['scriptEffect-timerClick','assets/audio/effects/timer-click.wav'],
     memoryClick:['scriptEffect-memoryClick','assets/audio/effects/light-click.wav'],
-    officeBang:['scriptEffect-officeBang','assets/audio/door-kick.wav']
+    officeBang:['scriptEffect-officeBang','assets/audio/door-kick.wav'],
+    'selection-button':['scriptEffect-selection-button','assets/audio/Slam-button.m4a']
    };
+   if(to.action==='selection-button'){
+    assert.equal(to.text,'Please make your selection.');
+    assert.equal(to.group,'prompt');
+    assert.equal(await page.evaluate(()=>scriptShow.active?.group),'prompt');
+    assert.ok(await page.evaluate(()=>scriptProjectionFrame().flash>0),'Flash must start with the slam and AI voice');
+    assert.equal(data.entries[i-1].paragraph,384);
+    assert.equal(data.entries[i+1].text,'One by one, state the name of the person you believe to be the robot.');
+   }
    if(expectedEffects[to.action]){
     const [id,src]=expectedEffects[to.action];
     assert.equal(await page.locator('#'+id).getAttribute('src'),src,'Effect at paragraph '+to.paragraph);
@@ -239,7 +248,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   const deadlines=await page.evaluate(()=>({...scriptShow.deadlines}));
   for(let i=last-1;i>=0;i--){await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>scriptShow.index),i);assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);}
   assert.deepEqual(await page.evaluate(()=>({...scriptShow.deadlines})),deadlines);assert.equal(await page.locator('button:visible').count(),0);
-  checks.push('all 395 forward and reverse inputs preserve exact 374 sentences, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
+  checks.push('all 393 forward and reverse inputs preserve exact 374 sentences, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
   // Check every subtitle at all ratios, including review pane. No text leaves the fixed projection frame.
   await page.reload();await page.waitForFunction(()=>!document.querySelector('#startButton').disabled);await page.locator('#stepsViewButton').click();
   for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){

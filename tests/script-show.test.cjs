@@ -43,12 +43,15 @@ test('every spoken Word paragraph is reproduced once and in order, without stage
 test('all four acts, source-specific two-vote order, card, door, room, office and ending boundaries match',()=>{
  const e=data.entries;
  assert.deepEqual([...new Set(e.map(x=>x.act))],['I','II','III','IV']);
- for(const [p,action] of [[23,'reveal'],[27,'ai'],[33,'doorKick'],[83,'card'],[85,'card-hide'],[87,'doorOpen'],[109,'memory-light'],[110,'memoryClick'],[213,'officeBang'],[386,'selection-flash'],[407,'ending-light'],[416,'end-blackout']])assert.ok(e.some(x=>x.paragraph===p&&x.action===action));
+ for(const [p,action] of [[23,'reveal'],[27,'ai'],[33,'doorKick'],[83,'card'],[85,'card-hide'],[87,'doorOpen'],[109,'memory-light'],[110,'memoryClick'],[213,'officeBang'],[388,'selection-button'],[407,'ending-light'],[416,'end-blackout']])assert.ok(e.some(x=>x.paragraph===p&&x.action===action));
  const votes=e.filter(x=>[389,393].includes(x.paragraph));assert.deepEqual(votes.map(x=>x.speaker),['CHRISTOPHER','MEGAN']);
  assert.equal(e.filter(x=>x.group==='two').at(-1).text,'Two votes.');assert.ok(!e.some(x=>/Three votes/.test(x.text)));
  assert.ok(e.some(x=>x.group==='prompt'&&x.text==='1 minute remaining.'));
  assert.equal(e.filter(x=>x.group==='revealTruth').at(-1).text,'You may leave.');
- assert.equal(e.length,395);
+ assert.equal(e.length,393);
+ assert.equal(e[365].paragraph,388);assert.equal(e[365].action,'selection-button');
+ assert.equal(e[365].group,'prompt');assert.equal(e[365].text,'Please make your selection.');
+ assert.ok(!e.some(x=>x.paragraph===385||x.paragraph===386));
  assert.ok(!e.some(x=>x.kind==='pause' || x.paragraph===405),'No no-op actor cues');
  for(const p of [17,42,185,188,195,221,269])
   assert.equal(e.some(x=>x.kind==='cue'&&x.paragraph===p),false,'Spotlight should not need a manual step: '+p);
@@ -64,6 +67,20 @@ test('all four acts, source-specific two-vote order, card, door, room, office an
 });
 class Media extends EventTarget{constructor(){super();this.ended=false;this.currentTime=0;this.calls=0;this.paused=true;}play(){this.calls++;this.paused=false;this.ended=false;return Promise.resolve();}pause(){this.paused=true;}end(){this.ended=true;this.dispatchEvent(new Event('ended'));}load(){}}
 function setup(){let time=0;const opening=new Media(),effect=new Media(),events=[];const entries=[{text:'first',group:'opening'},{text:'last',group:'opening'},{text:'actor',action:'doorKick'},{text:'end'}];const c=new Controller({entries,voices:{opening},effects:{doorKick:effect},now:()=>time,onEntry:(e,m)=>events.push(m.index)});return {c,opening,effect,events,tick:n=>time+=n};}
+test('button slam, flash and AI prompt are one stage entry',async()=>{
+ const prompt=new Media(),button=new Media();
+ const entries=data.entries.slice(364,367);
+ const c=new Controller({entries,voices:{prompt},effects:{'selection-button':button}});
+ assert.equal(c.start(),true);
+ assert.equal(c.next(),true);
+ assert.equal(c.index,1);
+ assert.equal(c.entry.group,'prompt');
+ assert.equal(c.entry.action,'selection-button');
+ assert.equal(c.entry.text,'Please make your selection.');
+ assert.equal(prompt.calls,1);assert.equal(button.calls,1);
+ assert.equal(c.next(),true);
+ assert.equal(prompt.calls,1);assert.equal(button.calls,1);
+});
 test('each next changes exactly one sentence; narration continues and only real end starts countdown',async()=>{
  const {c,opening,effect,tick}=setup();assert.equal(opening.calls,0);c.start();await Promise.resolve();
  c.next();assert.equal(c.index,1);assert.equal(opening.calls,1);assert.equal(opening.paused,false);
