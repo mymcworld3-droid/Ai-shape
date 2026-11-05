@@ -148,6 +148,10 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await page.waitForTimeout(1100);await page.screenshot({path:path.join(out,'script-clock.png')});
   checks.push('F resets preview to opening; Space advances each AI sentence while real 22.36s audio continues; clock starts only at genuine end, held key never spills to actor line');
   // Subsequent media still run naturally; AI subtitles are manual, never elapsed-time driven.
+  const votingCountdown=data.entries.findIndex(e=>e.id==='p389-0');
+  const fourthActStart=data.entries.findIndex(e=>e.id==='p408-0');
+  assert.equal(votingCountdown,368,'The voting clock starts on step 369');
+  assert.equal(fourthActStart,380,'The corner layout ends before step 381');
   for(let i=clock+1;i<data.entries.length;i++){
    const from=data.entries[i-1],to=data.entries[i];
    if(from.group!==to.group&&from.group){await page.waitForFunction(()=>!['starting','playing'].includes(scriptShow.active?.state),null,{timeout:60000});}
@@ -203,6 +207,35 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     // The operator may replace the door track with a shorter or longer MP3.
     // Validate successful complete playback without assuming its duration.
    }
+   if(i>=votingCountdown){
+    assert.equal(await page.evaluate(()=>scriptProjectionFrame().hideBackground),true,
+      'No room image is displayed after the voting countdown');
+   }
+   if(i>=votingCountdown&&i<fourthActStart&&to.action!=='blackout'){
+    await page.waitForTimeout(to.action==='ending-light'?2350:680);
+    const stagePose=await page.evaluate(()=>{
+     const f=projectionFrame(),p=graphicPlacement(f,200),
+       large=graphicPlacement({...f,voteCorner:0,aiExpansion:1},200),
+       t=clockPlacement(f);
+     return {corner:f.voteCorner,ai:f.ai,clock:f.clock,
+       x:p.x/w,y:p.y/h,ratio:p.scale/large.scale,
+       timerX:t.x/w,timerY:t.y/h};
+    });
+    assert.ok(stagePose.corner>.98,'AI must remain in corner through step 380');
+    assert.ok(stagePose.ai>.98&&stagePose.clock>.98,'AI and timer coexist');
+    assert.ok(Math.abs(stagePose.x-.82)<.02&&Math.abs(stagePose.y-.72)<.02,
+      'AI is moved to lower-right');
+    assert.ok(Math.abs(stagePose.ratio-.5)<.025,'Complete AI shrinks to half size');
+    assert.ok(Math.abs(stagePose.timerX-.5)<.015&&Math.abs(stagePose.timerY-.5)<.015,
+      'Countdown is centered');
+    assert.equal(await page.locator('#visualizer').evaluate(canvas=>{
+      const c=canvas.getContext('2d'),pixel=c.getImageData(8,8,1,1).data;
+      return pixel[0]===0&&pixel[1]===0&&pixel[2]===0;
+    }),true,'Room background must be entirely removed, not merely dimmed');
+   }
+   if(i===fourthActStart)
+    assert.equal(await page.evaluate(()=>transitions.voteCorner.target),0,
+      'AI corner layout ends when step 381 begins');
    if(to.text==='You may leave.') {
     assert.equal(await page.locator('#subtitleNext').isHidden(),true);
     assert.equal(data.entries[i+1]?.action,'end-blackout','Next operator input must go straight to black');
