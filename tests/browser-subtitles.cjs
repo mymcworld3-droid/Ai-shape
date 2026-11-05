@@ -38,7 +38,10 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     for(let i=0;i<pixels.length;i+=4)if(pixels[i]||pixels[i+1]||pixels[i+2])return false;
     return true;
   });
-  await page.waitForFunction(()=>document.getElementById('visualizer').getContext('2d').getImageData(0,0,1,1).data[3]===255);
+  await page.waitForFunction(()=>{
+    const c=document.getElementById('visualizer'),pixels=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+    return pixels.length>0 && pixels.every((v,i)=>i%4===3||v===0);
+  });
   assert.equal(await canvasIsBlack(),true,'Start must leave the whole canvas genuinely black');
   assert.equal(await page.locator('#actOneBgm').getAttribute('src'),null);
   assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.paused),true);
