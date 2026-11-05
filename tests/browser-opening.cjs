@@ -37,6 +37,15 @@ const server = http.createServer((request, response) => {
   if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     response.writeHead(404).end(); return;
   }
+  // Legacy 25-cue regression tests explicitly exercise silent optional voice slots.
+  // Production real M4As are validated by tests/browser-subtitles.cjs.
+  // The votingMedia page below overrides this mock to test spoken selections.
+  if(requested==="/opening-config.js"){
+    const original=fs.readFileSync(file,"utf8");
+    const silent=original.replace(/\b(prompt|one|two|final): "assets\/audio\/[^"]+\.m4a"/g,'$1: null');
+    response.writeHead(200,{"Content-Type":"text/javascript","Content-Length":Buffer.byteLength(silent)});
+    response.end(silent);return;
+  }
   const size = fs.statSync(file).size;
   const headers = { "Content-Type":types[path.extname(file).toLowerCase()] || "application/octet-stream", "Accept-Ranges":"bytes" };
   const range = /^bytes=(\d+)-(\d*)$/.exec(request.headers.range || "");
@@ -972,7 +981,9 @@ async function fastVoting(page){
     const votingMedia=await browser.newPage();
     await votingMedia.route('**/opening-config.js',route=>{
       let body=fs.readFileSync(path.join(root,'opening-config.js'),'utf8');
-      for(const kind of ['prompt','one','two','final'])body=body.replace(kind+': null',kind+': "test-fixtures/memory-welcome.wav"');
+      for(const kind of ['prompt','one','two','final'])
+        body=body.replace(new RegExp('(' + kind + ': )"assets/audio/[^"]+\\.m4a"'),
+          '$1"test-fixtures/memory-welcome.wav"');
       return route.fulfill({contentType:'text/javascript',body});
     });
     await votingMedia.addInitScript(()=>{
