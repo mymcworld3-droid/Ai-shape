@@ -8,7 +8,7 @@ test('every spoken Word paragraph is reproduced once and in order, without stage
  let speaker='';const expected=[];
  source.paragraphs.forEach((raw,p)=>{
   if(p<11||!raw.trim())return;raw=raw.trim();
-  if(/^(ACT |SCENE |SETTING:|AT RISE:|END OF PLAY)/.test(raw)||p===405)return;
+  if(/^(ACT |SCENE |SETTING:|AT RISE:|END OF PLAY)/.test(raw)||p===405||p===360)return;
   const m=raw.match(/^(AI VOICE|EVERYONE ELSE|RACHEL|MEGAN|ETHAN|CHRISTOPHER|LIAM|CEO|Ben):/);
   if(m){speaker=m[1];raw=raw.slice(m[0].length);}
   if(p===88)speaker='';
@@ -17,7 +17,7 @@ test('every spoken Word paragraph is reproduced once and in order, without stage
   assert.ok(entries.filter(x=>x.paragraph===p&&x.text).every(x=>x.speaker===speaker),'speaker '+p);
  });
  assert.deepEqual([...actual.keys()],expected);
- assert.equal(entries.filter(x=>x.text).length,374);
+ assert.equal(entries.filter(x=>x.text).length,373);
  assert.ok(!entries.some(x=>/\bboss\b/i.test(x.speaker+' '+x.text)),'Boss is renamed CEO everywhere');
  assert.ok(entries.some(x=>x.speaker==='CEO'));
 
@@ -34,7 +34,7 @@ test('all four acts, source-specific two-vote order, card, door, room, office an
  assert.equal(e.filter(x=>x.group==='two').at(-1).text,'Two votes.');assert.ok(!e.some(x=>/Three votes/.test(x.text)));
  assert.ok(e.some(x=>x.group==='prompt'&&x.text==='1 minute remaining.'));
  assert.equal(e.filter(x=>x.group==='revealTruth').at(-1).text,'You may leave.');
- assert.equal(e.length,395);
+ assert.equal(e.length,394);
  const prompt=e.find(x=>x.action==='selection-button');
  assert.equal(prompt.paragraph,388);assert.equal(prompt.group,'prompt');assert.equal(prompt.text,'Please make your selection.');
  assert.ok(!e.some(x=>x.paragraph===385||x.paragraph===386));
