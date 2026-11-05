@@ -119,6 +119,20 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
    if(expectedEffects[to.action]){
     const [id,src]=expectedEffects[to.action];
     assert.equal(await page.locator('#'+id).getAttribute('src'),src,'Effect at paragraph '+to.paragraph);
+    // Check the actual WAV/MP3 decoding and playback, not only its filename.
+    await page.waitForFunction(id=>{
+      const audio=document.getElementById(id);
+      return Boolean(audio?.ended || audio?.error);
+    },id,{timeout:12000});
+    const effect=await page.locator('#'+id).evaluate(audio=>({
+      ended:audio.ended,duration:audio.duration,
+      error:audio.error?.message||null,networkState:audio.networkState
+    }));
+    assert.equal(effect.error,null,'Audio decoder failed: '+id);
+    assert.equal(effect.ended,true,'Effect never reached the end: '+id);
+    assert.ok(Number.isFinite(effect.duration)&&effect.duration>.1,'Invalid sound duration for '+id);
+    if(to.action==='doorOpen') assert.ok(effect.duration>=2.5&&effect.duration<5,
+      'Heavy automatic door sound should play its complete mechanical sequence');
    }
    if(to.text==='You may leave.') {
     assert.equal(data.entries[i+1]?.action,'end-blackout','Next operator input must go straight to black');
