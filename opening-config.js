@@ -5,15 +5,16 @@ window.OPENING_CONFIG = Object.freeze({
   darkBackground: "assets/backgrounds/Start_dark.PNG",
   roomReveal: "assets/videos/Start_animation.mp4",
   revealFadeMs: 240,
-  // Cue-count-independent: anchor the soundtrack to immutable Word paragraph IDs.
-  // Blank stage directions can be removed without shifting the music.
-  // The original MP3 filenames retain their historical cue range names.
+  // Cue-count-independent: soundtrack cues are anchored to Word paragraph IDs.
+  // Keep the historic actOneMusic key so existing mixer and controls continue
+  // working; later acts can use the same fade/crossfade music player.
   actOneMusic: Object.freeze([
     Object.freeze({ from: 23, to: 29, src: "assets/audio/background/act-1/1-14.mp3" }),
     Object.freeze({ from: 30, to: 98, src: "assets/audio/background/act-1/15-91.mp3" }),
     Object.freeze({ from: 99, to: 103, src: "assets/audio/background/act-1/91-92(轉場).mp3", loop: false }),
     Object.freeze({ from: 104, to: 178, src: "assets/audio/background/act-1/92-174.mp3" }),
-    Object.freeze({ from: 179, to: 184, src: "assets/audio/background/act-1/174-175(轉場).mp3", loop: false })
+    Object.freeze({ from: 179, to: 184, src: "assets/audio/background/act-1/174-175(轉場).mp3", loop: false }),
+    Object.freeze({ from: 290, to: 402, src: "assets/audio/background/act-3/Act3.mp3" })
   ]),
   narration: "assets/audio/ai-opening.m4a",
   // Original user-supplied WAV, stored locally for offline playback.

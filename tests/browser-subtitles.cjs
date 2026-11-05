@@ -140,7 +140,9 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     99:'assets/audio/background/act-1/91-92(轉場).mp3',
     104:'assets/audio/background/act-1/92-174.mp3',
     179:'assets/audio/background/act-1/174-175(轉場).mp3',
-    186:null
+    186:null,
+    290:'assets/audio/background/act-3/Act3.mp3',
+    403:null
    };
    if(Object.prototype.hasOwnProperty.call(soundtrackByParagraph,to.paragraph)){
     const expected=soundtrackByParagraph[to.paragraph];
@@ -148,6 +150,12 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
       'Music must follow the immutable manuscript paragraph '+to.paragraph);
     if(expected){
       assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio?.getAttribute('src')),expected);
+      if(to.paragraph===290){
+       await page.waitForFunction(()=>actOneBackgroundMusic.activeAudio&&!actOneBackgroundMusic.activeAudio.paused,
+        null,{timeout:15000});
+       assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio.error),null);
+       assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio.loop),true);
+      }
     }else{
       await page.waitForFunction(()=>!actOneBackgroundMusic.stopping);
       assert.ok(await page.locator('#actOneBgm, #actOneBgmAlt').evaluateAll(xs=>xs.every(x=>x.paused)));

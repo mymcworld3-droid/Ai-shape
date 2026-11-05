@@ -35,10 +35,14 @@
 | 104–178 | `assets/audio/background/act-1/92-174.mp3` |
 | 179–184 | `assets/audio/background/act-1/174-175(轉場).mp3` |
 | 第 186 段起 | 第一幕配樂漸弱結束 |
+| 290–402（第三幕） | `assets/audio/background/act-3/Act3.mp3` |
+| 403（第三幕全暗） | 第三幕配樂約 1.1 秒漸弱結束；第四幕保持靜音 |
 
 重要音效對應：第 46 段時鐘 click ➝ `assets/audio/effects/timer-click.wav`；第 87 段左門開啟 ➝ `assets/audio/effects/heavy-auto-door.mp3`；第 110 段記憶室 click ➝ `assets/audio/effects/light-click.wav`；第 213 段辦公室 BANG ➝ `assets/audio/door-kick.wav`。
 
 開門使用最新上傳的 `heavy-auto-door.mp3`，不再引用已移除的 WAV。短 click 是 0.18 秒原創提示音，辦公室 BANG **直接引用** `assets/audio/door-kick.wav`，並非複製或重新轉碼。配樂本身沒有改動。
+
+第三幕新增的 `Act3.mp3` 使用同一套配樂播放器，從第三幕第一句開始淡入並持續播放（檔案結束時循環），切換台詞或 AI 配音不會重新啟動；進入第 403 段黑幕時漸弱停止。若由步驟檢視直接跳至第三幕，也會正確啟動該曲。第二幕配樂設定不變。
 
 音量 0–100%，**1／Q** 調整語音、**2／W** 調整其他音量（每次 5%），**O** 顯示／隱藏右下角音量。第一幕配樂改用**約 1.4 秒等功率交叉淡入／淡出**，換曲時兩首僅短暫重疊，舊曲淡完就停止；進入第二幕時採**約 1.1 秒漸弱收尾**，不再突然斷音。新曲首次進場也先淡入，原音訊檔沒有重新剪輯。**開頭第 1–2 步及倒退回開頭仍是立即純黑、完全靜音**。切換過程中調整 2／W 音量，兩首的混音比例不變；25 步場景模式 `?mode=cues` 也使用記憶室 click 與辦公室 BANG。
 

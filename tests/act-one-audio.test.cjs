@@ -8,7 +8,8 @@ const tracks=[
  {from:30,to:98,src:"dialogue.mp3"},
  {from:99,to:103,src:"transition.mp3",loop:false},
  {from:104,to:178,src:"memory.mp3"},
- {from:179,to:184,src:"final-transition.mp3",loop:false}
+ {from:179,to:184,src:"final-transition.mp3",loop:false},
+ {from:290,to:402,src:"act3.mp3"}
 ];
 class FakeAudio{
  constructor(id){this.id=id;this.src="";this.volume=0;this.loop=false;this.currentTime=0;this.paused=true;this.events=[];}
@@ -98,6 +99,30 @@ test("Act II fades the last track out; rewinding into black stops immediately",a
  assert.deepEqual([a.src,b.src],["",""]);
 });
 
+test("Act III music starts on paragraph 290, repeats through 402, and fades at blackout 403",async()=>{
+ const {music,a,b,tick}=setup();
+ for(const step of [185,186,289])music.setStep(step);
+ assert.equal(trackForStep(289,tracks),null);
+ assert.ok(a.paused&&b.paused);
+ music.setStep(290);await flush();
+ assert.equal(music.current.src,"act3.mp3");
+ assert.equal(music.activeAudio.src,"act3.mp3");
+ assert.equal(music.activeAudio.loop,true);
+ tick(1400);close(music.activeAudio.volume,.4);
+ const active=music.activeAudio,plays=active.events.filter(e=>e==="play:act3.mp3").length;
+ for(const step of [291,365,388,402])music.setStep(step);
+ assert.equal(music.activeAudio,active);
+ assert.equal(active.events.filter(e=>e==="play:act3.mp3").length,plays);
+ music.setMasterVolume(.2);close(active.volume,.2);
+ music.setStep(403);
+ assert.equal(music.current,null);
+ assert.equal(active.paused,false);
+ tick(550);close(active.volume,.2*Math.SQRT1_2);
+ tick(550);assert.equal(active.paused,true);
+ assert.deepEqual([a.src,b.src],["",""]);
+ music.setStep(402);await flush();tick(1400);
+ assert.equal(music.current.src,"act3.mp3");
+});
 test("rapid switching cancels stale fades and leaves no overlapping tail",async()=>{
  const {music,a,b,tick}=setup();
  music.setStep(23);await flush();tick(1400);
