@@ -2,6 +2,20 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {Controller}=require('../script-controller'),data=require('../script-data'),source=require('../docs/script-source.json');
 const clean=s=>s.replace(/\([^)]*\)|\[[^\]]*\]|\{[^}]*\}/g,'').replace(/\s+/g,'').trim();
+test('spoken neighbors skip nonverbal cues and handle both ends',()=>{
+ const {spokenNeighbors}=require('../subtitle-motion');
+ const entries=data.entries;
+ assert.deepEqual(spokenNeighbors(entries,-1),{previous:null,next:null});
+ assert.deepEqual(spokenNeighbors(entries,entries.length),{previous:null,next:null});
+ const first=spokenNeighbors(entries,0);
+ assert.equal(first.previous,null);assert.equal(first.next.text,entries[1].text);
+ const reveal=entries.findIndex(e=>e.action==='reveal');
+ const aroundReveal=spokenNeighbors(entries,reveal);
+ assert.equal(aroundReveal.previous.text,entries[1].text);
+ assert.equal(aroundReveal.next.text,entries.find((e,i)=>i>reveal&&e.text).text);
+ const last=spokenNeighbors(entries,entries.length-1);
+ assert.equal(last.next,null);assert.equal(last.previous.text,'You may leave.');
+});
 test('every spoken Word paragraph is reproduced once and in order, without stage directions',()=>{
  const entries=data.entries,actual=new Map();
  for(const e of entries){assert.ok(source.paragraphs[e.paragraph]);if(e.text)actual.set(e.paragraph,(actual.get(e.paragraph)||'')+e.text);}

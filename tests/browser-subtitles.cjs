@@ -26,26 +26,9 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await page.locator('#stepsViewButton').click();
   await page.locator(`[data-script="${indexOf(83,'“Access to one\'s memory.”')}"]`).click();
   await page.waitForTimeout(100);
-  // Operator-only cue context includes preceding and upcoming spoken lines;
-  // control-only cues must never be mistaken for dialogue.
-  const selectedIndex=indexOf(83,`“Access to one's memory.”`);
-  const expectedPrev=data.entries.findLastIndex((e,i)=>i<selectedIndex&&Boolean(e.text));
-  const expectedNext=data.entries.findIndex((e,i)=>i>selectedIndex&&Boolean(e.text));
-  assert.equal(await page.locator('#scriptContext').isVisible(),true);
-  assert.equal(await page.locator('#previousSentenceText').textContent(),
-    `第 ${expectedPrev+1} 步 · ${data.entries[expectedPrev].speaker?data.entries[expectedPrev].speaker+'：':''}${data.entries[expectedPrev].text}`);
-  assert.equal(await page.locator('#nextSentenceText').textContent(),
-    `第 ${expectedNext+1} 步 · ${data.entries[expectedNext].speaker?data.entries[expectedNext].speaker+'：':''}${data.entries[expectedNext].text}`);
-  await page.locator('#nextSentenceButton').click();
-  assert.equal(await page.evaluate(()=>window.selectedScriptStartIndex),expectedNext);
-  assert.equal(await page.locator('#subtitleText').textContent(),data.entries[expectedNext].text);
-  await page.locator('#previousSentenceButton').click();
-  assert.equal(await page.evaluate(()=>window.selectedScriptStartIndex),selectedIndex);
-  await page.locator('[data-script="0"]').click();
-  assert.equal(await page.locator('#previousSentenceButton').isDisabled(),true);
-  await page.locator(`[data-script="${data.entries.length-1}"]`).click();
-  assert.equal(await page.locator('#nextSentenceButton').isDisabled(),true);
-  await page.locator(`[data-script="${selectedIndex}"]`).click();
+  // Preview never displays context before Start.
+  assert.equal(await page.locator('#subtitlePrevious').isHidden(),true);
+  assert.equal(await page.locator('#subtitleNext').isHidden(),true);
   assert.equal(await page.locator('#subtitleText').textContent(),'“Access to one\'s memory.”');
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
@@ -62,6 +45,8 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await rehearsal.locator('#startButton').click();
   assert.equal(await rehearsal.evaluate(()=>scriptShow.index),doorIndex);
   assert.equal(await rehearsal.evaluate(()=>scriptShow.entry.action),'doorOpen');
+  assert.equal(await rehearsal.locator('#subtitlePrevious').isHidden(),true);
+  assert.equal(await rehearsal.locator('#subtitleNext').isHidden(),true);
   assert.ok(await rehearsal.evaluate(()=>scriptShow.deadlines.opening>performance.now()));
   assert.equal(await rehearsal.locator('#openingAudio').evaluate(a=>a.paused),true);
   await rehearsal.waitForFunction(()=>document.querySelector('#scriptEffect-doorOpen').ended||document.querySelector('#scriptEffect-doorOpen').error);
@@ -78,6 +63,8 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.equal(await voiceRehearsal.evaluate(()=>scriptShow.index),truthIndex);
   await voiceRehearsal.waitForFunction(()=>scriptShow.active?.group==='revealTruth'&&scriptShow.active?.state==='playing');
   assert.equal(await voiceRehearsal.locator('#revealTruthAudio').evaluate(a=>a.paused),false);
+  assert.equal(await voiceRehearsal.locator('#subtitlePrevious').isVisible(),true);
+  assert.equal(await voiceRehearsal.locator('#subtitleNext').isVisible(),true);
   assert.equal(await voiceRehearsal.locator('#selectionPromptAudio').evaluate(a=>a.paused),true);
   await voiceRehearsal.close();
   // Clearing the selection explicitly restores starting at the first cue.
@@ -86,6 +73,11 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.equal(await page.evaluate(()=>window.selectedScriptStartIndex),null);
   await page.locator('#startButton').press('f');await page.waitForFunction(()=>scriptShow.started);
   assert.equal(await page.evaluate(()=>scriptShow.index),0);assert.equal(await page.locator('button:visible').count(),0);
+  assert.equal(await page.locator('#subtitlePrevious').isHidden(),true);
+  const firstNext=data.entries.find((e,i)=>i>0&&e.text);
+  assert.equal(await page.locator('#subtitleNext').textContent(),
+    (firstNext.speaker?firstNext.speaker+': ':'')+firstNext.text);
+  assert.equal(await page.locator('#subtitleNext').isVisible(),true);
   assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),'showShell');
   const canvasIsBlack=()=>page.locator('#visualizer').evaluate(canvas=>{
     const pixels=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
@@ -117,6 +109,20 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   for(let i=1;i<=firstVoice;i++){
    if(i===1)await page.locator('#visualizer').click();else await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i);
    assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);
+   if(data.entries[i].paragraph===22){
+    const prev=data.entries[0];
+    const next=data.entries.find((e,j)=>j>i&&e.text);
+    assert.equal(await page.locator('#subtitlePrevious').textContent(),
+      (prev.speaker?prev.speaker+': ':'')+prev.text);
+    assert.equal(await page.locator('#subtitleNext').textContent(),
+      (next.speaker?next.speaker+': ':'')+next.text);
+    assert.equal(await page.locator('#subtitlePrevious').isVisible(),true);
+    assert.equal(await page.locator('#subtitleNext').isVisible(),true);
+   }
+   if(data.entries[i].action==='reveal'){
+    assert.equal(await page.locator('#subtitlePrevious').isHidden(),true);
+    assert.equal(await page.locator('#subtitleNext').isHidden(),true);
+   }
    if(data.entries[i].paragraph<23){
     assert.equal(await canvasIsBlack(),true,'Black room must not show a dim background in steps 1-3');
     assert.equal(await page.locator('#actOneBgm').getAttribute('src'),null);
@@ -189,6 +195,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     // Validate successful complete playback without assuming its duration.
    }
    if(to.text==='You may leave.') {
+    assert.equal(await page.locator('#subtitleNext').isHidden(),true);
     assert.equal(data.entries[i+1]?.action,'end-blackout','Next operator input must go straight to black');
     // Natural completion of the last AI recording must not brighten the room.
     await page.evaluate(()=>{

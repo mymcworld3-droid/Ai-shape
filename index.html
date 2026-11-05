@@ -16,7 +16,11 @@
   <div id="projectionViewport">
     <div id="visualizerWrap" tabindex="-1">
       <canvas id="visualizer" aria-label="16:9 劇場投影；開始後空白鍵、右鍵或點一下換下一句，左鍵上一句"></canvas>
-      <div id="subtitles" aria-live="off" hidden><div id="subtitleSpeaker"></div><div id="subtitleText"></div></div>
+      <div id="subtitleStack" aria-label="播放字幕及前後句">
+        <div id="subtitlePrevious" class="subtitle-neighbor" aria-hidden="true" hidden></div>
+        <div id="subtitles" aria-live="off" hidden><div id="subtitleSpeaker"></div><div id="subtitleText"></div></div>
+        <div id="subtitleNext" class="subtitle-neighbor" aria-hidden="true" hidden></div>
+      </div>
       <video id="roomRevealVideo" preload="auto" muted playsinline disablepictureinpicture aria-hidden="true" tabindex="-1"></video>
       <audio id="openingAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
       <audio id="actOneBgm" preload="none" aria-hidden="true" tabindex="-1"></audio>
@@ -35,17 +39,6 @@
 其他 100%</output>
   <aside id="stepsPanel" aria-label="演出步驟檢視" hidden>
     <header><h1>演出步驟<span>25</span></h1><p>點選預覽，不播放影音</p>
-      <section id="scriptContext" class="script-context" aria-label="當前步驟前後句" hidden>
-        <button type="button" id="previousSentenceButton" class="context-neighbor" aria-label="選擇上一句">
-          <span class="context-label">上一句</span><span id="previousSentenceText" class="context-line"></span>
-        </button>
-        <div class="context-current" aria-current="step">
-          <span class="context-label">目前選取</span><span id="currentSentenceText" class="context-line"></span>
-        </div>
-        <button type="button" id="nextSentenceButton" class="context-neighbor" aria-label="選擇下一句">
-          <span class="context-label">下一句</span><span id="nextSentenceText" class="context-line"></span>
-        </button>
-      </section>
     </header>
     <ol id="stepList">
       <li><button type="button" data-preview="bright" aria-pressed="true"><span class="step-number">01</span><span>暗 → 亮<small>影片播完，接回原本房間</small></span></button></li>

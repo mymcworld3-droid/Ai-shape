@@ -1,6 +1,18 @@
 'use strict';
 if(scriptMode){
  const subtitleRenderer=new SubtitleMotion.Renderer({element:document.getElementById('subtitles')});
+ const subtitlePrevious=document.getElementById('subtitlePrevious');
+ const subtitleNext=document.getElementById('subtitleNext');
+ const renderAdjacentLines=entry=>{
+  // Only active spoken cues show previous/next; no spoilers on preview or blackout.
+  const visible=startGate.started&&Boolean(entry?.text?.trim());
+  const pair=visible?SubtitleMotion.spokenNeighbors(SHOW_SCRIPT.entries,transcript.index):
+   {previous:null,next:null};
+  for(const [node,neighbor] of [[subtitlePrevious,pair.previous],[subtitleNext,pair.next]]){
+   node.hidden=!neighbor;
+   node.textContent=neighbor?(neighbor.speaker?neighbor.speaker+': ':'')+neighbor.text:'';
+  }
+ };
  const voices={opening:audioElement,memory:memoryAudio,...selectionAudio};
  for(const name of ['complete','revealTruth']){
   const media=document.createElement('audio');media.id=name+'Audio';media.preload='auto';media.hidden=true;
@@ -51,6 +63,7 @@ if(scriptMode){
   const duration=direction<=0||!startGate.started||transcript?.index===0||['opening-dark','end-blackout'].includes(entry.action)?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
   for(const name of Object.keys(transitions))animate(name,values[name]||0,duration);
   subtitleRenderer.render(entry);
+  renderAdjacentLines(entry);
   if(entry.action==='selection-flash'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
  };
  transcript=new ScriptShow.Controller({entries:SHOW_SCRIPT.entries,voices,effects,video:revealVideo,
@@ -74,5 +87,6 @@ if(scriptMode){
    flash:Math.max(0,(flashUntil-performance.now())/280)};
  };
  window.previewScriptEntry=index=>{if(startGate.started)return;previewEntry=SHOW_SCRIPT.entries[index]||null;
-  if(previewEntry)applyEntry(previewEntry,0);else subtitleRenderer.render(null);};
+  if(previewEntry)applyEntry(previewEntry,0);
+  else{subtitleRenderer.render(null);renderAdjacentLines(null);} };
 }
