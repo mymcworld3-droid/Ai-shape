@@ -32,14 +32,18 @@ if(scriptMode){
  const cornerStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p389-0');
  const backgroundStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p407-0');
  const backgroundEnd=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p408-0');
- if(cornerStart<0||backgroundStart<0||backgroundEnd<0)
+ const finalShapeStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p409-0');
+ const finalShapeEnd=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p414-4');
+ if([cornerStart,backgroundStart,backgroundEnd,finalShapeStart,finalShapeEnd].some(i=>i<0))
   throw Error('Voting cue boundaries unavailable');
  const votingState=entry=>{
   const index=SHOW_SCRIPT.entries.indexOf(entry);
   // Stages 380–381 are the background-only reveal; after 381, return to black.
   const backgroundOnly=index>=backgroundStart&&index<=backgroundEnd;
+  const finalShape=index>=finalShapeStart&&index<=finalShapeEnd;
   return {hideBackground:index>=cornerStart&&!backgroundOnly,
-   backgroundOnly,corner:index>=cornerStart&&index<backgroundStart&&entry.action!=='blackout'};
+   backgroundOnly,finalShape,
+   corner:index>=cornerStart&&index<backgroundStart&&entry.action!=='blackout'};
  };
  const applyEntry=(entry,direction=1)=>{
   if(!entry)return;
@@ -66,8 +70,14 @@ if(scriptMode){
   values.voteCorner=voteState.corner?1:0;
   if(voteState.corner){values.ai=1;values.clock=1;values.aiExpansion=1;}
   if(voteState.backgroundOnly){
-   // Suppress all visual graphics while allowing the actor subtitle to remain.
+   // The memory room appears alone in steps 380–381.
    values.ai=0;values.clock=0;values.card=0;values.vote=0;values.aiExpansion=0;
+  }
+  if(voteState.finalShape){
+   // From 382 through 392, keep the full AI artwork alive even on actor
+   // dialogue and after either AI recording naturally finishes.
+   values.ai=1;values.aiExpansion=1;
+   values.clock=0;values.card=0;values.vote=0;values.voteCorner=0;
   }
   const duration=direction<=0||!startGate.started||transcript?.index===0||['opening-dark','end-blackout'].includes(entry.action)?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
   for(const name of Object.keys(transitions))animate(name,values[name]||0,duration);
@@ -94,6 +104,7 @@ if(scriptMode){
   return {...entry.look,voiceGroup:entry.group,preview:!startGate.started,caption:null,script:true,
    hideBackground:votingState(entry).hideBackground,
    backgroundOnly:votingState(entry).backgroundOnly,
+   finalShape:votingState(entry).finalShape,
    ...Object.fromEntries(Object.entries(transitions).map(([name,t])=>[name,t.value])),
    flash:Math.max(0,(flashUntil-performance.now())/280)};
  };

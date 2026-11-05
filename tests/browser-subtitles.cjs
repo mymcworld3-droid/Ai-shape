@@ -230,10 +230,25 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
       return pixel[0]===0&&pixel[1]===0&&pixel[2]===0;
     }),true,'Room background must be entirely removed, not merely dimmed');
    }
-   if(i===fourthActStart+1){
-    assert.equal(await page.evaluate(()=>scriptProjectionFrame().hideBackground),true,
-      'Step 382 returns to the black background');
-    assert.equal(await page.evaluate(()=>scriptProjectionFrame().backgroundOnly),false);
+   if(i>=fourthActStart+1&&i<=data.entries.findIndex(e=>e.id==='p414-4')){
+    const f=await page.evaluate(()=>scriptProjectionFrame());
+    assert.equal(f.hideBackground,true,'Steps 382–392 retain black background');
+    assert.equal(f.backgroundOnly,false,'Room-only scene ended after step 381');
+    assert.equal(f.finalShape,true,'The final AI must persist in steps 382–392');
+    for(const key of ['ai','aiExpansion']){
+     assert.equal(await page.evaluate(name=>transitions[name].target,key),1,
+       'AI shape must remain visible at paragraph '+to.paragraph+': '+key);
+    }
+    assert.equal(await page.evaluate(()=>transitions.clock.target),0);
+    // Rendering fades only on the first appearance; never out across actor
+    // lines or recording-end callbacks, including the final spoken sentence.
+    await page.waitForTimeout(680);
+    const pose=await page.evaluate(()=>({
+     graphic:scriptProjectionFrame().ai,expanded:scriptProjectionFrame().aiExpansion,
+     clock:scriptProjectionFrame().clock
+    }));
+    assert.ok(pose.graphic>.98&&pose.expanded>.98&&pose.clock<.02,
+      'AI remains fully visible across steps 382–392');
    }
    if(to.text==='You may leave.') {
     assert.equal(data.entries[i+1]?.action,'end-blackout','Next operator input must go straight to black');
@@ -248,6 +263,8 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     assert.equal(await page.evaluate(()=>transitions.aiExpansion.target),1);
    }
    if(to.action==='end-blackout') {
+    assert.equal(await page.evaluate(()=>scriptProjectionFrame().finalShape),false,
+      'Final blackout terminates the persistent AI after step 392');
     assert.equal(await page.evaluate(()=>transitions.blackout.target),1);
     assert.equal(await page.evaluate(()=>transitions.blackout.duration),0,'Final blackout must be an instant cut');
    }
