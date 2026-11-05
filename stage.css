@@ -26,6 +26,16 @@ body[data-view=steps]:not([data-started=true]) #showShell{grid-template-columns:
 #stepsPanel h1{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 10px;font-size:21px;font-weight:500;letter-spacing:.04em}
 #stepsPanel h1 span{color:#616d7b;font-size:13px;letter-spacing:.15em;font-variant-numeric:tabular-nums}
 #stepsPanel header p{margin:0 0 20px;color:#7e8a98;font-size:12px}
+#scriptContext{display:grid;gap:5px;margin:12px 0;padding:10px;border:1px solid #ffffff1c;border-radius:12px;background:#141a2190}
+#scriptContext[hidden]{display:none}
+#scriptContext .context-label{display:block;font-size:11px;letter-spacing:.05em;color:#8592a2;margin-bottom:3px}
+#scriptContext .context-line{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;font-size:12px;line-height:1.4}
+#scriptContext .context-neighbor,#scriptContext .context-current{width:100%;padding:8px 10px;border-radius:8px;text-align:left;color:#aebbc9}
+#scriptContext .context-neighbor{border:1px solid transparent;background:#ffffff05;cursor:pointer}
+#scriptContext .context-neighbor:hover:not(:disabled){background:#ffffff14;border-color:#ffffff1e;color:#fff}
+#scriptContext .context-neighbor:disabled{opacity:.4;cursor:default}
+#scriptContext .context-current{border:1px solid #c5d7ea33;background:#edf4ff12;color:#f3f8ff}
+#scriptContext .context-current .context-label{color:#a9c7e8}
 #stepList{list-style:none;overflow:auto;margin:0;padding:0 4px 0 0;scrollbar-width:thin;scrollbar-color:#4b5563 transparent}
 #stepList li+li{margin-top:5px}
 #stepList .scene-divider{margin-top:20px;padding:12px 12px 8px;border-top:1px solid #ffffff18;color:#8797a9;font-size:12px;letter-spacing:.06em}

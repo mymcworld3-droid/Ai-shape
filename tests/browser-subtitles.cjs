@@ -26,6 +26,26 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await page.locator('#stepsViewButton').click();
   await page.locator(`[data-script="${indexOf(83,'“Access to one\'s memory.”')}"]`).click();
   await page.waitForTimeout(100);
+  // Operator-only cue context includes preceding and upcoming spoken lines;
+  // control-only cues must never be mistaken for dialogue.
+  const selectedIndex=indexOf(83,'“Access to one\\'s memory.”');
+  const expectedPrev=data.entries.findLastIndex((e,i)=>i<selectedIndex&&Boolean(e.text));
+  const expectedNext=data.entries.findIndex((e,i)=>i>selectedIndex&&Boolean(e.text));
+  assert.equal(await page.locator('#scriptContext').isVisible(),true);
+  assert.equal(await page.locator('#previousSentenceText').textContent(),
+    `第 ${expectedPrev+1} 步 · ${data.entries[expectedPrev].speaker?data.entries[expectedPrev].speaker+'：':''}${data.entries[expectedPrev].text}`);
+  assert.equal(await page.locator('#nextSentenceText').textContent(),
+    `第 ${expectedNext+1} 步 · ${data.entries[expectedNext].speaker?data.entries[expectedNext].speaker+'：':''}${data.entries[expectedNext].text}`);
+  await page.locator('#nextSentenceButton').click();
+  assert.equal(await page.evaluate(()=>window.selectedScriptStartIndex),expectedNext);
+  assert.equal(await page.locator('#subtitleText').textContent(),data.entries[expectedNext].text);
+  await page.locator('#previousSentenceButton').click();
+  assert.equal(await page.evaluate(()=>window.selectedScriptStartIndex),selectedIndex);
+  await page.locator('[data-script="0"]').click();
+  assert.equal(await page.locator('#previousSentenceButton').isDisabled(),true);
+  await page.locator(`[data-script="${data.entries.length-1}"]`).click();
+  assert.equal(await page.locator('#nextSentenceButton').isDisabled(),true);
+  await page.locator(`[data-script="${selectedIndex}"]`).click();
   assert.equal(await page.locator('#subtitleText').textContent(),'“Access to one\'s memory.”');
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);

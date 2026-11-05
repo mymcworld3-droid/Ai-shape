@@ -22,22 +22,52 @@ modeButton.textContent=scriptMode?'場景模式':'逐句字幕';
 modeButton.addEventListener('click',()=>{if(startGate.started)return;location.search=scriptMode?'?mode=cues':'';});
 let selectedScript=null;
 window.selectedScriptStartIndex=null;
-for(const button of document.querySelectorAll('[data-script]'))button.addEventListener('click',()=>{
- if(startGate.started)return;
- selectedScript=Number(button.dataset.script);
+const scriptContext=document.getElementById('scriptContext');
+const previousSentenceButton=document.getElementById('previousSentenceButton');
+const nextSentenceButton=document.getElementById('nextSentenceButton');
+const previousSentenceText=document.getElementById('previousSentenceText');
+const currentSentenceText=document.getElementById('currentSentenceText');
+const nextSentenceText=document.getElementById('nextSentenceText');
+const sentenceButtons=Array.from(document.querySelectorAll('[data-script]'));
+function neighboringSentence(from,direction){
+ if(!scriptMode||from===null)return -1;
+ for(let i=from+direction;i>=0&&i<SHOW_SCRIPT.entries.length;i+=direction)
+  if(SHOW_SCRIPT.entries[i].text?.trim())return i;
+ return -1;
+}
+function sentenceLabel(index){
+ if(index<0)return '（沒有更多台詞）';
+ const e=SHOW_SCRIPT.entries[index];
+ return `第 ${index+1} 步 · ${e.speaker?e.speaker+'：':''}${e.text||e.note||e.action||'（空白）'}`;
+}
+function updateSentenceContext(){
+ if(!scriptMode)return;
+ scriptContext.hidden=selectedScript===null;
+ if(selectedScript===null)return;
+ const prev=neighboringSentence(selectedScript,-1),next=neighboringSentence(selectedScript,1);
+ previousSentenceButton.disabled=prev<0;previousSentenceButton.dataset.target=String(prev);
+ nextSentenceButton.disabled=next<0;nextSentenceButton.dataset.target=String(next);
+ previousSentenceText.textContent=sentenceLabel(prev);
+ currentSentenceText.textContent=sentenceLabel(selectedScript);
+ nextSentenceText.textContent=sentenceLabel(next);
+}
+function selectScriptStep(index){
+ if(startGate.started||!scriptMode)return;
+ selectedScript=Number.isInteger(index)&&index>=0&&index<SHOW_SCRIPT.entries.length?index:null;
  window.selectedScriptStartIndex=selectedScript;
- for(const other of document.querySelectorAll('[data-script]'))other.setAttribute('aria-pressed',String(other===button));
+ for(const button of sentenceButtons)
+  button.setAttribute('aria-pressed',String(Number(button.dataset.script)===selectedScript));
  window.previewScriptEntry(selectedScript);
+ updateSentenceContext();
  updateStartButton();
+ if(selectedScript!==null&&document.body.dataset.view==='steps')
+  sentenceButtons[selectedScript]?.scrollIntoView({block:'nearest'});
+}
+for(const button of sentenceButtons)button.addEventListener('click',()=>selectScriptStep(Number(button.dataset.script)));
+for(const button of [previousSentenceButton,nextSentenceButton])button.addEventListener('click',()=>{
+ if(!button.disabled)selectScriptStep(Number(button.dataset.target));
 });
-resetStartStep.addEventListener('click',()=>{
- if(startGate.started)return;
- selectedScript=null;
- window.selectedScriptStartIndex=null;
- for(const button of document.querySelectorAll('[data-script]'))button.setAttribute('aria-pressed','false');
- window.previewScriptEntry(null);
- updateStartButton();
-});
+resetStartStep.addEventListener('click',()=>selectScriptStep(null));
 const stepButtons=Array.from(document.querySelectorAll("[data-preview]"));
 let selectedPreview="bright";
 

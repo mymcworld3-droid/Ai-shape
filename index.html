@@ -34,7 +34,19 @@
   <output id="volumeDisplay" aria-label="語音與其他音量" aria-live="off">語音 100%
 其他 100%</output>
   <aside id="stepsPanel" aria-label="演出步驟檢視" hidden>
-    <header><h1>演出步驟<span>25</span></h1><p>點選預覽，不播放影音</p></header>
+    <header><h1>演出步驟<span>25</span></h1><p>點選預覽，不播放影音</p>
+      <section id="scriptContext" class="script-context" aria-label="當前步驟前後句" hidden>
+        <button type="button" id="previousSentenceButton" class="context-neighbor" aria-label="選擇上一句">
+          <span class="context-label">上一句</span><span id="previousSentenceText" class="context-line"></span>
+        </button>
+        <div class="context-current" aria-current="step">
+          <span class="context-label">目前選取</span><span id="currentSentenceText" class="context-line"></span>
+        </div>
+        <button type="button" id="nextSentenceButton" class="context-neighbor" aria-label="選擇下一句">
+          <span class="context-label">下一句</span><span id="nextSentenceText" class="context-line"></span>
+        </button>
+      </section>
+    </header>
     <ol id="stepList">
       <li><button type="button" data-preview="bright" aria-pressed="true"><span class="step-number">01</span><span>暗 → 亮<small>影片播完，接回原本房間</small></span></button></li>
       <li><button type="button" data-preview="ai" aria-pressed="false"><span class="step-number">02</span><span>AI 漸顯<small>電視正中央 · 填滿內框</small></span></button></li>
