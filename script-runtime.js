@@ -15,7 +15,7 @@ if(scriptMode){
   const media=document.createElement('audio');media.id='scriptEffect-'+name;media.hidden=true;media.preload='auto';visualizerWrap.append(media);
   if(path){media.src=path;media.load();effects[name]=media;}
  }
- // The Act I soundtrack follows manual subtitle cues. Two hidden elements
+ // The Act I soundtrack follows fixed manuscript paragraphs, not mutable cue numbers. Two hidden elements
  // overlap for 1.4s only while crossfading; the second is not an extra song.
  const actOneMusic=new ActOneMusic.Controller({
   audio:document.getElementById('actOneBgm'),
@@ -56,7 +56,7 @@ if(scriptMode){
  transcript=new ScriptShow.Controller({entries:SHOW_SCRIPT.entries,voices,effects,video:revealVideo,
   onEntry(entry,{direction,index}){
    document.body.dataset.musicError='false';
-   actOneMusic.setStep(index+1);
+   actOneMusic.setStep(entry.paragraph);
    applyEntry(entry,direction);
   },
   onVoice(group,state){document.body.dataset.scriptVoice=group+':'+state;
