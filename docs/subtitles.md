@@ -2,13 +2,13 @@
 
 預設為逐句字幕模式。按 F 或開始後，空白鍵、→、單擊／單次觸碰各前進一個步驟；← 回上一個步驟。1／Q 調整語音、2／W 調整背景音樂與音效，O 顯示／隱藏音量。開始後所有控制按鈕隱藏，字幕固定在 16:9 投影內下方。
 
-依使用者上傳的 `Power playyyy.docx`，目前共 **374 句英文字幕、416 個手動步驟**，涵蓋四幕。每句手動換，不以語音秒數或字幕長度自動跳句。純舞台動作不印成字幕；停頓、全暗及重要影音切換保留空白字幕步驟，操作員可在開始前的步驟檢視讀到原舞台指示。
+依使用者上傳的 `Power playyyy.docx`，目前共 **374 句英文字幕、395 個手動步驟**，涵蓋四幕。每句手動換，不以語音秒數或字幕長度自動跳句。純舞台動作不印成字幕；只有全暗、實際影音與必要畫面切換保留獨立步驟。純追光、停頓與演員出場不再占用操作步驟，原舞台指示仍保存在劇本來源內。
 
 字幕除了刪除原稿第 64 段 Christopher 的 `It's empty.` 外，沿用原文，包括大小寫、用字與標點，未替劇本校正文法。角色名與動作分離；跨段續說繼承角色。第 88 段開門後的「AH!」在原稿沒有標明說話者，因此投影只顯示 AH!，不自行指定角色。卡片本身保留使用者指定的 `Access to One’s Memory`；Ethan 讀卡的字幕保留原稿 `“Access to one's memory.”`。
 
 ## 開場黑幕與無聲確認（2026-11-04）
 
-預設逐句字幕模式在開始前完全純黑、無音訊。按下「開始」後，**步驟 1–3 都維持純黑且背景音樂不得播放**（角色台詞仍有字幕）；只在**步驟 4 的原稿第 23 段 [full] 房間亮起**時開始播放 `1-14.mp3`，之後依原配樂範圍切換。使用左鍵回到步驟 1–3 時也必須停止音樂，避免倒帶留下配樂；初始 25-cue 場景模式亦以純黑作為尚未開始的畫面。
+預設逐句字幕模式在開始前完全純黑、無音訊。按下「開始」後，**步驟 1–2 都維持純黑且背景音樂不得播放**（角色台詞仍有字幕）；只在**步驟 3 的原稿第 23 段 [full] 房間亮起**時開始播放 `1-14.mp3`，之後依原配樂範圍切換。使用左鍵回到步驟 1–2 時也必須停止音樂，避免倒帶留下配樂；初始 25-cue 場景模式亦以純黑作為尚未開始的畫面。
 
 ## 操作與影音
 
@@ -16,8 +16,8 @@
 - 歡迎語音首句啟動原 M4A，字幕可在播放中逐句前進。走到 `You have 15 minutes.` 時切成碼錶；語音期間維持 15:00，真正播完才開始倒數並縮回。
 - AI 語音播完不會自動換字幕。到最後一句仍在播放時，前進按鍵忽略、不排隊；播完再按才進下一位演員台詞。
 - ← 暫停影音並回上一句／動作；不重播音效，也不重設兩個倒數期限。仍留在同一段 AI 配音時，下一次前進會從暫停位置繼續；返回配音首句之前，再重新走入首句才從頭播放。字幕倒退不對錄音做逐句定位。
-- 尚未提供的 AI 配音以手動字幕完成，缺檔不造成卡住、假播放或自動跳步。選擇提示未配音時，在讀完提示、前進至下一句時開始獨立一分鐘。
-- 第四幕接回記憶房間慢慢亮起，保留兩名守衛進場與第 413 段的沉默；兩段 AI 配音預留欄位。最後一句 `You may leave.` 後，下一次操作立即切成純黑，不再插入沉默或重新亮起。
+- 第三幕四段、第四幕兩段 AI 配音現已全部接入。若將來有缺檔，仍會保留可手動操作的字幕與錯誤提示；選擇提示的一分鐘從該段 AI 語音真正播完後開始。
+- 第四幕接回記憶房間慢慢亮起；守衛進場和第 413 段沉默仍依劇本演出，但不必按額外一步。兩段 AI 配音已接入。最後一句 `You may leave.` 後，下一次操作立即切成純黑，不再插入沉默或重新亮起。
 - 原本 25 步的場景操作模式可在開始前按「場景模式」切換，也可用 `?mode=cues` 開啟；該模式沒有逐句字幕。
 
 ## 背景與聲音對照
@@ -41,7 +41,7 @@
 | 389–395 | Christopher 投 Ethan 一票；Megan 投 Ethan 第二票；各自 AI 確認 |
 | 400–403 | Rachel? → 沒有回答 → 最後選擇提示 → 全暗 |
 | 405–409 | 守衛進場 → 慢慢亮起 → Ethan 台詞 → 測試完成提示 |
-| 413–416 | 沉默 → 沒有機器人的揭露 → `You may leave.` → 直接純黑（跳過原第 415 段停頓） |
+| 413–416 | 演員依劇本沉默（不佔一步） → AI 揭露 → `You may leave.` → 直接純黑 |
 
 ## 音效位置與對應檔名
 
@@ -57,18 +57,24 @@
 
 第一幕配樂檔名配合台詞編號更新為 `1-14.mp3`、`15-91.mp3`、`91-92(轉場).mp3`、`92-174.mp3`、`174-175(轉場).mp3`。舊的 `.mp3_` 副檔名已修正。所有原音檔只重新命名，不轉碼。
 
-## 另缺的六段 AI 配音
+## 已接入的六段 AI 配音（2026-11-05）
 
-| 建議檔名 | 設定欄位 | 原稿台詞 |
+| 上傳音檔（位於 `assets/audio/`） | 設定欄位 | 原稿 AI 台詞段落 |
 | --- | --- | --- |
-| `selection-prompt.m4a` | `voting.prompt` | Please make your selection.One by one, state the name of the person you believe to be the robot. 1 minute remaining. |
-| `selection-one.m4a` | `voting.one` | Subject Ethan. One vote. |
-| `selection-two.m4a` | `voting.two` | Subject Ethan. Two votes. |
-| `selection-final.m4a` | `voting.final` | Please make your final selection. |
-| `test-complete.m4a` | `ending.complete` | HUMAN VERIFICATION TEST NUMBER #67 complete. Please proceed to the exit. The next test will begin in 5 minutes. |
-| `test-truth.m4a` | `ending.revealTruth` | There is no robot in the room.This test does not measure artificial intelligence.It measures how quickly human beings choose to sacrifice one another under pressure.Test completed. You may leave. |
+| `387-389ai.m4a` | `voting.prompt` | 第 388 段：請大家選擇機器人／剩餘一分鐘 |
+| `391-392ai.m4a` | `voting.one` | 第 390 段：Subject Ethan. One vote. |
+| `395-396ai.m4a` | `voting.two` | 第 395 段：Subject Ethan. Two votes. |
+| `399ai.m4a` | `voting.final` | 第 402 段：Please make your final selection. |
+| `404-406ai.m4a` | `ending.complete` | 第 409 段：測試完成，請前往出口 |
+| `411-415ai.m4a` | `ending.revealTruth` | 第 414 段：沒有機器人、測試真相、You may leave. |
 
-以上皆建議放入 `assets/audio/`。開場 `ai-opening.m4a` 與記憶室 `Memory-room.m4a` 沿用現有檔案，未修改內容，也未做新的逐字語音辨識。
+以上對應是依**音檔命名順序與劇本的六段 AI 語音出場順序**設定，原音訊未被重新剪輯、轉碼或語音辨識。第一幕 `ai-opening.m4a` 與記憶室 `Memory-room.m4a` 仍沿用原檔。
+
+## 刪除無操作意義的步驟
+
+原稿中的 `[middle spot light]` 與其他純追光燈光提示、`(silence)`/`(pause)` 以及「Two masked guards enter.」都不再生成獨立字幕操作步驟，總數由 416 減至 **395**，台詞仍為 **374 句**。影響投影亮度或場景的提示不會丟失：投影狀態沿用到**下一句實際字幕**。真正要手動觸發的開場影片、黑屏、音效、卡片和場景切換繼續保留操作點。
+
+第一幕配樂依**原稿段落**（23、30、99、104、179、186）切換，不再按照被刪除後會重新編號的字幕步數。新的第三、四幕 AI 語音也一樣依對應劇本段落啟動，而非檔名數字剛好等於新的字幕步數。
 
 ## 核對方式
 
