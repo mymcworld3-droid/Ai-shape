@@ -14,6 +14,10 @@ window.OPENING_CONFIG = Object.freeze({
     Object.freeze({ from: 99, to: 103, src: "assets/audio/background/act-1/91-92(轉場).mp3", loop: false }),
     Object.freeze({ from: 104, to: 178, src: "assets/audio/background/act-1/92-174.mp3" }),
     Object.freeze({ from: 179, to: 184, src: "assets/audio/background/act-1/174-175(轉場).mp3", loop: false }),
+    // Act II: recollection introduction, office scene, then Christopher's reflection.
+    Object.freeze({ from: 185, to: 194, src: "assets/audio/background/act-2/175-180.mp3" }),
+    Object.freeze({ from: 195, to: 268, src: "assets/audio/background/act-2/181-263.mp3" }),
+    Object.freeze({ from: 269, to: 283, src: "assets/audio/background/act-2/264-277.mp3" }),
     Object.freeze({ from: 290, to: 402, src: "assets/audio/background/act-3/Act3.mp3" }),
     Object.freeze({ from: 407, to: 415, src: "assets/audio/background/act-4/Act4.m4a" })
   ]),
