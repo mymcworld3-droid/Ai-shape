@@ -488,7 +488,7 @@ async function fastVoting(page){
     }
     await page.setViewportSize({width:1280,height:720});await page.waitForTimeout(1200);
     await cue(page,'office-light');await matchesStill(page,'assets/backgrounds/office-memory.png');
-    assert.equal(await page.locator('#officeBangAudio').getAttribute('src'),'assets/audio/effects/office-bang.wav');
+    assert.equal(await page.locator('#officeBangAudio').getAttribute('src'),'assets/audio/door-kick.wav');
     await flag(page,'officeBangAvailable','true');
     await page.screenshot({path:path.join(output,'16-office-light.png')});
     await page.keyboard.press('Space');await cue(page,'office-bang');await flag(page,'officeBangState','finished');
@@ -931,7 +931,7 @@ async function fastVoting(page){
 
     const officeMedia=await browser.newPage();
     await officeMedia.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:
-      fs.readFileSync(path.join(root,'opening-config.js'),'utf8').replace('bang: "assets/audio/effects/office-bang.wav"','bang: "test-fixtures/memory-welcome.wav"')}));
+      fs.readFileSync(path.join(root,'opening-config.js'),'utf8').replace('bang: "assets/audio/door-kick.wav"','bang: "test-fixtures/memory-welcome.wav"')}));
     await officeMedia.addInitScript(()=>{
       const play=HTMLMediaElement.prototype.play;let blocked=true;
       HTMLMediaElement.prototype.play=function(){

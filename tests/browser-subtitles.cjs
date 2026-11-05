@@ -111,10 +111,10 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     }
    }
    const expectedEffects={
-    doorOpen:['scriptEffect-doorOpen','assets/audio/effects/door-open.mp3'],
+    doorOpen:['scriptEffect-doorOpen','assets/audio/effects/heavy-auto-door.wav'],
     timerClick:['scriptEffect-timerClick','assets/audio/effects/timer-click.wav'],
     memoryClick:['scriptEffect-memoryClick','assets/audio/effects/light-click.wav'],
-    officeBang:['scriptEffect-officeBang','assets/audio/effects/office-bang.wav']
+    officeBang:['scriptEffect-officeBang','assets/audio/door-kick.wav']
    };
    if(expectedEffects[to.action]){
     const [id,src]=expectedEffects[to.action];

@@ -48,12 +48,12 @@
 | 音效 | 專案檔案 | 設定欄位 | 劇本位置 |
 | --- | --- | --- | --- |
 | 時鐘 click | `assets/audio/effects/timer-click.wav` | `scriptEffects.timerClick` | 第 46 段 `{timer clicks}` |
-| 左門開啟聲 | `assets/audio/effects/door-open.mp3` | `scriptEffects.doorOpen` | 第 87 段 `{click}` |
+| 沉重自動門開啟聲 | `assets/audio/effects/heavy-auto-door.wav` | `scriptEffects.doorOpen` | 第 87 段 `{click}` |
 | 記憶室 click | `assets/audio/effects/light-click.wav` | `memory.lightClick` | 第 110 段 `{click sound}`，獨立空白 cue |
-| 辦公室 BANG | `assets/audio/effects/office-bang.wav` | `office.bang` | 第 213 段 Ben 進場前 |
+| 辦公室 BANG（沿用踢門聲） | `assets/audio/door-kick.wav` | `office.bang` | 第 213 段 Ben 進場前 |
 | 按鈕拍擊（待補、選用） | `assets/audio/selection-button.wav` | `scriptEffects.selectionButton` | 第 385 段 |
 
-時鐘、記憶室短 click 是新增的 0.18 秒提示音。原本 `開門聲.mp3` 更名並移至 effects，內容未變；辦公室 BANG 暫用與開場踢門相同的 WAV 內容，以不同播放元素和時機觸發。已有正式聲音時，可以直接換成真正的 BANG 音檔。
+時鐘、記憶室短 click 是新增的 0.18 秒提示音。第 87 段開門聲改成新製作的約 3 秒沉重自動門 WAV：先有門鎖解鎖的金屬聲，再由低頻馬達推動厚重門板沿軌道滑動，最後緩緩停住。原有的 `door-open.mp3` 保留但不再播放。第 213 段辦公室 BANG 則直接引用原本的 `assets/audio/door-kick.wav`，不另用替代檔；兩個播放元素仍各自獨立控制。
 
 第一幕配樂檔名配合台詞編號更新為 `1-14.mp3`、`15-91.mp3`、`91-92(轉場).mp3`、`92-174.mp3`、`174-175(轉場).mp3`。舊的 `.mp3_` 副檔名已修正。所有原音檔只重新命名，不轉碼。
 

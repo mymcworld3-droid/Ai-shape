@@ -30,8 +30,8 @@ window.OPENING_CONFIG = Object.freeze({
   }),
   office: Object.freeze({
     background: "assets/backgrounds/office-memory.png",
-    // Act II, Scene II: BANG before Ben enters; temporary reusable impact sound.
-    bang: "assets/audio/effects/office-bang.wav",
+    // Act II, Scene II: BANG explicitly reuses the original door-kick impact WAV.
+    bang: "assets/audio/door-kick.wav",
     fadeMs: 1000,
     introDim: 0.35
   }),
@@ -51,7 +51,7 @@ window.OPENING_CONFIG = Object.freeze({
     complete: "assets/audio/404-406ai.m4a",
     revealTruth: "assets/audio/411-415ai.m4a"
   }),
-  scriptEffects: Object.freeze({doorOpen: "assets/audio/effects/door-open.mp3", timerClick: "assets/audio/effects/timer-click.wav", selectionButton: null}),
+  scriptEffects: Object.freeze({doorOpen: "assets/audio/effects/heavy-auto-door.wav", timerClick: "assets/audio/effects/timer-click.wav", selectionButton: null}),
   countdownMs: 15 * 60 * 1000,
   // Black display interior in IMG_0165.png's source pixels; excludes its bezel.
   roomScreen: Object.freeze({ x: 552, y: 310, width: 430, height: 195, inset: 2 }),

@@ -36,9 +36,9 @@
 | 179–184 | `assets/audio/background/act-1/174-175(轉場).mp3` |
 | 第 186 段起 | 第一幕配樂漸弱結束 |
 
-重要音效對應：第 46 段時鐘 click ➝ `assets/audio/effects/timer-click.wav`；第 87 段左門開啟 ➝ `assets/audio/effects/door-open.mp3`；第 110 段記憶室 click ➝ `assets/audio/effects/light-click.wav`；第 213 段辦公室 BANG ➝ `assets/audio/effects/office-bang.wav`。
+重要音效對應：第 46 段時鐘 click ➝ `assets/audio/effects/timer-click.wav`；第 87 段左門開啟 ➝ `assets/audio/effects/heavy-auto-door.wav`；第 110 段記憶室 click ➝ `assets/audio/effects/light-click.wav`；第 213 段辦公室 BANG ➝ `assets/audio/door-kick.wav`。
 
-原本開門 MP3 已重新整理到 effects 資料夾；短 click 是新增的 0.18 秒原創提示音。辦公室 BANG 暫時重用現有的 0.51 秒踢門 WAV（保留原踢門檔），有正式 BANG 素材即可替換。配樂只是重新命名、移動檔案，不轉碼音訊。
+開門改用新製作的約 3 秒沉重自動門音效（解鎖金屬聲→低沉馬達滑軌→門板停止）；舊開門 MP3 保留備用。短 click 是 0.18 秒原創提示音，辦公室 BANG **直接引用** `assets/audio/door-kick.wav`，並非複製或重新轉碼。配樂本身沒有改動。
 
 音量 0–100%，**1／Q** 調整語音、**2／W** 調整其他音量（每次 5%），**O** 顯示／隱藏右下角音量。第一幕配樂改用**約 1.4 秒等功率交叉淡入／淡出**，換曲時兩首僅短暫重疊，舊曲淡完就停止；進入第二幕時採**約 1.1 秒漸弱收尾**，不再突然斷音。新曲首次進場也先淡入，原音訊檔沒有重新剪輯。**開頭第 1–2 步及倒退回開頭仍是立即純黑、完全靜音**。切換過程中調整 2／W 音量，兩首的混音比例不變；25 步場景模式 `?mode=cues` 也使用記憶室 click 與辦公室 BANG。
 
@@ -153,7 +153,7 @@ Y＝40% 指**整個投影畫面高度**；大小＝37% 是原本大小滑桿的�
 | 記憶室歡迎語音 | 已有 `assets/audio/Memory-room.m4a`，原始錄音約 3.7 秒；第 10 步播放，播完自動縮回並淡出 AI。 |
 | 記憶室開燈音效 | 已配置 `assets/audio/effects/light-click.wav`。 |
 | 辦公室背景 | 已有 `assets/backgrounds/office-memory.png`，明亮企業辦公室、已移除辦公桌與座椅，保留左後方矮櫃與中央留白。 |
-| 辦公室 BANG 音效 | 已配置 `assets/audio/effects/office-bang.wav`；其播放時機與開場踢門 cue 分開。 |
+| 辦公室 BANG 音效 | 已配置 `assets/audio/door-kick.wav`；其播放時機與開場踢門 cue 分開。 |
 | 相框道具 | Christopher 與 Liam 合照及背面題字由演員道具提供；背景內不虛構角色照片。 |
 | 第二幕道具 | 實際文件／資料夾供 Christopher、Liam、CEO 使用；需要演員操作的桌子另備實體。 |
 | 第三幕語音 | **待提供**：選擇提示、Ethan 一票、Ethan 兩票、最後選擇，共四段；精確台詞與檔名見 `docs/voting.md`。 |
