@@ -25,14 +25,6 @@
     for(const child of snapshot.querySelectorAll('[id]')){
      child.className=child.id==='subtitleSpeaker'?'subtitle-speaker':'subtitle-text';child.removeAttribute('id');
     }
-    // The old line fades in place even if the adjacent-line rows reflow.
-    const parentBounds=this.element.parentElement.getBoundingClientRect();
-    const lineBounds=this.element.getBoundingClientRect();
-    Object.assign(snapshot.style,{
-     position:'absolute',left:(lineBounds.left-parentBounds.left)+'px',
-     top:(lineBounds.top-parentBounds.top)+'px',right:'auto',bottom:'auto',
-     width:lineBounds.width+'px'
-    });
     this.element.parentElement.append(snapshot);this.ghost=snapshot;
     const animation=snapshot.animate([{opacity:oldOpacity,transform:'translateY(0)'},{opacity:0,transform:`translateY(${-offset*.5}px)`}],
      {duration:text?110:160,easing:'ease-out',fill:'both'});
@@ -49,15 +41,5 @@
   }
   destroy(){this.cancel();}
  }
- function spokenNeighbors(entries,index){
-  if(!Array.isArray(entries)||!Number.isInteger(index)||index<0||index>=entries.length)
-   return {previous:null,next:null};
-  const lookup=direction=>{
-   for(let i=index+direction;i>=0&&i<entries.length;i+=direction)
-    if(typeof entries[i]?.text==='string'&&entries[i].text.trim())return entries[i];
-   return null;
-  };
-  return {previous:lookup(-1),next:lookup(1)};
- }
- return {Renderer,spokenNeighbors};
+ return {Renderer};
 });

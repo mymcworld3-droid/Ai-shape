@@ -47,12 +47,5 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
 #volumeDisplay{position:fixed;z-index:5;right:max(16px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));color:#fff;opacity:.38;font-size:clamp(10px,1vw,13px);font-weight:400;font-variant-numeric:tabular-nums;line-height:1.3;white-space:pre-line;text-align:right;pointer-events:none;user-select:none}
 
 #subtitles,.subtitle-ghost{position:absolute;z-index:2;left:5%;right:5%;bottom:3%;text-align:center;color:#fff;pointer-events:none;user-select:none;line-height:1.22;text-shadow:0 2px 3px #000,0 0 8px #000,1px 0 2px #000,-1px 0 2px #000;font-family:Arial,sans-serif}
-#subtitleStack{position:absolute;z-index:2;left:5%;right:5%;bottom:3%;max-height:55%;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:clamp(3px,.65vh,9px);text-align:center;pointer-events:none;user-select:none;font-family:Arial,sans-serif;text-shadow:0 2px 3px #000,0 0 8px #000,1px 0 2px #000,-1px 0 2px #000}
-#subtitleStack > #subtitles{position:relative;left:auto;right:auto;bottom:auto;flex:0 0 auto}
-#subtitleStack > .subtitle-ghost{z-index:3}
-.subtitle-neighbor{color:#d3dbe6;font-size:clamp(10px,1.45vw,22px);line-height:1.28;font-weight:400;opacity:.63;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
-.subtitle-neighbor[hidden]{display:none!important}
-#subtitlePrevious{opacity:.52}
-#subtitleNext{opacity:.67}
 #subtitleText,.subtitle-text{font-size:clamp(12px,2.3vw,38px);font-weight:500;white-space:normal;overflow-wrap:break-word}
 #subtitleSpeaker,.subtitle-speaker{font-size:clamp(9px,1.1vw,18px);font-weight:400;margin-bottom:.35em;opacity:.72;letter-spacing:.07em}
