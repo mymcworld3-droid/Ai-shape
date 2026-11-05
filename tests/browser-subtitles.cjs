@@ -28,7 +28,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await page.waitForTimeout(100);
   // Operator-only cue context includes preceding and upcoming spoken lines;
   // control-only cues must never be mistaken for dialogue.
-  const selectedIndex=indexOf(83,'“Access to one\\'s memory.”');
+  const selectedIndex=indexOf(83,`“Access to one's memory.”`);
   const expectedPrev=data.entries.findLastIndex((e,i)=>i<selectedIndex&&Boolean(e.text));
   const expectedNext=data.entries.findIndex((e,i)=>i>selectedIndex&&Boolean(e.text));
   assert.equal(await page.locator('#scriptContext').isVisible(),true);
