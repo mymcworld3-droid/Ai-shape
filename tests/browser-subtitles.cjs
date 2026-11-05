@@ -142,7 +142,9 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     179:'assets/audio/background/act-1/174-175(轉場).mp3',
     186:null,
     290:'assets/audio/background/act-3/Act3.mp3',
-    403:null
+    403:null,
+    407:'assets/audio/background/act-4/Act4.m4a',
+    416:null
    };
    if(Object.prototype.hasOwnProperty.call(soundtrackByParagraph,to.paragraph)){
     const expected=soundtrackByParagraph[to.paragraph];
@@ -150,7 +152,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
       'Music must follow the immutable manuscript paragraph '+to.paragraph);
     if(expected){
       assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio?.getAttribute('src')),expected);
-      if(to.paragraph===290){
+      if(to.paragraph===290||to.paragraph===407){
        await page.waitForFunction(()=>actOneBackgroundMusic.activeAudio&&!actOneBackgroundMusic.activeAudio.paused,
         null,{timeout:15000});
        assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio.error),null);
@@ -202,7 +204,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
    if(memoryOnly){
     assert.equal(await page.evaluate(()=>scriptProjectionFrame().backgroundOnly),true);
     for(const name of ['ai','clock','voteCorner','card','vote'])
-     assert.equal(await page.evaluate(name=>transitions[name].target),0,
+     assert.equal(await page.evaluate(name=>transitions[name].target,name),0,
        'No graphics are allowed during the background-only scene: '+name);
     await page.waitForTimeout(i===fourthActStart-1?2350:680);
     const onlyBg=await page.evaluate(()=>{
