@@ -34,7 +34,7 @@ actions={17:('opening-dark',{'blackout':1}),23:('reveal',{'room':True,'blackout'
 195:('office-light',{'background':'office','room':True,'scene':.35,'blackout':0}),199:('office-full',{'scene':0}),221:('office-dim',{'scene':.35}),213:('officeBang',{}),
 269:('past-reflection',{'blackout':1}),284:('blackout',{'blackout':1}),
 290:('discussion',{'background':'memory','room':True,'blackout':0,'scene':.2,'clock':0,'ai':0}),
-385:('selection-button',{}),386:('selection-flash',{}),403:('blackout',{'blackout':1,'ai':0,'clock':0}),
+403:('blackout',{'blackout':1,'ai':0,'clock':0}),
 407:('ending-light',{'background':'memory','room':True,'scene':0,'blackout':0,'ai':0,'clock':0}),416:('end-blackout',{'blackout':1,'ai':0,'clock':0})}
 voices={28:'opening',115:'memory',388:'prompt',390:'one',395:'two',402:'final',409:'complete',414:'revealTruth'}
 # Pure spotlight directions only change the look of the NEXT real subtitle.
@@ -65,9 +65,9 @@ for p,raw in enumerate(ps):
   else:look.update(ai=1,clock=0)
   for n,line in enumerate(sentences(text)):
    # Operator controls the clock switch during the last opening sentence.
-   action='opening-clock' if group=='opening' and n==len(sentences(text))-1 else None
+   action='selection-button' if p==388 and n==0 else ('opening-clock' if group=='opening' and n==len(sentences(text))-1 else None)
    if action:look['clock']=1
-   add(p,line,action,group)
+   add(p,line,action,group,note='(Christopher slams the button); [light flashes]' if action=='selection-button' else '')
   look.update(ai=1 if group=='opening' else 0,clock=1 if group in ('opening','prompt','one','two') else 0)
  elif text:
   # Bare prose stage direction in Act IV is not dialogue.
