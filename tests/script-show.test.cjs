@@ -60,6 +60,41 @@ test('each next changes exactly one sentence; narration continues and only real 
  assert.equal(c.index,1);assert.equal(c.remaining('opening'),895000);
  c.next();assert.equal(c.index,2);assert.equal(c.remaining('opening'),895000);
 });
+test('rehearsal start jumps to cue, plays that effect once and starts a fresh timer',()=>{
+ const {c,opening,effect,tick}=setup();
+ assert.equal(c.start(999),false);assert.equal(c.started,false);
+ assert.equal(c.start(-1),false);assert.equal(c.start(1.5),false);
+ assert.equal(c.start(2),true);assert.equal(c.index,2);
+ assert.equal(effect.calls,1);assert.equal(opening.calls,0);
+ assert.equal(c.deadlines.opening,900000);
+ tick(2500);assert.equal(c.remaining('opening'),897500);
+ assert.equal(c.start(0),false);
+ assert.equal(c.next(),true);assert.equal(c.index,3);
+ assert.equal(c.previous(),true);assert.equal(c.index,2);
+ assert.equal(effect.calls,1,'rewind does not replay effects');
+});
+test('rehearsal start inside a voice group starts the recording even if not first sentence',async()=>{
+ const {c,opening,effect}=setup();
+ assert.equal(c.start(1),true);await Promise.resolve();
+ assert.equal(c.index,1);assert.equal(opening.calls,1);
+ assert.equal(c.deadlines.opening,null,'opening clock waits for real recording end');
+ assert.equal(effect.calls,0);assert.equal(c.next(),false);
+ opening.end();assert.equal(c.deadlines.opening,900000);
+ assert.equal(c.next(),true);assert.equal(effect.calls,1);
+});
+test('jumping into voting starts the one-minute timer when prompt is skipped',async()=>{
+ let now=4200;const one=new Media(),prompt=new Media();
+ const entries=[
+  {text:'prompt',group:'prompt',look:{timer:'selection'}},
+  {text:'one vote',group:'one',look:{timer:'selection'}},
+  {text:'after vote',look:{timer:'selection'}}
+ ];
+ const c=new Controller({entries,voices:{prompt,one},now:()=>now});
+ assert.equal(c.start(1),true);await Promise.resolve();
+ assert.equal(prompt.calls,0);assert.equal(one.calls,1);
+ assert.equal(c.deadlines.selection,64200);
+ now+=3000;assert.equal(c.remaining('selection'),57000);
+});
 test('Left pauses media, never replays effects; resume cannot skip a paused unfinished voice',async()=>{
  const {c,opening,effect}=setup();c.start();await Promise.resolve();c.next();c.previous();
  assert.equal(c.index,0);assert.equal(opening.paused,true);assert.equal(effect.calls,0);

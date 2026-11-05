@@ -29,7 +29,41 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.equal(await page.locator('#subtitleText').textContent(),'“Access to one\'s memory.”');
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
+  assert.match(await page.locator('#startLabel').textContent(),/從第 .* 步開始/);
   await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('395 quiet previews never play media; first two live cues are pixel-black and silent until room reveal');
+  // Validate a real rehearsal jump, including on-demand media and a fresh clock.
+  const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
+  await rehearsal.goto(url);
+  await rehearsal.waitForFunction(()=>!document.getElementById('startButton').disabled);
+  await rehearsal.locator('#stepsViewButton').click();
+  const doorIndex=indexOf(87);
+  await rehearsal.locator(`[data-script="${doorIndex}"]`).click();
+  assert.equal(await rehearsal.locator('#startLabel').textContent(),`從第 ${doorIndex+1} 步開始`);
+  await rehearsal.locator('#startButton').click();
+  assert.equal(await rehearsal.evaluate(()=>scriptShow.index),doorIndex);
+  assert.equal(await rehearsal.evaluate(()=>scriptShow.entry.action),'doorOpen');
+  assert.ok(await rehearsal.evaluate(()=>scriptShow.deadlines.opening>performance.now()));
+  assert.equal(await rehearsal.locator('#openingAudio').evaluate(a=>a.paused),true);
+  await rehearsal.waitForFunction(()=>document.querySelector('#scriptEffect-doorOpen').ended||document.querySelector('#scriptEffect-doorOpen').error);
+  assert.equal(await rehearsal.locator('#scriptEffect-doorOpen').evaluate(a=>a.error),null);
+  await rehearsal.close();
+  // The middle sentence of an AI group must still start its audio recording.
+  const voiceRehearsal=await browser.newPage({viewport:{width:1280,height:720}});
+  await voiceRehearsal.goto(url);
+  await voiceRehearsal.waitForFunction(()=>!document.getElementById('startButton').disabled);
+  await voiceRehearsal.locator('#stepsViewButton').click();
+  const truthIndex=data.entries.findIndex((e,i)=>i>0&&e.group==='revealTruth'&&data.entries[i-1].group==='revealTruth');
+  await voiceRehearsal.locator(`[data-script="${truthIndex}"]`).click();
+  await voiceRehearsal.keyboard.press('f');
+  assert.equal(await voiceRehearsal.evaluate(()=>scriptShow.index),truthIndex);
+  await voiceRehearsal.waitForFunction(()=>scriptShow.active?.group==='revealTruth'&&scriptShow.active?.state==='playing');
+  assert.equal(await voiceRehearsal.locator('#revealTruthAudio').evaluate(a=>a.paused),false);
+  assert.equal(await voiceRehearsal.locator('#selectionPromptAudio').evaluate(a=>a.paused),true);
+  await voiceRehearsal.close();
+  // Clearing the selection explicitly restores starting at the first cue.
+  await page.locator('#resetStartStep').click();
+  assert.equal(await page.locator('#startLabel').textContent(),'開始');
+  assert.equal(await page.evaluate(()=>window.selectedScriptStartIndex),null);
   await page.locator('#startButton').press('f');await page.waitForFunction(()=>scriptShow.started);
   assert.equal(await page.evaluate(()=>scriptShow.index),0);assert.equal(await page.locator('button:visible').count(),0);
   assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),'showShell');
