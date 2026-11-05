@@ -65,6 +65,12 @@ if(scriptMode){
     else{values.ai=0;values.aiExpansion=0;if(['prompt','one','two'].includes(entry.group))values.clock=1;}
    }
   }
+  // Operator cues 366–367 show the AI alone; the clock first appears at 368.
+  // Apply after narration callbacks so finishing a voice cannot reveal it early.
+  if(['p384-0','p388-0'].includes(entry.id)){
+   values.ai=1;values.aiExpansion=1;values.clock=0;
+  }
+  if(['p388-1','p388-2'].includes(entry.id))values.clock=1;
   // Both the AI and the clock stay present at every voting cue, even when
   // a narration starts/ends. Only the dedicated blackout conceals both.
   values.voteCorner=voteState.corner?1:0;
