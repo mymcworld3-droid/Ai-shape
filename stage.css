@@ -47,8 +47,8 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
 #volumeDisplay{position:fixed;z-index:5;right:max(16px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));color:#fff;opacity:.38;font-size:clamp(10px,1vw,13px);font-weight:400;font-variant-numeric:tabular-nums;line-height:1.3;white-space:pre-line;text-align:right;pointer-events:none;user-select:none}
 
 #subtitles,.subtitle-ghost{position:absolute;z-index:2;left:5%;right:5%;bottom:3%;text-align:center;color:#fff;pointer-events:none;user-select:none;line-height:1.22;text-shadow:0 2px 3px #000,0 0 8px #000,1px 0 2px #000,-1px 0 2px #000;font-family:Arial,sans-serif}
-#subtitleText,.subtitle-text{font-size:clamp(12px,2.3vw,38px);font-weight:500;white-space:normal;overflow-wrap:break-word}
-#subtitleSpeaker,.subtitle-speaker{font-size:clamp(9px,1.1vw,18px);font-weight:400;margin-bottom:.35em;opacity:.72;letter-spacing:.07em}
+#subtitleText,.subtitle-text{font-size:clamp(11px,1.9vw,32px);font-weight:500;white-space:normal;overflow-wrap:break-word}
+#subtitleSpeaker,.subtitle-speaker{font-size:clamp(9px,.95vw,16px);font-weight:400;margin-bottom:.35em;opacity:.72;letter-spacing:.07em}
 
 .step-mark-tools{display:flex;align-items:center;gap:10px;margin:0 0 12px}
 .step-mark-tools button{border:1px solid #ffffff24;border-radius:7px;padding:7px 10px;background:transparent;color:#a2afbe;font-size:12px;cursor:pointer}
