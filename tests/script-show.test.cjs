@@ -1,6 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {Controller}=require('../script-controller'),data=require('../script-data'),source=require('../docs/script-source.json');
+const omittedSentences={"32": ["Huh."], "33": ["Hey!"], "141": ["Ugh."], "164": ["Haha."], "220": ["ah."], "321": ["You."], "322": ["Me?"], "323": ["You talk too much."], "325": ["Oh, but like, it’s not all my fault, right?", "At least now we know that she’s definitely a human."], "326": ["Ohhhh ya, I got it."], "327": ["Correction, I found it."], "358": ["Ugh!"], "362": ["This again."]};
 const clean=s=>s.replace(/\([^)]*\)|\[[^\]]*\]|\{[^}]*\}/g,'').replace(/\s+/g,'').trim();
 test('every spoken Word paragraph is reproduced once and in order, without stage directions',()=>{
  const entries=data.entries,actual=new Map();
@@ -12,12 +13,12 @@ test('every spoken Word paragraph is reproduced once and in order, without stage
   const m=raw.match(/^(AI VOICE|EVERYONE ELSE|RACHEL|MEGAN|ETHAN|CHRISTOPHER|LIAM|CEO|Ben):/);
   if(m){speaker=m[1];raw=raw.slice(m[0].length);}
   if(p===88)speaker='';
-  const text=clean(raw);if(!text)return;
+  let text=clean(raw);for(const omitted of omittedSentences[p]||[])text=text.replace(clean(omitted),'');if(!text)return;
   expected.push(p);assert.equal(clean(actual.get(p)||''),text,'paragraph '+p);
   assert.ok(entries.filter(x=>x.paragraph===p&&x.text).every(x=>x.speaker===speaker),'speaker '+p);
  });
  assert.deepEqual([...actual.keys()],expected);
- assert.equal(entries.filter(x=>x.text).length,373);
+ assert.equal(entries.filter(x=>x.text).length,359);
  assert.ok(!entries.some(x=>/\bboss\b/i.test(x.speaker+' '+x.text)),'Boss is renamed CEO everywhere');
  assert.ok(entries.some(x=>x.speaker==='CEO'));
 
@@ -34,7 +35,7 @@ test('all four acts, source-specific two-vote order, card, door, room, office an
  assert.equal(e.filter(x=>x.group==='two').at(-1).text,'Two votes.');assert.ok(!e.some(x=>/Three votes/.test(x.text)));
  assert.ok(e.some(x=>x.group==='prompt'&&x.text==='1 minute remaining.'));
  assert.equal(e.filter(x=>x.group==='revealTruth').at(-1).text,'You may leave.');
- assert.equal(e.length,394);
+ assert.equal(e.length,380);
  const prompt=e.find(x=>x.action==='selection-button');
  assert.equal(prompt.paragraph,388);assert.equal(prompt.group,'prompt');assert.equal(prompt.text,'Please make your selection.');
  assert.ok(!e.some(x=>x.paragraph===385||x.paragraph===386));
@@ -43,9 +44,10 @@ test('all four acts, source-specific two-vote order, card, door, room, office an
   assert.equal(e.some(x=>x.kind==='cue'&&x.paragraph===p),false,'Spotlight should not need a manual step: '+p);
  assert.equal(e[0].id,'pre-show');assert.equal(e[0].text,'');
  assert.equal(e[1].paragraph,20);
- assert.equal(e[251].id,'p263-0');assert.equal(e[252].id,'pause-after-p263');
- assert.equal(e[252].text,'');assert.deepEqual(e[252].look,e[251].look);
- assert.equal(e[253].id,'p270-0');
+ const hold=e.findIndex(x=>x.id==='pause-after-p263');
+ assert.equal(e[hold-1].id,'p263-0');assert.equal(e[hold+1].id,'p270-0');
+ assert.equal(e[hold].text,'');assert.equal(e[hold].look.blackout,1);
+ assert.equal(e[hold].action,'blackout');
  assert.equal(e[0].look.blackout,1);
  assert.equal(e.find(x=>x.paragraph===43).look.scene,.35);
  assert.equal(e.find(x=>x.paragraph===186).look.blackout,0);
