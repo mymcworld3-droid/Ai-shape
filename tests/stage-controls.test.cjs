@@ -22,11 +22,12 @@ function setup(){
 function key(target,type,code,extra={}){
  const e=new Event(type,{cancelable:true});Object.assign(e,{code,key:code,repeat:false,...extra});target.dispatchEvent(e);return e;
 }
-test('F starts once, arrows navigate, 1/Q and 2/W change separate volumes, O toggles HUD',()=>{
+test('F starts once, arrows navigate, 1/Q, 2/W and 3/E change separate volumes, O toggles HUD',()=>{
  const target=new EventTarget(),calls=[];let started=false;
  const unbind=bindStageKeys(target,{start:()=>{calls.push('start');started=true;},
   next:()=>calls.push('next'),previous:()=>calls.push('previous'),
   voiceUp:()=>calls.push('voice+'),voiceDown:()=>calls.push('voice-'),
+  effectUp:()=>calls.push('effect+'),effectDown:()=>calls.push('effect-'),
   otherUp:()=>calls.push('other+'),otherDown:()=>calls.push('other-'),
   toggleVolumeDisplay:()=>calls.push('toggle'),isStarted:()=>started});
  assert.equal(key(target,'keydown','ArrowRight').defaultPrevented,false);
@@ -36,15 +37,15 @@ test('F starts once, arrows navigate, 1/Q and 2/W change separate volumes, O tog
  assert.deepEqual(calls,['start','next']);
  key(target,'keyup','ArrowRight');key(target,'keydown','ArrowLeft');key(target,'keyup','ArrowLeft');
  key(target,'keydown','Digit1');key(target,'keydown','Digit1',{repeat:true});
- key(target,'keydown','KeyQ');key(target,'keydown','Digit2');key(target,'keydown','KeyW');
+ key(target,'keydown','KeyQ');key(target,'keydown','Digit2');key(target,'keydown','KeyW');key(target,'keydown','Digit3');key(target,'keydown','KeyE');
  assert.equal(key(target,'keydown','ArrowDown').defaultPrevented,false);
  assert.equal(key(target,'keydown','ArrowUp').defaultPrevented,false);
  key(target,'keydown','KeyO');key(target,'keydown','KeyO',{repeat:true});
- assert.deepEqual(calls,['start','next','previous','voice+','voice+','voice-','other+','other-','toggle']);
+ assert.deepEqual(calls,['start','next','previous','voice+','voice+','voice-','effect+','effect-','other+','other-','toggle']);
  key(target,'keyup','KeyO');key(target,'keydown','KeyO');
  assert.equal(calls.at(-1),'toggle');
  target.dispatchEvent(new Event('blur'));key(target,'keydown','Space');assert.equal(calls.at(-1),'next');
- unbind();key(target,'keyup','Space');key(target,'keydown','ArrowRight');assert.equal(calls.length,11);
+ unbind();key(target,'keyup','Space');key(target,'keydown','ArrowRight');assert.equal(calls.length,13);
 });
 test('F during loading never queues Start; shortcuts and composing input are ignored',()=>{
  const target=new EventTarget();let ready=false,starts=0,next=0;
@@ -103,4 +104,18 @@ test('all 25 cues rewind across scene boundaries and can run forward again witho
  }
  assert.equal(c.stage.opening.deadline,opening);assert.equal(c.stage.voting.deadline,selection);
  for(const m of [c.audio,c.memoryVoice,c.bang,c.prompt])assert.equal(m.calls,2);
+});
+
+test('live mixer isolates voice, effects and BGM while retaining the crossfade master gain',()=>{
+ const fs=require('node:fs'),vm=require('node:vm');
+ const source=fs.readFileSync(require.resolve('../visualizer.js'),'utf8');
+ const mixer=source.slice(source.indexOf('let voiceVolume='),source.indexOf('StageOpening.bindAdvanceClick(projectionViewport'));
+ const voice={id:'voice'},effect={id:'scriptEffect-doorOpen'},video={id:'revealVideo'},bgm={id:'actOneBgm'},alt={id:'actOneBgmAlt'},hud={hidden:false};
+ const elements=[voice,effect,video,bgm,alt];let keys;
+ const context={document:{querySelectorAll:()=>elements,getElementById:id=>id==='volumeDisplay'?hud:elements.find(e=>e.id===id)},narrationMedia:[voice],window:{actOneBackgroundMusic:{setMasterVolume(value){this.master=value;}}},StageOpening:{adjustVolume,bindStageKeys(target,actions){keys=actions;}},startGate:{started:false},advanceStage(){}};
+ vm.runInNewContext(mixer,context);
+ keys.effectDown();assert.equal(effect.volume,.95);assert.equal(video.volume,.95);assert.equal(voice.volume,1);assert.equal(context.window.actOneBackgroundMusic.master,.4);
+ keys.otherDown();assert.equal(effect.volume,.95);assert.equal(voice.volume,1);assert.equal(context.window.actOneBackgroundMusic.master,.38);
+ keys.voiceDown();assert.equal(voice.volume,.95);assert.equal(effect.volume,.95);assert.equal(context.window.actOneBackgroundMusic.master,.38);
+ assert.match(hud.textContent,/語音 95%\n音效 95%\n背景音樂 95%/);
 });

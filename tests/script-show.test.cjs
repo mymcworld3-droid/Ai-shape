@@ -34,14 +34,18 @@ test('all four acts, source-specific two-vote order, card, door, room, office an
  assert.equal(e.filter(x=>x.group==='two').at(-1).text,'Two votes.');assert.ok(!e.some(x=>/Three votes/.test(x.text)));
  assert.ok(e.some(x=>x.group==='prompt'&&x.text==='1 minute remaining.'));
  assert.equal(e.filter(x=>x.group==='revealTruth').at(-1).text,'You may leave.');
- assert.equal(e.length,393);
- assert.equal(e[365].paragraph,388);assert.equal(e[365].action,'selection-button');
- assert.equal(e[365].group,'prompt');assert.equal(e[365].text,'Please make your selection.');
+ assert.equal(e.length,395);
+ const prompt=e.find(x=>x.action==='selection-button');
+ assert.equal(prompt.paragraph,388);assert.equal(prompt.group,'prompt');assert.equal(prompt.text,'Please make your selection.');
  assert.ok(!e.some(x=>x.paragraph===385||x.paragraph===386));
  assert.ok(!e.some(x=>x.kind==='pause' || x.paragraph===405),'No no-op actor cues');
- for(const p of [17,42,185,188,195,221,269])
+ for(const p of [42,185,188,195,221,269])
   assert.equal(e.some(x=>x.kind==='cue'&&x.paragraph===p),false,'Spotlight should not need a manual step: '+p);
- assert.equal(e[0].paragraph,20);
+ assert.equal(e[0].id,'pre-show');assert.equal(e[0].text,'');
+ assert.equal(e[1].paragraph,20);
+ assert.equal(e[251].id,'p263-0');assert.equal(e[252].id,'pause-after-p263');
+ assert.equal(e[252].text,'');assert.deepEqual(e[252].look,e[251].look);
+ assert.equal(e[253].id,'p270-0');
  assert.equal(e[0].look.blackout,1);
  assert.equal(e.find(x=>x.paragraph===43).look.scene,.35);
  assert.equal(e.find(x=>x.paragraph===186).look.blackout,0);
@@ -55,7 +59,8 @@ class Media extends EventTarget{constructor(){super();this.ended=false;this.curr
 function setup(){let time=0;const opening=new Media(),effect=new Media(),events=[];const entries=[{text:'first',group:'opening'},{text:'last',group:'opening'},{text:'actor',action:'doorKick'},{text:'end'}];const c=new Controller({entries,voices:{opening},effects:{doorKick:effect},now:()=>time,onEntry:(e,m)=>events.push(m.index)});return {c,opening,effect,events,tick:n=>time+=n};}
 test('button slam, flash and AI prompt are one stage entry',async()=>{
  const prompt=new Media(),button=new Media();
- const entries=data.entries.slice(364,367);
+ const start=data.entries.findIndex(e=>e.action==='selection-button');
+ const entries=data.entries.slice(start-1,start+2);
  const c=new Controller({entries,voices:{prompt},effects:{'selection-button':button}});
  assert.equal(c.start(),true);
  assert.equal(c.next(),true);

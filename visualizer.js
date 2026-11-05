@@ -328,25 +328,26 @@ function advanceStage(){
  for(const kind of ["Prompt","One","Two","Final"])document.body.dataset["selection"+kind+"Error"]="false";
  stage.advance();requestStageFullscreen();
 }
-let voiceVolume=100,otherVolume=100;
+let voiceVolume=100,effectVolume=100,otherVolume=100;
 const volumeDisplay=document.getElementById("volumeDisplay");
 function applyVolumes(){
  for(const media of document.querySelectorAll("audio,video")){
   // Music crossfades own the gain of both soundtrack players.
   if(media.id==="actOneBgm"||media.id==="actOneBgmAlt")continue;
   const isVoice=narrationMedia.includes(media);
-  media.volume=(isVoice?voiceVolume:otherVolume)/100;
+  media.volume=(isVoice?voiceVolume:effectVolume)/100;
  }
- // 2/W changes the common master without interrupting either fade.
+ // 3/E changes the common master without interrupting either fade.
  const soundtrackLevel=otherVolume/100*.4;
  if(window.actOneBackgroundMusic)window.actOneBackgroundMusic.setMasterVolume(soundtrackLevel);
  else{
   document.getElementById("actOneBgm").volume=soundtrackLevel;
   document.getElementById("actOneBgmAlt").volume=0;
  }
- volumeDisplay.textContent="語音 "+voiceVolume+"%\n其他 "+otherVolume+"%";
+ volumeDisplay.textContent="語音 "+voiceVolume+"%\n音效 "+effectVolume+"%\n背景音樂 "+otherVolume+"%";
 }
 function changeVoiceVolume(delta){voiceVolume=StageOpening.adjustVolume(voiceVolume,delta);applyVolumes();}
+function changeEffectVolume(delta){effectVolume=StageOpening.adjustVolume(effectVolume,delta);applyVolumes();}
 function changeOtherVolume(delta){otherVolume=StageOpening.adjustVolume(otherVolume,delta);applyVolumes();}
 function toggleVolumeDisplay(){volumeDisplay.hidden=!volumeDisplay.hidden;}
 applyVolumes();
@@ -354,6 +355,7 @@ StageOpening.bindStageKeys(window,{
  start:()=>startGate.start(),next:advanceStage,
  previous:()=>{if(startGate.started){if(scriptMode)transcript.previous();else stage.previous();}},
  voiceUp:()=>changeVoiceVolume(5),voiceDown:()=>changeVoiceVolume(-5),
+ effectUp:()=>changeEffectVolume(5),effectDown:()=>changeEffectVolume(-5),
  otherUp:()=>changeOtherVolume(5),otherDown:()=>changeOtherVolume(-5),
  toggleVolumeDisplay,
  isStarted:()=>startGate.started

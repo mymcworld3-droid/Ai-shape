@@ -1065,10 +1065,10 @@ async function fastVoting(page){
     await ready(keys,url);
     await keys.keyboard.press('ArrowRight');await keys.keyboard.press('ArrowLeft');await cue(keys,'dark');
     for(let i=0;i<3;i++)await keys.keyboard.press('q');
-    assert.equal(await keys.locator('#volumeDisplay').textContent(),'語音 85%\n其他 100%');
+    assert.equal(await keys.locator('#volumeDisplay').textContent(),'語音 85%\n音效 100%\n背景音樂 100%');
     assert.ok(await keys.locator('#openingAudio').evaluate(m=>m.volume===.85));
     assert.ok(await keys.locator('#doorKickAudio').evaluate(m=>m.volume===1));
-    await keys.keyboard.press('1');assert.equal(await keys.locator('#volumeDisplay').textContent(),'語音 90%\n其他 100%');
+    await keys.keyboard.press('1');assert.equal(await keys.locator('#volumeDisplay').textContent(),'語音 90%\n音效 100%\n背景音樂 100%');
     await keys.keyboard.press('f');await roomState(keys,'playing');await noControls(keys);
     await keys.keyboard.press('f');await cue(keys,'room-reveal');
     await keys.keyboard.press('ArrowLeft');await cue(keys,'dark');
@@ -1105,13 +1105,13 @@ async function fastVoting(page){
     await keys.keyboard.press('ArrowLeft');await cue(keys,'clock');
     assert.equal(await keys.evaluate(()=>opening.deadline),keysDeadline);
     for(let i=0;i<25;i++)await keys.keyboard.press('q');
-    assert.equal(await keys.locator('#volumeDisplay').textContent(),'語音 0%\n其他 100%');
+    assert.equal(await keys.locator('#volumeDisplay').textContent(),'語音 0%\n音效 100%\n背景音樂 100%');
     assert.ok(await keys.locator('#openingAudio').evaluate(m=>m.volume===0));
     assert.ok(await keys.locator('#doorKickAudio').evaluate(m=>m.volume===1));
     for(let i=0;i<25;i++)await keys.keyboard.press('1');
-    assert.equal(await keys.locator('#volumeDisplay').textContent(),'語音 100%\n其他 100%');
+    assert.equal(await keys.locator('#volumeDisplay').textContent(),'語音 100%\n音效 100%\n背景音樂 100%');
     for(let i=0;i<25;i++)await keys.keyboard.press('w');
-    assert.equal(await keys.locator('#volumeDisplay').textContent(),'語音 100%\n其他 0%');
+    assert.equal(await keys.locator('#volumeDisplay').textContent(),'語音 100%\n音效 0%\n背景音樂 100%');
     assert.ok(await keys.locator('#doorKickAudio').evaluate(m=>m.volume===0));
     assert.ok(await keys.locator('#openingAudio').evaluate(m=>m.volume===1));
     for(let i=0;i<25;i++)await keys.keyboard.press('2');
@@ -1128,7 +1128,7 @@ async function fastVoting(page){
       await noControls(keys);
     }
     await keys.screenshot({path:path.join(output,'26-keyboard-volume.png')});await keys.close();
-    results.push('F starts once; Left interrupts video and voice; Right and Space share a release gate; resumed cues preserve deadlines; 1/Q adjust narration and 2/W adjust other audio independently; O toggles the subtle white bottom-right HUD at three ratios');
+    results.push('F starts once; Left interrupts video and voice; Right and Space share a release gate; resumed cues preserve deadlines; 1/Q adjust narration, 2/W effects and 3/E background music independently; O toggles the subtle white bottom-right HUD at three ratios');
 
     const rewind=await browser.newPage();await ready(rewind,url);await fastVoting(rewind);
     await rewind.keyboard.press('ArrowRight');await cue(rewind,'vote-clock');await rewind.waitForTimeout(700);

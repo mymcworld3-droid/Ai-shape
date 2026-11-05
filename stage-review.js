@@ -12,7 +12,7 @@ if(scriptMode){
  document.querySelector('#stepsPanel header p').textContent='點選任一步驟預覽；按開始／F 便從該步驟播放';
  SHOW_SCRIPT.entries.forEach((e,index)=>{
   const li=document.createElement('li'),button=document.createElement('button'),number=document.createElement('span'),text=document.createElement('span'),small=document.createElement('small');
-  button.type='button';button.dataset.script=index;button.setAttribute('aria-pressed','false');number.className='step-number';number.textContent=index+1;
+  button.type='button';button.dataset.script=index;button.setAttribute('aria-pressed','false');number.className='step-number';number.textContent=index;
   text.textContent=e.text||e.note||e.action;small.textContent=`ACT ${e.act} · SCENE ${e.scene}${e.speaker?' · '+e.speaker:''}`;
   text.append(small);button.append(number,text);li.append(button);list.append(li);
  });
@@ -63,7 +63,7 @@ function updateStartButton(){
  if(startGate.started)return;
  startButton.disabled=!showAssetsReady();
  startLabel.textContent=startButton.disabled?"載入中…":
-  scriptMode&&selectedScript!==null?`從第 ${selectedScript+1} 步開始`:"開始";
+  scriptMode&&selectedScript!==null?`從第 ${selectedScript} 步開始`:"開始";
  resetStartStep.hidden=!scriptMode||selectedScript===null;
  const failed=["backgroundReady","darkBackgroundReady","cardReady","memoryBackgroundReady","officeBackgroundReady","videoError","audioError"]
   .some(key=>document.body.dataset[key]===(key.endsWith("Error")?"true":"false"));

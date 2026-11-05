@@ -679,22 +679,24 @@
   }
 
   function bindStageKeys(target, { start, next, previous, voiceUp, voiceDown,
-    otherUp, otherDown, toggleVolumeDisplay, isStarted }) {
+    effectUp, effectDown, otherUp, otherDown, toggleVolumeDisplay, isStarted }) {
     const held = new Set();
     const actionFor = event => ({
       Space: "next", ArrowRight: "next", ArrowLeft: "previous",
       Digit1: "voiceUp", Numpad1: "voiceUp", KeyQ: "voiceDown",
-      Digit2: "otherUp", Numpad2: "otherUp", KeyW: "otherDown",
+      Digit2: "effectUp", Numpad2: "effectUp", KeyW: "effectDown",
+      Digit3: "otherUp", Numpad3: "otherUp", KeyE: "otherDown",
       KeyO: "toggleVolumeDisplay", KeyF: "start"
     })[event.code] || ({
       " ": "next", ArrowRight: "next", ArrowLeft: "previous",
       "1": "voiceUp", q: "voiceDown", Q: "voiceDown",
-      "2": "otherUp", w: "otherDown", W: "otherDown",
+      "2": "effectUp", w: "effectDown", W: "effectDown",
+      "3": "otherUp", e: "otherDown", E: "otherDown",
       o: "toggleVolumeDisplay", O: "toggleVolumeDisplay", f: "start", F: "start"
     })[event.key];
-    const actions = { start, next, previous, voiceUp, voiceDown, otherUp,
+    const actions = { start, next, previous, voiceUp, voiceDown, effectUp, effectDown, otherUp,
       otherDown, toggleVolumeDisplay };
-    const volumeActions = new Set(["voiceUp", "voiceDown", "otherUp", "otherDown"]);
+    const volumeActions = new Set(["voiceUp", "voiceDown", "effectUp", "effectDown", "otherUp", "otherDown"]);
     const down = event => {
       const action = actionFor(event), element = event.target;
       if (!action || event.ctrlKey || event.altKey || event.metaKey || event.isComposing ||

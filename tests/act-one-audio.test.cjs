@@ -70,7 +70,7 @@ test("cue change crossfades for 1.4 seconds; outgoing audio is not cut on change
  assert.equal(b.src,"dialogue.mp3");
 });
 
-test("the 2/W master-volume adjustment preserves both fade envelopes",async()=>{
+test("the 3/E master-volume adjustment preserves both fade envelopes",async()=>{
  const {music,a,b,tick}=setup();
  music.setStep(23);await flush();tick(1400);
  music.setStep(30);await flush();tick(700);

@@ -21,7 +21,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
    assert.equal(await page.locator('#'+id).getAttribute('src'),'assets/audio/'+name,
      'AI narration '+id+' should use the uploaded file');
   }
-  assert.ok(!data.entries.some(x=>x.kind==='pause'||x.paragraph===17||x.paragraph===405));
+  assert.ok(!data.entries.some(x=>x.paragraph===405));
   for(const p of [42,185,188,195,221,269])assert.ok(!data.entries.some(x=>x.paragraph===p&&x.kind==='cue'));
   await page.locator('#stepsViewButton').click();
   await page.locator(`[data-script="${indexOf(83,'“Access to one\'s memory.”')}"]`).click();
@@ -32,7 +32,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
   assert.match(await page.locator('#startLabel').textContent(),/從第 .* 步開始/);
-  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('393 quiet previews never play media; first two live cues are pixel-black and silent until room reveal');
+  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('395 quiet previews never play media; opening live cues are pixel-black and silent until room reveal');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
@@ -86,15 +86,18 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.paused),true);
   assert.equal(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused)),true,'No sound before room reveal');
   await page.keyboard.press('q');
-  assert.equal(await page.locator('#volumeDisplay').textContent(),'語音 95%\n其他 100%');
+  assert.equal(await page.locator('#volumeDisplay').textContent(),'語音 95%\n音效 100%\n背景音樂 100%');
   assert.equal(await page.locator('#openingAudio').evaluate(a=>a.volume),.95);
   assert.equal(await page.evaluate(()=>actOneBackgroundMusic.masterVolume),.4);
   assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.volume),0);
   await page.keyboard.press('w');
+  assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.volume),.95);
+  assert.equal(await page.evaluate(()=>actOneBackgroundMusic.masterVolume),.4);
+  await page.keyboard.press('e');
   assert.equal(await page.evaluate(()=>actOneBackgroundMusic.masterVolume),.38);
   assert.equal(await page.locator('#actOneBgmAlt').evaluate(a=>a.volume),0);
   assert.equal(await page.locator('#openingAudio').evaluate(a=>a.volume),.95);
-  await page.keyboard.press('1');await page.keyboard.press('2');
+  await page.keyboard.press('1');await page.keyboard.press('2');await page.keyboard.press('3');
   await page.keyboard.press('o');assert.equal(await page.locator('#volumeDisplay').isHidden(),true);
   await page.keyboard.press('o');assert.equal(await page.locator('#volumeDisplay').isVisible(),true);
   // Walk every actual forward input; no synthetic timeline jump.
@@ -306,7 +309,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   const deadlines=await page.evaluate(()=>({...scriptShow.deadlines}));
   for(let i=last-1;i>=0;i--){await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>scriptShow.index),i);assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);}
   assert.deepEqual(await page.evaluate(()=>({...scriptShow.deadlines})),deadlines);assert.equal(await page.locator('button:visible').count(),0);
-  checks.push('all 393 forward and reverse inputs preserve exact 374 sentences, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
+  checks.push('all 395 forward and reverse inputs preserve exact 374 sentences, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
   // Check every subtitle at all ratios, including review pane. No text leaves the fixed projection frame.
   await page.reload();await page.waitForFunction(()=>!document.querySelector('#startButton').disabled);await page.locator('#stepsViewButton').click();
   for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
