@@ -30,12 +30,16 @@ if(scriptMode){
  let previewEntry=null,flashUntil=0;
  // Immutable script IDs avoid coupling the visual effect to mutable step counts.
  const cornerStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p389-0');
- const cornerEnd=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p408-0');
- if(cornerStart<0||cornerEnd<0)throw Error('Voting cue boundaries unavailable');
+ const backgroundStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p407-0');
+ const backgroundEnd=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p408-0');
+ if(cornerStart<0||backgroundStart<0||backgroundEnd<0)
+  throw Error('Voting cue boundaries unavailable');
  const votingState=entry=>{
   const index=SHOW_SCRIPT.entries.indexOf(entry);
-  return {hideBackground:index>=cornerStart,
-   corner:index>=cornerStart&&index<cornerEnd&&entry.action!=='blackout'};
+  // Stages 380–381 are the background-only reveal; after 381, return to black.
+  const backgroundOnly=index>=backgroundStart&&index<=backgroundEnd;
+  return {hideBackground:index>=cornerStart&&!backgroundOnly,
+   backgroundOnly,corner:index>=cornerStart&&index<backgroundStart&&entry.action!=='blackout'};
  };
  const applyEntry=(entry,direction=1)=>{
   if(!entry)return;
@@ -61,6 +65,10 @@ if(scriptMode){
   // a narration starts/ends. Only the dedicated blackout conceals both.
   values.voteCorner=voteState.corner?1:0;
   if(voteState.corner){values.ai=1;values.clock=1;values.aiExpansion=1;}
+  if(voteState.backgroundOnly){
+   // Suppress all visual graphics while allowing the actor subtitle to remain.
+   values.ai=0;values.clock=0;values.card=0;values.vote=0;values.aiExpansion=0;
+  }
   const duration=direction<=0||!startGate.started||transcript?.index===0||['opening-dark','end-blackout'].includes(entry.action)?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
   for(const name of Object.keys(transitions))animate(name,values[name]||0,duration);
   subtitleRenderer.render(entry);
@@ -85,6 +93,7 @@ if(scriptMode){
   if(!entry)return null;
   return {...entry.look,voiceGroup:entry.group,preview:!startGate.started,caption:null,script:true,
    hideBackground:votingState(entry).hideBackground,
+   backgroundOnly:votingState(entry).backgroundOnly,
    ...Object.fromEntries(Object.entries(transitions).map(([name,t])=>[name,t.value])),
    flash:Math.max(0,(flashUntil-performance.now())/280)};
  };

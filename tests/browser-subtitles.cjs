@@ -186,11 +186,29 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     // The operator may replace the door track with a shorter or longer MP3.
     // Validate successful complete playback without assuming its duration.
    }
+   const memoryOnly=i===fourthActStart-1||i===fourthActStart;
    if(i>=votingCountdown){
-    assert.equal(await page.evaluate(()=>scriptProjectionFrame().hideBackground),true,
-      'No room image is displayed after the voting countdown');
+    assert.equal(await page.evaluate(()=>scriptProjectionFrame().hideBackground),!memoryOnly,
+      'Only steps 380 and 381 restore the memory room background');
    }
-   if(i>=votingCountdown&&i<fourthActStart&&to.action!=='blackout'){
+   if(memoryOnly){
+    assert.equal(await page.evaluate(()=>scriptProjectionFrame().backgroundOnly),true);
+    for(const name of ['ai','clock','voteCorner','card','vote'])
+     assert.equal(await page.evaluate(name=>transitions[name].target),0,
+       'No graphics are allowed during the background-only scene: '+name);
+    await page.waitForTimeout(i===fourthActStart-1?2350:680);
+    const onlyBg=await page.evaluate(()=>{
+     const frame=scriptProjectionFrame(),canvas=document.querySelector('#visualizer');
+     const pixel=canvas.getContext('2d').getImageData(Math.floor(canvas.width/2),Math.floor(canvas.height/4),1,1).data;
+     return {ai:frame.ai,clock:frame.clock,corner:frame.voteCorner,
+      background:frame.background,blackout:frame.blackout,pixel:[...pixel].slice(0,3)};
+    });
+    assert.equal(onlyBg.background,'memory');assert.equal(onlyBg.blackout,0);
+    assert.ok(onlyBg.ai<.01&&onlyBg.clock<.01&&onlyBg.corner<.01,
+      'Background-only steps must not show the AI or timer');
+    assert.ok(onlyBg.pixel.some(value=>value>0),'Memory room image should render');
+   }
+   if(i>=votingCountdown&&i<fourthActStart-1&&to.action!=='blackout'){
     await page.waitForTimeout(to.action==='ending-light'?2350:680);
     const stagePose=await page.evaluate(()=>{
      const f=projectionFrame(),p=graphicPlacement(f,200),
@@ -212,9 +230,11 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
       return pixel[0]===0&&pixel[1]===0&&pixel[2]===0;
     }),true,'Room background must be entirely removed, not merely dimmed');
    }
-   if(i===fourthActStart)
-    assert.equal(await page.evaluate(()=>transitions.voteCorner.target),0,
-      'AI corner layout ends when step 381 begins');
+   if(i===fourthActStart+1){
+    assert.equal(await page.evaluate(()=>scriptProjectionFrame().hideBackground),true,
+      'Step 382 returns to the black background');
+    assert.equal(await page.evaluate(()=>scriptProjectionFrame().backgroundOnly),false);
+   }
    if(to.text==='You may leave.') {
     assert.equal(data.entries[i+1]?.action,'end-blackout','Next operator input must go straight to black');
     // Natural completion of the last AI recording must not brighten the room.
