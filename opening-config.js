@@ -36,18 +36,21 @@ window.OPENING_CONFIG = Object.freeze({
     introDim: 0.35
   }),
   voting: Object.freeze({
-    // Four distinct script recordings; null preserves manual silent cues.
-    prompt: null,
-    one: null,
-    two: null,
-    final: null,
+    // Uploaded recordings are ordered by the six AI dialogue groups in the script.
+    prompt: "assets/audio/387-389ai.m4a",
+    one: "assets/audio/391-392ai.m4a",
+    two: "assets/audio/395-396ai.m4a",
+    final: "assets/audio/399ai.m4a",
     durationMs: 60 * 1000,
     fadeMs: 600,
     voiceExpandMs: 900,
     voiceSettleMs: 600,
     discussionDim: 0.2
   }),
-  ending: Object.freeze({complete: null, revealTruth: null}),
+  ending: Object.freeze({
+    complete: "assets/audio/404-406ai.m4a",
+    revealTruth: "assets/audio/411-415ai.m4a"
+  }),
   scriptEffects: Object.freeze({doorOpen: "assets/audio/effects/door-open.mp3", timerClick: "assets/audio/effects/timer-click.wav", selectionButton: null}),
   countdownMs: 15 * 60 * 1000,
   // Black display interior in IMG_0165.png's source pixels; excludes its bezel.
