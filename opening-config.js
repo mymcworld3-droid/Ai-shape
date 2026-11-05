@@ -5,15 +5,15 @@ window.OPENING_CONFIG = Object.freeze({
   darkBackground: "assets/backgrounds/Start_dark.PNG",
   roomReveal: "assets/videos/Start_animation.mp4",
   revealFadeMs: 240,
-  // Cue numbers account for deleted p64 dialogue and added p110 light-click cue.
-  // Audio filenames mark the original boundaries; cues 1-3 remain silent and black.
-  // The first track starts only when the room-reveal cue (step 4) is advanced.
+  // Cue-count-independent: anchor the soundtrack to immutable Word paragraph IDs.
+  // Blank stage directions can be removed without shifting the music.
+  // The original MP3 filenames retain their historical cue range names.
   actOneMusic: Object.freeze([
-    Object.freeze({ from: 4, to: 14, src: "assets/audio/background/act-1/1-14.mp3" }),
-    Object.freeze({ from: 15, to: 90, src: "assets/audio/background/act-1/15-91.mp3" }),
-    Object.freeze({ from: 91, to: 91, src: "assets/audio/background/act-1/91-92(轉場).mp3", loop: false }),
-    Object.freeze({ from: 92, to: 173, src: "assets/audio/background/act-1/92-174.mp3" }),
-    Object.freeze({ from: 174, to: 174, src: "assets/audio/background/act-1/174-175(轉場).mp3", loop: false })
+    Object.freeze({ from: 23, to: 29, src: "assets/audio/background/act-1/1-14.mp3" }),
+    Object.freeze({ from: 30, to: 98, src: "assets/audio/background/act-1/15-91.mp3" }),
+    Object.freeze({ from: 99, to: 103, src: "assets/audio/background/act-1/91-92(轉場).mp3", loop: false }),
+    Object.freeze({ from: 104, to: 178, src: "assets/audio/background/act-1/92-174.mp3" }),
+    Object.freeze({ from: 179, to: 184, src: "assets/audio/background/act-1/174-175(轉場).mp3", loop: false })
   ]),
   narration: "assets/audio/ai-opening.m4a",
   // Original user-supplied WAV, stored locally for offline playback.
