@@ -42,7 +42,7 @@ test('all four acts, source-specific two-vote order, card, door, room, office an
  assert.equal(e[0].look.blackout,1);
  assert.equal(e.find(x=>x.paragraph===43).look.scene,.35);
  assert.equal(e.find(x=>x.paragraph===186).look.blackout,0);
- assert.equal(e.find(x=>x.paragraph===196).look.background,'office');
+ assert.equal(e.find(x=>x.paragraph===198).look.background,'office');
  assert.equal(e.at(-2).text,'You may leave.');
  assert.equal(e.at(-1).action,'end-blackout');
  assert.equal(e.at(-1).look.blackout,1);
