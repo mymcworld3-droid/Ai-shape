@@ -40,6 +40,15 @@ if(scriptMode){
  window.actOneBackgroundMusic=actOneMusic;
  applyVolumes(); // Include ending voices and newly constructed scripted effects.
  let previewEntry=null,flashUntil=0;
+ // Immutable script IDs avoid coupling the visual effect to mutable step counts.
+ const cornerStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p389-0');
+ const cornerEnd=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p408-0');
+ if(cornerStart<0||cornerEnd<0)throw Error('Voting cue boundaries unavailable');
+ const votingState=entry=>{
+  const index=SHOW_SCRIPT.entries.indexOf(entry);
+  return {hideBackground:index>=cornerStart,
+   corner:index>=cornerStart&&index<cornerEnd&&entry.action!=='blackout'};
+ };
  const applyEntry=(entry,direction=1)=>{
   if(!entry)return;
   document.body.dataset.scene=entry.look.background;
@@ -49,7 +58,7 @@ if(scriptMode){
   document.body.dataset.cue='script-'+entry.id;
   const active=transcript?.active;
   const speaking=entry.group&&(!startGate.started||active?.group===entry.group&&['starting','playing','missing'].includes(active.state));
-  const values={...entry.look};
+  const values={...entry.look},voteState=votingState(entry);
   if(entry.group){
    if(speaking){values.ai=1;if(entry.group==='opening')values.scene=1;else values.aiExpansion=1;}
    else if(active?.state==='finished'||active?.state==='error'){
@@ -60,6 +69,10 @@ if(scriptMode){
     else{values.ai=0;values.aiExpansion=0;if(['prompt','one','two'].includes(entry.group))values.clock=1;}
    }
   }
+  // Both the AI and the clock stay present at every voting cue, even when
+  // a narration starts/ends. Only the dedicated blackout conceals both.
+  values.voteCorner=voteState.corner?1:0;
+  if(voteState.corner){values.ai=1;values.clock=1;values.aiExpansion=1;}
   const duration=direction<=0||!startGate.started||transcript?.index===0||['opening-dark','end-blackout'].includes(entry.action)?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
   for(const name of Object.keys(transitions))animate(name,values[name]||0,duration);
   subtitleRenderer.render(entry);
@@ -84,6 +97,7 @@ if(scriptMode){
   const entry=startGate.started?transcript.entry:previewEntry;
   if(!entry)return null;
   return {...entry.look,voiceGroup:entry.group,preview:!startGate.started,caption:null,script:true,
+   hideBackground:votingState(entry).hideBackground,
    ...Object.fromEntries(Object.entries(transitions).map(([name,t])=>[name,t.value])),
    flash:Math.max(0,(flashUntil-performance.now())/280)};
  };
