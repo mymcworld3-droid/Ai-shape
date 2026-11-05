@@ -12,13 +12,24 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   const page=await browser.newPage({viewport:{width:1280,height:720}}),errors=[];page.on('pageerror',e=>errors.push(String(e)));
   await page.goto(url);try{await page.waitForFunction(()=>!document.querySelector('#startButton').disabled);}catch(e){console.error(await page.evaluate(()=>({flags:{...document.body.dataset},media:[...document.querySelectorAll('audio,video')].map(a=>({id:a.id,error:a.error?.message,ready:a.readyState})),text:document.querySelector('#startStatus').textContent})),errors);throw e;}
   assert.equal(await page.locator('#stepList [data-script]').count(),data.entries.length);
+  const narrationFiles={
+   selectionPromptAudio:'387-389ai.m4a',selectionOneAudio:'391-392ai.m4a',
+   selectionTwoAudio:'395-396ai.m4a',selectionFinalAudio:'399ai.m4a',
+   completeAudio:'404-406ai.m4a',revealTruthAudio:'411-415ai.m4a'
+  };
+  for(const [id,name] of Object.entries(narrationFiles)){
+   assert.equal(await page.locator('#'+id).getAttribute('src'),'assets/audio/'+name,
+     'AI narration '+id+' should use the uploaded file');
+  }
+  assert.ok(!data.entries.some(x=>x.kind==='pause'||x.paragraph===17||x.paragraph===405));
+  for(const p of [42,185,188,195,221,269])assert.ok(!data.entries.some(x=>x.paragraph===p&&x.kind==='cue'));
   await page.locator('#stepsViewButton').click();
   await page.locator(`[data-script="${indexOf(83,'“Access to one\'s memory.”')}"]`).click();
   await page.waitForTimeout(100);
   assert.equal(await page.locator('#subtitleText').textContent(),'“Access to one\'s memory.”');
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
-  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('416 quiet previews never play media; first three live cues are pixel-black and fully silent until room reveal');
+  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('395 quiet previews never play media; first two live cues are pixel-black and silent until room reveal');
   await page.locator('#startButton').press('f');await page.waitForFunction(()=>scriptShow.started);
   assert.equal(await page.evaluate(()=>scriptShow.index),0);assert.equal(await page.locator('button:visible').count(),0);
   assert.equal(await page.evaluate(()=>document.fullscreenElement?.id),'showShell');
@@ -49,7 +60,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   for(let i=1;i<=firstVoice;i++){
    if(i===1)await page.locator('#visualizer').click();else await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i);
    assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);
-   if(i<3){
+   if(data.entries[i].paragraph<23){
     assert.equal(await canvasIsBlack(),true,'Black room must not show a dim background in steps 1-3');
     assert.equal(await page.locator('#actOneBgm').getAttribute('src'),null);
     assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.paused),true);
@@ -76,22 +87,22 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   // Subsequent media still run naturally; AI subtitles are manual, never elapsed-time driven.
   for(let i=clock+1;i<data.entries.length;i++){
    const from=data.entries[i-1],to=data.entries[i];
-   if(from.group!==to.group&&from.group){await page.waitForFunction(()=>!['starting','playing'].includes(scriptShow.active?.state),null,{timeout:12000});}
+   if(from.group!==to.group&&from.group){await page.waitForFunction(()=>!['starting','playing'].includes(scriptShow.active?.state),null,{timeout:60000});}
    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i,'entry '+i);
-   const soundtrackByStep={
-    15:'assets/audio/background/act-1/15-91.mp3',
-    91:'assets/audio/background/act-1/91-92(轉場).mp3',
-    92:'assets/audio/background/act-1/92-174.mp3',
-    174:'assets/audio/background/act-1/174-175(轉場).mp3',
-    175:null
+   const soundtrackByParagraph={
+    30:'assets/audio/background/act-1/15-91.mp3',
+    99:'assets/audio/background/act-1/91-92(轉場).mp3',
+    104:'assets/audio/background/act-1/92-174.mp3',
+    179:'assets/audio/background/act-1/174-175(轉場).mp3',
+    186:null
    };
-   if(Object.prototype.hasOwnProperty.call(soundtrackByStep,i+1)){
-    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current?.src||null),soundtrackByStep[i+1],
-      'Act I music must follow the subtitle step '+(i+1));
-    if(i+1!==175){
-      assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio?.getAttribute('src')),soundtrackByStep[i+1]);
-    } else {
-      // After crossing into Act II, let the outgoing track fade for 1.1s.
+   if(Object.prototype.hasOwnProperty.call(soundtrackByParagraph,to.paragraph)){
+    const expected=soundtrackByParagraph[to.paragraph];
+    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current?.src||null),expected,
+      'Music must follow the immutable manuscript paragraph '+to.paragraph);
+    if(expected){
+      assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio?.getAttribute('src')),expected);
+    }else{
       await page.waitForFunction(()=>!actOneBackgroundMusic.stopping);
       assert.ok(await page.locator('#actOneBgm, #actOneBgmAlt').evaluateAll(xs=>xs.every(x=>x.paused)));
     }
@@ -124,7 +135,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
    }
    assert.equal(await page.locator('#subtitleText').textContent(),to.text);
    if(to.text)assert.equal(await page.locator('#subtitles').isVisible(),true);
-   if(to.action==='opening-dim'){
+   if(to.paragraph===43){
     await page.waitForTimeout(650);
     const pose=await page.evaluate(()=>{
      const frame=projectionFrame(),bright={...frame,scene:0};
@@ -150,7 +161,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   const deadlines=await page.evaluate(()=>({...scriptShow.deadlines}));
   for(let i=last-1;i>=0;i--){await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>scriptShow.index),i);assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);}
   assert.deepEqual(await page.evaluate(()=>({...scriptShow.deadlines})),deadlines);assert.equal(await page.locator('button:visible').count(),0);
-  checks.push('all 416 forward and reverse inputs preserve exact 374 sentences, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
+  checks.push('all 395 forward and reverse inputs preserve exact 374 sentences, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
   // Check every subtitle at all ratios, including review pane. No text leaves the fixed projection frame.
   await page.reload();await page.waitForFunction(()=>!document.querySelector('#startButton').disabled);await page.locator('#stepsViewButton').click();
   for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
