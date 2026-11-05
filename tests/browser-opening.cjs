@@ -296,6 +296,9 @@ async function fastOffice(page){
 async function fastVoting(page){
  await fastOffice(page);
  for(const next of ['office-bang','past-reflection','memory-return','discussion','vote-prompt']){
+  // A real BANG is asynchronous. The shortcut for browser tests must not
+  // attempt to leave the effect cue until the recording has actually ended.
+  if(next==='past-reflection')await flag(page,'officeBangState','finished');
   await page.keyboard.press('Space');await cue(page,next);
   await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
  }
