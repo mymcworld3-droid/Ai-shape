@@ -54,10 +54,10 @@ if(scriptMode){
   if(entry.action==='selection-flash'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
  };
  transcript=new ScriptShow.Controller({entries:SHOW_SCRIPT.entries,voices,effects,video:revealVideo,
-  onEntry(entry,{direction,index}){
+  onEntry(entry,{direction,index,starting}){
    document.body.dataset.musicError='false';
    actOneMusic.setStep(entry.paragraph);
-   applyEntry(entry,direction);
+   applyEntry(entry,starting&&index>0?0:direction);
   },
   onVoice(group,state){document.body.dataset.scriptVoice=group+':'+state;
    if(state==='starting'&&voices[group])prepareAudio(voices[group]);

@@ -4,11 +4,12 @@ const stepsViewButton=document.getElementById("stepsViewButton");
 const stepsPanel=document.getElementById("stepsPanel");
 const startButton=document.getElementById("startButton");
 const startLabel=document.getElementById("startLabel");
+const resetStartStep=document.getElementById("resetStartStep");
 if(scriptMode){
  const list=document.getElementById('stepList');list.replaceChildren();
  document.querySelector('#stepsPanel h1').firstChild.textContent='劇本字幕';
  document.querySelector('#stepsPanel h1 span').textContent=SHOW_SCRIPT.entries.length;
- document.querySelector('#stepsPanel header p').textContent='逐句預覽，影音不播放；開始後從開場重跑';
+ document.querySelector('#stepsPanel header p').textContent='點選任一步驟預覽；按開始／F 便從該步驟播放';
  SHOW_SCRIPT.entries.forEach((e,index)=>{
   const li=document.createElement('li'),button=document.createElement('button'),number=document.createElement('span'),text=document.createElement('span'),small=document.createElement('small');
   button.type='button';button.dataset.script=index;button.setAttribute('aria-pressed','false');number.className='step-number';number.textContent=index+1;
@@ -20,10 +21,22 @@ const modeButton=document.getElementById('modeButton');
 modeButton.textContent=scriptMode?'場景模式':'逐句字幕';
 modeButton.addEventListener('click',()=>{if(startGate.started)return;location.search=scriptMode?'?mode=cues':'';});
 let selectedScript=null;
+window.selectedScriptStartIndex=null;
 for(const button of document.querySelectorAll('[data-script]'))button.addEventListener('click',()=>{
- if(startGate.started)return;selectedScript=Number(button.dataset.script);
+ if(startGate.started)return;
+ selectedScript=Number(button.dataset.script);
+ window.selectedScriptStartIndex=selectedScript;
  for(const other of document.querySelectorAll('[data-script]'))other.setAttribute('aria-pressed',String(other===button));
  window.previewScriptEntry(selectedScript);
+ updateStartButton();
+});
+resetStartStep.addEventListener('click',()=>{
+ if(startGate.started)return;
+ selectedScript=null;
+ window.selectedScriptStartIndex=null;
+ for(const button of document.querySelectorAll('[data-script]'))button.setAttribute('aria-pressed','false');
+ window.previewScriptEntry(null);
+ updateStartButton();
 });
 const stepButtons=Array.from(document.querySelectorAll("[data-preview]"));
 let selectedPreview="bright";
@@ -51,7 +64,9 @@ for(const button of stepButtons){
 function updateStartButton(){
  if(startGate.started)return;
  startButton.disabled=!showAssetsReady();
- startLabel.textContent=startButton.disabled?"載入中…":"開始";
+ startLabel.textContent=startButton.disabled?"載入中…":
+  scriptMode&&selectedScript!==null?`從第 ${selectedScript+1} 步開始`:"開始";
+ resetStartStep.hidden=!scriptMode||selectedScript===null;
  const failed=["backgroundReady","darkBackgroundReady","cardReady","memoryBackgroundReady","officeBackgroundReady","videoError","audioError"]
   .some(key=>document.body.dataset[key]===(key.endsWith("Error")?"true":"false"));
  document.getElementById("startStatus").textContent=failed?"素材未載入，請重新整理":"";

@@ -13,6 +13,8 @@ audio,video{display:none}
 #reviewControls button{border:0;border-radius:999px;padding:10px 19px;background:transparent;color:#aeb8c4;font-size:14px;white-space:nowrap;cursor:pointer}
 #reviewControls button[aria-pressed=true]{background:#f1f4f8;color:#11161d}
 #startDock{position:fixed;z-index:4;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px}
+#resetStartStep{border:0;background:#11151bd9;color:#d6dde6;border-radius:999px;padding:7px 13px;font-size:12px;cursor:pointer;white-space:nowrap}
+#resetStartStep:hover{background:#303946}
 #startButton{display:flex;align-items:center;justify-content:center;gap:12px;min-width:176px;height:54px;padding:0 28px;border:1px solid #ffffff66;border-radius:999px;background:#f1f5f9e8;color:#111827;box-shadow:0 8px 32px #0008;backdrop-filter:blur(12px);font-size:17px;font-weight:600;cursor:pointer}
 #startButton:hover:not(:disabled){background:#fff}
 #startButton:disabled{opacity:.55;cursor:wait}

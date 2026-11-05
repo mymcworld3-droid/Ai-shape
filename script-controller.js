@@ -13,7 +13,17 @@
   }
   get entry(){return this.entries[this.index]||null;}
   remaining(kind){const duration=kind==='selection'?60000:900000;return this.deadlines[kind]===null?duration:Math.max(0,this.deadlines[kind]-this.now());}
-  start(){if(this.started)return false;this.started=true;this.index=0;this.enter(1);return true;}
+  start(index=0){
+   if(this.started||!Number.isInteger(index)||index<0||index>=this.entries.length)return false;
+   this.started=true;this.index=index;
+   // A rehearsal jump starts fresh timers rather than elapsing skipped scenes.
+   const entry=this.entry,earlier=this.entries.slice(0,index);
+   if(earlier.some(e=>e.group==='opening')&&entry.group!=='opening')
+    this.deadlines.opening=this.now()+900000;
+   if(earlier.some(e=>e.group==='prompt')&&entry.group!=='prompt')
+    this.deadlines.selection=this.now()+60000;
+   this.enter(1,true);return true;
+  }
   finish(group){
    if(!this.active||this.active.group!==group)return;
    this.active.state='finished';
@@ -58,13 +68,13 @@
    if(this.active&&['starting','playing'].includes(this.active.state))this.active.state='paused';
    this.index--;this.enter(-1);return true;
   }
-  enter(direction){
+  enter(direction,starting=false){
    const e=this.entry,previous=this.entries[this.index-1];
-   if(direction>0&&previous?.group!==e.group){
+   if(direction>0&&(starting||previous?.group!==e.group)){
     this.active?.media?.pause();
     if(e.group)this.play(e.group);else this.active=null;
    }
-   this.onEntry(e,{direction,index:this.index,total:this.entries.length});
+   this.onEntry(e,{direction,index:this.index,total:this.entries.length,starting});
    if(direction<0)return;
    const effect=this.effects[e.action];
    if(effect){for(const m of Object.values(this.effects))m?.pause();effect.currentTime=0;
