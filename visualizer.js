@@ -32,7 +32,7 @@ let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
 const ROTATE_INTERVAL=500,ROTATE_DURATION=1400,ROTATE_STEP=Math.PI/3;
 const particles=[],PARTICLES=90;
 const freqMin=20,freqMax=20000;
-const transitions=Object.fromEntries(["scene","ai","clock","card","blackout","vote","aiExpansion"].map(name=>
+const transitions=Object.fromEntries(["scene","ai","clock","card","blackout","vote","aiExpansion","voteCorner"].map(name=>
  [name,{value:0,from:0,target:0,start:0,duration:0}]));
 
 function easeInOutCubic(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
@@ -375,7 +375,8 @@ function roomHandoffProgress(now){
  return easeInOutCubic(Math.max(0,Math.min(1,(now-roomReadyAt)/config.revealFadeMs)));
 }
 function drawBackground(now,frame){
- ctx.clearRect(0,0,w,h);ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
+ ctx.clearRect(0,0,w,h);ctx.fillStyle=frame.hideBackground?"#000":"#050505";ctx.fillRect(0,0,w,h);
+ if(frame.hideBackground)return; // No room or office backgrounds after the vote clock begins.
  const openingRoom=!frame.background||frame.background==="opening";
  const ready=frame.background==="office"?officeBackgroundReady:frame.background==="memory"?memoryBackgroundReady:backgroundReady;
  const image=frame.background==="office"?officeBackgroundImage:frame.background==="memory"?memoryBackgroundImage:frame.room?backgroundImage:darkBackgroundImage;
@@ -651,13 +652,25 @@ function graphicPlacement(frame,radius){
  const foreground={x:full.x+full.width*(1-config.voiceGraphicScale)/2,
   y:full.y+full.height*(1-config.voiceGraphicScale)/2,
   width:full.width*config.voiceGraphicScale,height:full.height*config.voiceGraphicScale};
- return StageLayout.expandGraphicPose(home,foreground,radius,progress,
+ const pose=StageLayout.expandGraphicPose(home,foreground,radius,progress,
   config.roomScreen.inset*home.width/config.roomScreen.width);
+ if(frame.script&&frame.voteCorner>0){
+  // Entire AI visual, including particle and waveform geometry, scales together.
+  const large=StageLayout.expandGraphicPose(home,foreground,radius,1,
+   config.roomScreen.inset*home.width/config.roomScreen.width);
+  const p=frame.voteCorner,lerp=(a,b)=>a+(b-a)*p;
+  return {x:lerp(pose.x,w*.82),y:lerp(pose.y,h*.72),
+   scale:lerp(pose.scale,large.scale*.5),clip:p>=.999?null:pose.clip};
+ }
+ return pose;
 }
 function clockPlacement(frame){
  const unit=Math.min(w,h)*.23*.012;
  if(frame.background&&frame.background!=="opening"){
-  return {x:w*config.idleShape.x,y:h*config.idleShape.y,scale:unit*config.idleShape.size,clip:null};
+  const p=frame.script?(frame.voteCorner||0):0;
+  return {x:w*(config.idleShape.x*(1-p)+.5*p),
+   y:h*(config.idleShape.y*(1-p)+.5*p),
+   scale:unit*config.idleShape.size*(1+.55*p),clip:null};
  }
  const screen=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
  const rest=StageLayout.fitRectGraphic(screen,236,84,config.roomScreen.inset*screen.width/config.roomScreen.width);
@@ -687,7 +700,7 @@ function draw(){
  const waveBase=Math.min(w,h)*.2;
  const ringR=frame.background==="memory"?waveBase+Math.min(w,h)*.075:waveBase-4*scale;
  const morph=frame.clock;
- const graphicOpacity=frame.ai*(1-easeInOutCubic(Math.min(1,morph/.55)));
+ const graphicOpacity=frame.ai*(1-easeInOutCubic(Math.min(1,morph/.55))*(1-(frame.voteCorner||0)));
  const clockOpacity=easeInOutCubic(Math.max(0,Math.min(1,(morph-.55)/.45)));
  if(graphicOpacity>0){
   const coils=createCoils(waveBase,now*.00045);
