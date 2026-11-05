@@ -34,7 +34,15 @@ test('all four acts, source-specific two-vote order, card, door, room, office an
  assert.equal(e.filter(x=>x.group==='two').at(-1).text,'Two votes.');assert.ok(!e.some(x=>/Three votes/.test(x.text)));
  assert.ok(e.some(x=>x.group==='prompt'&&x.text==='1 minute remaining.'));
  assert.equal(e.filter(x=>x.group==='revealTruth').at(-1).text,'You may leave.');
- assert.equal(e.length,416);
+ assert.equal(e.length,395);
+ assert.ok(!e.some(x=>x.kind==='pause' || x.paragraph===405),'No no-op actor cues');
+ for(const p of [17,42,185,188,195,221,269])
+  assert.equal(e.some(x=>x.kind==='cue'&&x.paragraph===p),false,'Spotlight should not need a manual step: '+p);
+ assert.equal(e[0].paragraph,20);
+ assert.equal(e[0].look.blackout,1);
+ assert.equal(e.find(x=>x.paragraph===43).look.scene,.35);
+ assert.equal(e.find(x=>x.paragraph===186).look.blackout,0);
+ assert.equal(e.find(x=>x.paragraph===196).look.background,'office');
  assert.equal(e.at(-2).text,'You may leave.');
  assert.equal(e.at(-1).action,'end-blackout');
  assert.equal(e.at(-1).look.blackout,1);
