@@ -72,3 +72,49 @@ function updateStartButton(){
 window.addEventListener("stageassetschange",updateStartButton);
 startButton.addEventListener("click",()=>startGate.start());
 updateStartButton();
+
+// Stable cue IDs keep bookmarks attached to the same sentence after edits.
+function setupStepMarks(){
+ const storageKey='ai-shape-step-marks-v1';
+ let saved=[];
+ try{const value=JSON.parse(localStorage.getItem(storageKey)||'[]');if(Array.isArray(value))saved=value.filter(id=>typeof id==='string');}catch{}
+ const marked=new Set(saved),rows=[];
+ let onlyMarked=false;
+ const toolbar=document.createElement('div');toolbar.className='step-mark-tools';
+ const filter=document.createElement('button');filter.type='button';filter.textContent='只看標記';filter.setAttribute('aria-pressed','false');
+ const count=document.createElement('span');count.setAttribute('role','status');
+ const empty=document.createElement('p');empty.className='step-marks-empty';empty.textContent='尚未標記步驟。點步驟右側的 ☆ 即可標記。';empty.hidden=true;
+ toolbar.append(filter,count);document.querySelector('#stepsPanel header').append(toolbar);
+ document.getElementById('stepList').after(empty);
+ let saveFailed=false;
+ function refresh(){
+  let total=0;
+  for(const {row,mark,id,label} of rows){
+   const active=marked.has(id);if(active)total++;
+   row.dataset.marked=String(active);row.hidden=onlyMarked&&!active;
+   mark.textContent=active?'★':'☆';mark.setAttribute('aria-pressed',String(active));
+   mark.setAttribute('aria-label',(active?'取消標記':'標記')+'第 '+label+' 步');
+   mark.title=active?'取消標記':'標記此步驟';
+  }
+  for(const divider of document.querySelectorAll('#stepList .scene-divider'))divider.hidden=onlyMarked;
+  count.textContent=total+' 個標記'+(saveFailed?'（目前無法儲存）':'');
+  filter.setAttribute('aria-pressed',String(onlyMarked));
+  empty.hidden=!onlyMarked||total>0;
+ }
+ for(const button of document.querySelectorAll('#stepList [data-script], #stepList [data-preview]')){
+  const index=Number(button.dataset.script);
+  const id=button.dataset.script!==undefined?'script:'+SHOW_SCRIPT.entries[index].id:'cue:'+button.dataset.preview;
+  const row=button.closest('li');row.classList.add('markable-step');
+  const label=button.querySelector('.step-number')?.textContent||String(index);
+  const mark=document.createElement('button');mark.type='button';mark.className='step-mark';
+  mark.addEventListener('click',()=>{
+   if(marked.has(id))marked.delete(id);else marked.add(id);
+   try{localStorage.setItem(storageKey,JSON.stringify([...marked]));saveFailed=false;}catch{saveFailed=true;}
+   refresh();
+  });
+  row.append(mark);rows.push({row,mark,id,label});
+ }
+ filter.addEventListener('click',()=>{onlyMarked=!onlyMarked;refresh();});
+ refresh();
+}
+setupStepMarks();
