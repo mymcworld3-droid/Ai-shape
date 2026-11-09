@@ -1087,7 +1087,8 @@ async function fastVoting(page){
     assert.equal(await keys.locator('#openingAudio').evaluate(a=>a.volume),.85);
     assert.equal(await keys.locator('#openingAudio').evaluate(a=>a.paused),false);
     await keys.keyboard.press('ArrowLeft');await cue(keys,'ai');await checkAiScreen(keys,{centered:true,large:true});
-    assert.ok(await keys.locator('audio,video').evaluateAll(items=>items.every(m=>m.paused)));
+    assert.ok(await keys.locator('audio,video').evaluateAll(items=>items.filter(m=>!['actOneBgm','actOneBgmAlt'].includes(m.id)).every(m=>m.paused)));
+    assert.ok(await keys.evaluate(()=>window.actOneBackgroundMusic?.current),'Rewinding voice keeps scene BGM active');
     await keys.keyboard.press('ArrowRight');await state(keys,'narration');
     assert.ok(await keys.locator('#openingAudio').evaluate(a=>a.currentTime)<1,'Right replays the interrupted voice');
     await naturalAudioEnd(keys);const keysDeadline=await keys.evaluate(()=>opening.deadline);
@@ -1141,7 +1142,7 @@ async function fastVoting(page){
       'memory-blackout','memory-room','memory-welcome','memory-light','blackout','card-hidden','card','door-kick','clock','welcome','ai','bright','dark'];
     for(const previous of preceding){
       await rewind.keyboard.press('ArrowLeft');await cue(rewind,previous);
-      assert.ok(await rewind.locator('audio,video').evaluateAll(items=>items.every(m=>m.paused)));
+      assert.ok(await rewind.locator('audio,video').evaluateAll(items=>items.filter(m=>!['actOneBgm','actOneBgmAlt'].includes(m.id)).every(m=>m.paused)));
       assert.equal(await rewind.evaluate(()=>opening.deadline),rewindOpening);
       assert.equal(await rewind.evaluate(()=>stage.voting.deadline),rewindSelection);
       if(previous==='office-light')assert.equal(await rewind.locator('body').getAttribute('data-scene'),'office');
@@ -1150,18 +1151,27 @@ async function fastVoting(page){
     }
     await rewind.keyboard.press('ArrowLeft');await cue(rewind,'dark');await noControls(rewind);
     await rewind.keyboard.press('ArrowRight');await roomState(rewind,'playing');await rewind.close();
-    results.push('Left restores all prior scene boundaries from the selection clock to initial darkness, pauses every media element and preserves both absolute deadlines; Right can start the first cue again without restoring buttons');
+    results.push('Left restores scene boundaries and switches BGM by cue; paused scene effects and preserved countdown deadlines; Right restarts after initial darkness without showing controls');
 
     const jump=await browser.newPage();
     await ready(jump,url);await jump.locator('#stepsViewButton').click();
     await jump.locator('[data-preview="office-light"]').click();
     assert.equal(await jump.locator('#startLabel').textContent(),'從第 15 步開始');
     assert.equal(await jump.locator('#resetStartStep').isVisible(),true);
+    // Preview never loads or plays a music track.
+    assert.equal(await jump.evaluate(()=>window.actOneBackgroundMusic?.current),null);
+    assert.ok(await jump.locator('#actOneBgm, #actOneBgmAlt').evaluateAll(items=>items.every(m=>m.paused)));
     await jump.locator('#startButton').click();await cue(jump,'office-light');
+    await jump.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
+    assert.match(await jump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-2\/181-263\.mp3$/);
     assert.equal(await jump.locator('body').getAttribute('data-scene'),'office');
     assert.equal(await jump.locator('#roomRevealVideo').evaluate(v=>v.paused),true);
     assert.equal(await jump.locator('#openingAudio').evaluate(a=>a.paused),true);
-    await jump.keyboard.press('ArrowRight');await cue(jump,'office-bang');await jump.close();
+    await jump.keyboard.press('ArrowRight');await cue(jump,'office-bang');
+    assert.match(await jump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-2\/181-263\.mp3$/);
+    await jump.keyboard.press('e');
+    assert.ok(await jump.evaluate(()=>Math.abs(window.actOneBackgroundMusic.masterVolume-.38)<.001));
+    await jump.close();
     const resetJump=await browser.newPage();
     await ready(resetJump,url);await resetJump.locator('#stepsViewButton').click();
     await resetJump.locator('[data-preview="vote-clock"]').click();
@@ -1169,8 +1179,11 @@ async function fastVoting(page){
     await resetJump.locator('#resetStartStep').click();
     assert.equal(await resetJump.locator('#startLabel').textContent(),'開始');
     assert.equal(await resetJump.locator('#resetStartStep').isHidden(),true);
-    await resetJump.locator('#startButton').click();await roomState(resetJump,'playing');await resetJump.close();
-    results.push('Scene mode starts from chosen office cue with appropriate background and no skipped recordings; clear selection restores opening reveal');
+    await resetJump.locator('#startButton').click();await roomState(resetJump,'playing');
+    await resetJump.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
+    assert.match(await resetJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-1\/1-14\.mp3$/);
+    await resetJump.close();
+    results.push('Scene mode previews stay silent; direct jumps and normal opening start matching act soundtrack, 3/E controls BGM gain, and skipped media remain paused');
 
     fs.writeFileSync(path.join(output,"browser-results.json"),JSON.stringify({passed:true,checks:results},null,2));
     for(const result of results)console.log("PASS",result);
