@@ -604,6 +604,7 @@ async function fastVoting(page){
     const reviewErrors=[];review.on('pageerror',error=>reviewErrors.push(String(error)));
     await ready(review,url);
     await review.locator('#stepsViewButton').click(); await flag(review,'view','steps');
+    await review.locator('[data-preview="bright"]').click();
     await review.waitForTimeout(100);await fixedFrame(review);
     assert.equal(await review.locator('#stepList [data-preview]').count(),25);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
@@ -1042,9 +1043,9 @@ async function fastVoting(page){
     await touch.locator('#stepsViewButton').click();await touch.waitForTimeout(100);await fixedFrame(touch);
     await touch.locator('[data-preview="card"]').click();await flag(touch,'previewCue','card');
     assert.equal(await touch.locator('#openingAudio').evaluate(a=>a.currentTime),0);
+    await touch.locator('#resetStartStep').click();
     const startBox=await touch.locator('#startButton').boundingBox();
     assert.ok(startBox.y+startBox.height<=844&&startBox.y>700,"Floating Start remains on-screen on mobile");
-    await touch.locator('#resetStartStep').click();
     await touch.touchscreen.tap(startBox.x+startBox.width/2,startBox.y+startBox.height/2); await roomState(touch,"playing");
     await noControls(touch);
     await touch.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
