@@ -106,6 +106,51 @@ test('all 25 cues rewind across scene boundaries and can run forward again witho
  for(const m of [c.audio,c.memoryVoice,c.bang,c.prompt])assert.equal(m.calls,2);
 });
 
+test('every one of the 25 scene cues can be selected as the first live cue',async()=>{
+ const {STAGE_START_CUES}=require('../opening-controller.js');
+ assert.equal(STAGE_START_CUES.length,25);
+ const mediaFor={"bright":"video","welcome":"audio","door-kick":"effect",
+  "memory-welcome":"memoryVoice","office-bang":"bang","vote-prompt":"prompt"};
+ for(const [index,cue] of STAGE_START_CUES.entries()){
+  const c=setup();
+  assert.equal(await c.stage.startAt(cue),true,cue);
+  assert.equal(c.stage.state,index===0?'room-reveal':cue,cue);
+  for(const name of ['video','audio','effect','memoryVoice','bang','prompt']){
+   assert.equal(c[name].calls,mediaFor[cue]===name?1:0,cue+': '+name);
+  }
+  assert.equal(c.stage.opening.deadline,index>=3?900000:null,cue+': opening deadline');
+  assert.equal(c.stage.voting.deadline,index>=20?60000:null,cue+': selection deadline');
+  if(index>=8)assert.equal(c.stage.memory.state,index<=11?cue:'memory-blackout');
+  if(index>=12)assert.equal(c.stage.office.state,index<=17?cue:'memory-return');
+  if(index>=18)assert.equal(c.stage.voting.state,cue);
+  assert.equal(c.stage.startAt('clock'),false,'cannot restart an already started scene');
+  c.stage.destroy();
+ }
+});
+
+test('a direct scene jump starts fresh timers and advances from the chosen scene',async()=>{
+ const c=setup();
+ assert.equal(await c.stage.startAt('clock'),true);
+ assert.equal(c.stage.opening.state,'countdown');
+ assert.equal(c.stage.opening.getRemainingMs(),900000);
+ c.tick(1500);
+ assert.equal(c.stage.opening.getRemainingMs(),898500);
+ await c.stage.advance();
+ assert.equal(c.stage.state,'door-kick');
+ assert.equal(c.effect.calls,1);
+ const vote=setup();
+ assert.equal(await vote.stage.startAt('vote-clock'),true);
+ assert.equal(vote.stage.voting.getRemainingMs(),60000);
+ vote.tick(2000);
+ assert.equal(vote.stage.voting.getRemainingMs(),58000);
+ await vote.stage.advance();assert.equal(vote.stage.state,'vote-one');
+ assert.equal(vote.prompt.calls,0,'skipped AI prompt must not replay');
+ const invalid=setup();
+ assert.equal(invalid.stage.startAt('not-a-cue'),false);
+ assert.equal(invalid.stage.state,'dark');
+ invalid.stage.destroy();vote.stage.destroy();c.stage.destroy();
+});
+
 test('live mixer isolates voice, effects and BGM while retaining the crossfade master gain',()=>{
  const fs=require('node:fs'),vm=require('node:vm');
  const source=fs.readFileSync(require.resolve('../visualizer.js'),'utf8');
