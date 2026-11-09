@@ -48,6 +48,16 @@ function updateTransitions(now){
  }
 }
 
+// Scene mode shares the script's real soundtrack files and crossfade player.
+ // Keep it idle until a live cue; selecting a rehearsal preview must stay silent.
+const sceneBackgroundMusic=scriptMode?null:new ActOneMusic.Controller({
+ audio:document.getElementById("actOneBgm"),
+ alternateAudio:document.getElementById("actOneBgmAlt"),
+ tracks:config.actOneMusic,fadeMs:1400,fadeOutMs:1100,
+ onError(error){document.body.dataset.musicError="true";console.error("[Scene BGM]",error);}
+});
+if(sceneBackgroundMusic)window.actOneBackgroundMusic=sceneBackgroundMusic;
+
 const stage=new StageOpening.StageCueController({
  video:revealVideo,audio:audioElement,effect:config.doorKick?effectElement:null,
  durationMs:config.countdownMs,revealFadeMs:config.revealFadeMs,
@@ -75,6 +85,12 @@ const stage=new StageOpening.StageCueController({
  },
  onCue(cue){
   document.body.dataset.cue=cue;
+  // All live scene transitions (including rewind and a direct rehearsal jump)
+  // update BGM. Stage previews never emit onCue and remain fully silent.
+  if(!scriptMode&&startGate.started){
+   document.body.dataset.musicError="false";
+   sceneBackgroundMusic.setStep(config.sceneMusicSteps[cue]??20);
+  }
   if(cue==="bright")roomReadyAt=performance.now();
   if(cue==="ai"){animate("ai",0,0);animate("ai",1,config.aiFadeMs);}
   if(cue==="door-kick"){
