@@ -675,6 +675,7 @@ async function fastVoting(page){
       }
     }
     assert.equal(await screenFit.locator('#openingAudio').evaluate(a=>a.currentTime),0);
+    await screenFit.locator('#resetStartStep').click();
     await fastReveal(screenFit);
     await screenFit.keyboard.press('Space');await cue(screenFit,'ai');await settleLiveAi(screenFit);
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
