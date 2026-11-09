@@ -35,9 +35,24 @@ function selectScriptStep(index){
   sentenceButtons[selectedScript]?.scrollIntoView({block:'nearest'});
 }
 for(const button of sentenceButtons)button.addEventListener('click',()=>selectScriptStep(Number(button.dataset.script)));
-resetStartStep.addEventListener('click',()=>selectScriptStep(null));
 const stepButtons=Array.from(document.querySelectorAll("[data-preview]"));
-let selectedPreview="bright";
+let selectedPreview=null,selectedScene=null;
+window.selectedSceneStartCue=null;
+if(!scriptMode){
+ document.querySelector('#stepsPanel header p').textContent='點選任一步驟預覽；按開始／F 便從該步驟播放';
+ for(const button of stepButtons)button.setAttribute('aria-pressed','false');
+}
+function selectSceneStep(cue){
+ if(startGate.started||scriptMode)return;
+ const button=stepButtons.find(item=>item.dataset.preview===cue);
+ selectedScene=button?cue:null;
+ selectedPreview=selectedScene;
+ window.selectedSceneStartCue=selectedScene;
+ for(const item of stepButtons)item.setAttribute('aria-pressed',String(item===button));
+ setProjectionPreview(selectedPreview);
+ updateStartButton();
+}
+resetStartStep.addEventListener('click',()=>scriptMode?selectScriptStep(null):selectSceneStep(null));
 
 function setReviewView(view){
  if(startGate.started)return;
@@ -54,17 +69,16 @@ stepsViewButton.addEventListener("click",()=>setReviewView("steps"));
 for(const button of stepButtons){
  button.addEventListener("click",()=>{
   if(startGate.started)return;
-  selectedPreview=button.dataset.preview;
-  for(const item of stepButtons)item.setAttribute("aria-pressed",String(item===button));
-  setProjectionPreview(selectedPreview);
+  selectSceneStep(button.dataset.preview);
  });
 }
 function updateStartButton(){
  if(startGate.started)return;
  startButton.disabled=!showAssetsReady();
  startLabel.textContent=startButton.disabled?"載入中…":
-  scriptMode&&selectedScript!==null?`從第 ${selectedScript} 步開始`:"開始";
- resetStartStep.hidden=!scriptMode||selectedScript===null;
+  scriptMode&&selectedScript!==null?`從第 ${selectedScript} 步開始`:
+  !scriptMode&&selectedScene!==null?`從第 ${stepButtons.findIndex(item=>item.dataset.preview===selectedScene)+1} 步開始`:"開始";
+ resetStartStep.hidden=scriptMode?selectedScript===null:selectedScene===null;
  const failed=["backgroundReady","darkBackgroundReady","cardReady","memoryBackgroundReady","officeBackgroundReady","videoError","audioError"]
   .some(key=>document.body.dataset[key]===(key.endsWith("Error")?"true":"false"));
  document.getElementById("startStatus").textContent=failed?"素材未載入，請重新整理":"";
