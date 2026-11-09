@@ -426,6 +426,15 @@
     }
   }
 
+  // The 25 selectable scene-mode cues (the first also owns the reveal video).
+  const STAGE_START_CUES = Object.freeze([
+    "bright", "ai", "welcome", "clock", "door-kick", "card", "card-hidden", "blackout",
+    "memory-light", "memory-welcome", "memory-room", "memory-blackout",
+    "past-intro", "past-isolate", "office-light", "office-bang", "past-reflection",
+    "memory-return", "discussion", "vote-prompt", "vote-clock", "vote-one",
+    "vote-two", "vote-final", "vote-blackout"
+  ]);
+
   // Operator cues and media completion are separate. The clock may replace the
   // graphic during narration, while its deadline still belongs to audio.ended.
   class StageCueController {
@@ -485,6 +494,52 @@
     setCue(state) { this.state = state; this.onCue(state); }
     setEffectState(state) { this.effectState = state; this.onMediaState("effect", state); }
     lock(ms) { this.busyUntil = Math.max(this.busyUntil, this.now() + ms); }
+
+    // Begin rehearsal at an arbitrary cue without playing skipped video, voices or effects.
+    // Skipped deadlines start fresh; the chosen cue's own media plays immediately.
+    startAt(cue = STAGE_START_CUES[0]) {
+      const index = STAGE_START_CUES.indexOf(cue);
+      if (this.destroyed || this.state !== "dark" || this.history.length || index < 0) return false;
+      if (index === 0) return this.advance(); // Keep the original room-reveal video.
+      this.room.state = "ready";
+      this.onMediaState("room", "ready");
+      if (index >= 3) {
+        this.opening.state = "countdown";
+        this.opening.deadline = this.now() + this.opening.durationMs;
+        this.onMediaState("narration", "countdown");
+      }
+      if (index >= 5) this.setEffectState("finished");
+      if (this.memory && index >= 8) {
+        this.memory.state = index <= 11 ? cue : "memory-blackout";
+        if (index >= 9) this.memory.setMediaState("memoryClick", "finished");
+        if (index >= 10) this.memory.setMediaState("memoryVoice", "finished");
+      }
+      if (this.office && index >= 12) {
+        this.office.state = index <= 17 ? cue : "memory-return";
+        if (index >= 16) this.office.setBangState("finished");
+      }
+      if (this.voting && index >= 18) {
+        this.voting.state = cue;
+        if (index >= 20) this.voting.deadline = this.now() + this.voting.durationMs;
+        if (index >= 20) this.voting.setMediaState("selectionPrompt", "finished");
+        if (index >= 22) this.voting.setMediaState("selectionOne", "finished");
+        if (index >= 23) this.voting.setMediaState("selectionTwo", "finished");
+        if (index >= 24) this.voting.setMediaState("selectionFinal", "finished");
+      }
+      this.setCue(cue);
+      switch (cue) {
+        case "welcome": return this.opening.advance();
+        case "door-kick": return this.playEffect();
+        case "memory-light": return this.memory?.play("memoryClick") ?? false;
+        case "memory-welcome": return this.memory?.play("memoryVoice") ?? false;
+        case "office-bang": return this.office?.playBang() ?? false;
+        case "vote-prompt": return this.voting?.play("selectionPrompt") ?? false;
+        case "vote-one": return this.voting?.play("selectionOne") ?? false;
+        case "vote-two": return this.voting?.play("selectionTwo") ?? false;
+        case "vote-final": return this.voting?.play("selectionFinal") ?? false;
+        default: return true;
+      }
+    }
 
     checkpoint() {
       return {
@@ -735,5 +790,5 @@
     return () => target.removeEventListener("click", click);
   }
 
-  return { RoomRevealController, OpeningController, MemorySceneController, OfficeSceneController, VotingSceneController, StageCueController, StartGate, formatTime, bindAdvanceKey, bindStageKeys, adjustVolume, bindAdvanceClick };
+  return { STAGE_START_CUES, RoomRevealController, OpeningController, MemorySceneController, OfficeSceneController, VotingSceneController, StageCueController, StartGate, formatTime, bindAdvanceKey, bindStageKeys, adjustVolume, bindAdvanceClick };
 });
