@@ -592,6 +592,7 @@ async function fastVoting(page){
     await fadePage.locator('[data-preview="bright"]').click();await fadePage.waitForTimeout(1700);
     await matchesStill(fadePage,'assets/backgrounds/IMG_0165.png');
     await fadePage.locator('[data-preview="ai"]').click();await fadePage.waitForTimeout(200);
+    await fadePage.locator('#resetStartStep').click();
     await fastReveal(fadePage);await matchesStill(fadePage,'assets/backgrounds/IMG_0165.png');
     await fadePage.keyboard.press('Space');await cue(fadePage,'ai');
     gradualPixels(await fadePixels(fadePage),'live second cue');
@@ -604,7 +605,7 @@ async function fastVoting(page){
     await ready(review,url);
     await review.locator('#stepsViewButton').click(); await flag(review,'view','steps');
     await review.waitForTimeout(100);await fixedFrame(review);
-    assert.equal(await review.locator('#stepList button').count(),25);
+    assert.equal(await review.locator('#stepList [data-preview]').count(),25);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
     for(const preview of ['welcome','clock','door-kick','card','card-hidden','blackout','ai','bright',
       'memory-light','memory-welcome','memory-room','memory-blackout',
@@ -643,13 +644,13 @@ async function fastVoting(page){
     });await fixedFrame(review);
     await review.locator('#stepsViewButton').click();await review.locator('[data-preview="vote-blackout"]').click();
     await flag(review,'previewCue','vote-blackout');
-    // Starting after inspecting the last cue must still play the first clip.
-    await review.locator('#startButton').click();await roomState(review,'playing');await noControls(review);
+    // The selected last cue now starts as a blackout, without replaying earlier scenes.
+    assert.equal(await review.locator('#startLabel').textContent(),'從第 25 步開始');
+    await review.locator('#startButton').click();await cue(review,'vote-blackout');await noControls(review);
     await flag(review,'view','page');
-    assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.currentTime<1),true);
-    await review.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
-    await cue(review,'bright');await review.waitForTimeout(400);
-    await matchesStill(review,'assets/backgrounds/IMG_0165.png');
+    assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.paused),true);
+    assert.equal(await review.locator('#openingAudio').evaluate(a=>a.paused),true);
+    assert.equal(await review.evaluate(()=>stage.voting.deadline!==null),true);
     assert.equal(reviewErrors.length,0,reviewErrors.join('\n'));
     await review.close();
 
@@ -681,7 +682,7 @@ async function fastVoting(page){
     }
     await screenFit.close();
     results.push('only AI enlarges over the fixed original background during speech; independent pixels verify the background becomes exactly black, bounded glow and automatic return at three ratios');
-    results.push("full-page and twenty-five silent step previews; no audio/video or either timer before Start; Start from the final selection blackout preview resets to first cue and hides every button");
+    results.push("full-page and twenty-five silent step previews; no audio/video or either timer before Start; selecting final blackout starts directly there and hides every button");
 
     const stableSize=await browser.newPage();await ready(stableSize,url);
     await stableSize.locator('#stepsViewButton').click();
@@ -1043,6 +1044,7 @@ async function fastVoting(page){
     assert.equal(await touch.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     const startBox=await touch.locator('#startButton').boundingBox();
     assert.ok(startBox.y+startBox.height<=844&&startBox.y>700,"Floating Start remains on-screen on mobile");
+    await touch.locator('#resetStartStep').click();
     await touch.touchscreen.tap(startBox.x+startBox.width/2,startBox.y+startBox.height/2); await roomState(touch,"playing");
     await noControls(touch);
     await touch.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
@@ -1147,6 +1149,26 @@ async function fastVoting(page){
     await rewind.keyboard.press('ArrowLeft');await cue(rewind,'dark');await noControls(rewind);
     await rewind.keyboard.press('ArrowRight');await roomState(rewind,'playing');await rewind.close();
     results.push('Left restores all prior scene boundaries from the selection clock to initial darkness, pauses every media element and preserves both absolute deadlines; Right can start the first cue again without restoring buttons');
+
+    const jump=await browser.newPage();
+    await ready(jump,url);await jump.locator('#stepsViewButton').click();
+    await jump.locator('[data-preview="office-light"]').click();
+    assert.equal(await jump.locator('#startLabel').textContent(),'從第 15 步開始');
+    assert.equal(await jump.locator('#resetStartStep').isVisible(),true);
+    await jump.locator('#startButton').click();await cue(jump,'office-light');
+    assert.equal(await jump.locator('body').getAttribute('data-scene'),'office');
+    assert.equal(await jump.locator('#roomRevealVideo').evaluate(v=>v.paused),true);
+    assert.equal(await jump.locator('#openingAudio').evaluate(a=>a.paused),true);
+    await jump.keyboard.press('ArrowRight');await cue(jump,'office-bang');await jump.close();
+    const resetJump=await browser.newPage();
+    await ready(resetJump,url);await resetJump.locator('#stepsViewButton').click();
+    await resetJump.locator('[data-preview="vote-clock"]').click();
+    assert.equal(await resetJump.locator('#startLabel').textContent(),'從第 21 步開始');
+    await resetJump.locator('#resetStartStep').click();
+    assert.equal(await resetJump.locator('#startLabel').textContent(),'開始');
+    assert.equal(await resetJump.locator('#resetStartStep').isHidden(),true);
+    await resetJump.locator('#startButton').click();await roomState(resetJump,'playing');await resetJump.close();
+    results.push('Scene mode starts from chosen office cue with appropriate background and no skipped recordings; clear selection restores opening reveal');
 
     fs.writeFileSync(path.join(output,"browser-results.json"),JSON.stringify({passed:true,checks:results},null,2));
     for(const result of results)console.log("PASS",result);
