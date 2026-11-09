@@ -161,7 +161,25 @@ const startGate=new StageOpening.StartGate({
   visualizerWrap.focus({preventScroll:true});
   resizeCanvas();
   // This is the first real cue, still inside the Start button's click event.
-  if(scriptMode){transcript.start(window.selectedScriptStartIndex??0);requestStageFullscreen();}else advanceStage();
+  if(scriptMode){transcript.start(window.selectedScriptStartIndex??0);requestStageFullscreen();}
+  else{
+   const cue=window.selectedSceneStartCue;
+   if(!cue||cue==="bright"||!StageOpening.STAGE_START_CUES.includes(cue))advanceStage();
+   else{
+    // The selected cue is the first live cue. Skipped media are never played.
+    const voice={"welcome":audioElement,"memory-welcome":memoryAudio,
+     "vote-prompt":selectionAudio.prompt,"vote-one":selectionAudio.one,
+     "vote-two":selectionAudio.two,"vote-final":selectionAudio.final}[cue];
+    if(voice)prepareAudio(voice);
+    stage.startAt(cue);
+    // A rehearsal jump must show the selected stage immediately, not animate
+    // from an unrelated opening-room/blackout state.
+    const frame=StageLayout.previewFrame(cue);
+    stage.restorePresentation({scene:frame.background||"opening",
+     values:Object.fromEntries(Object.keys(transitions).map(name=>[name,Number(frame[name])||0]))});
+    requestStageFullscreen();
+   }
+  }
  }
 });
 document.body.dataset.cue="dark";
