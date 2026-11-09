@@ -33,6 +33,42 @@ function setup(){
 const flush=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
 const close=(a,b)=>assert.ok(Math.abs(a-b)<.01,`${a} != ${b}`);
 
+test("all 25 scene cues select the existing script soundtrack, without music before Start or after blackout",()=>{
+ const fs=require('node:fs'),vm=require('node:vm');
+ const source=fs.readFileSync(require.resolve('../opening-config.js'),'utf8');
+ const context={window:{}};vm.runInNewContext(source,context);
+ const config=context.window.OPENING_CONFIG;
+ const {STAGE_START_CUES}=require('../opening-controller.js');
+ const cueSteps=config.sceneMusicSteps;
+ assert.equal(Object.keys(cueSteps).length,27);
+ assert.equal(cueSteps.dark,20);
+ assert.equal(trackForStep(cueSteps.dark,config.actOneMusic),null);
+ assert.equal(trackForStep(cueSteps['room-reveal'],config.actOneMusic).src,
+  'assets/audio/background/act-1/1-14.mp3');
+ for(const cue of STAGE_START_CUES){
+  assert.equal(Number.isInteger(cueSteps[cue]),true,'missing paragraph for '+cue);
+  const track=trackForStep(cueSteps[cue],config.actOneMusic);
+  if(cue==='vote-blackout')assert.equal(track,null,'closing blackout must end music');
+  else assert.ok(track,'no music for '+cue);
+ }
+ assert.equal(trackForStep(cueSteps.card,config.actOneMusic).src,
+  'assets/audio/background/act-1/15-91.mp3');
+ assert.equal(trackForStep(cueSteps.blackout,config.actOneMusic).src,
+  'assets/audio/background/act-1/91-92(轉場).mp3');
+ assert.equal(trackForStep(cueSteps['memory-light'],config.actOneMusic).src,
+  'assets/audio/background/act-1/92-174.mp3');
+ assert.equal(trackForStep(cueSteps['memory-blackout'],config.actOneMusic).src,
+  'assets/audio/background/act-1/174-175(轉場).mp3');
+ assert.equal(trackForStep(cueSteps['past-intro'],config.actOneMusic).src,
+  'assets/audio/background/act-2/175-180.mp3');
+ assert.equal(trackForStep(cueSteps['office-light'],config.actOneMusic).src,
+  'assets/audio/background/act-2/181-263.mp3');
+ assert.equal(trackForStep(cueSteps['past-reflection'],config.actOneMusic).src,
+  'assets/audio/background/act-2/264-277.mp3');
+ assert.equal(trackForStep(cueSteps['discussion'],config.actOneMusic).src,
+  'assets/audio/background/act-3/Act3.mp3');
+});
+ 
 test("opening first three steps are pure silence; cue 4 fades the first track in",async()=>{
  const {music,a,b,tick}=setup();
  for(let step=20;step<=22;step++)music.setStep(step);
