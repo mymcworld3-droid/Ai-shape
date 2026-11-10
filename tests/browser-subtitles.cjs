@@ -32,7 +32,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
   assert.match(await page.locator('#startLabel').textContent(),/從第 .* 步開始/);
-  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('395 quiet previews never play media; opening live cues are pixel-black and silent until room reveal');
+  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('380 quiet previews never play media; opening live cues are pixel-black and silent until room reveal');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
@@ -40,7 +40,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await rehearsal.locator('#stepsViewButton').click();
   const doorIndex=indexOf(87);
   await rehearsal.locator(`[data-script="${doorIndex}"]`).click();
-  assert.equal(await rehearsal.locator('#startLabel').textContent(),`從第 ${doorIndex+1} 步開始`);
+  assert.equal(await rehearsal.locator('#startLabel').textContent(),`從第 ${doorIndex} 步開始`);
   await rehearsal.locator('#startButton').click();
   assert.equal(await rehearsal.evaluate(()=>scriptShow.index),doorIndex);
   assert.equal(await rehearsal.evaluate(()=>scriptShow.entry.action),'doorOpen');
@@ -63,6 +63,37 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.equal(await voiceRehearsal.locator('#subtitleText').textContent(),data.entries[truthIndex].text);
   assert.equal(await voiceRehearsal.locator('#selectionPromptAudio').evaluate(a=>a.paused),true);
   await voiceRehearsal.close();
+  // Regression: all actual current step IDs 366-379 must be visible and
+  // executable after the user-requested deletions, not just present in JSON.
+  const after366=await browser.newPage({viewport:{width:1280,height:720}});
+  await after366.goto(url);
+  await after366.waitForFunction(()=>!document.getElementById('startButton').disabled);
+  await after366.locator('#stepsViewButton').click();
+  assert.equal(data.entries.length,380);
+  for(let i=366;i<=379;i++)
+   assert.equal(await after366.locator(`#stepList [data-script="${i}"]`).count(),1,'missing visual step '+i);
+  await after366.locator('[data-script="366"]').click();
+  assert.equal(await after366.locator('#startLabel').textContent(),'從第 366 步開始');
+  await after366.locator('#startButton').click();
+  assert.equal(await after366.evaluate(()=>scriptShow.index),366);
+  assert.equal(await after366.evaluate(()=>scriptShow.entry.action),'ending-light');
+  for(let i=367;i<=379;i++){
+   const from=data.entries[i-1],to=data.entries[i];
+   if(from.group && from.group!==to.group){
+    const mediaId=from.group==='complete'?'completeAudio':from.group==='revealTruth'?'revealTruthAudio':null;
+    if(mediaId){
+     await after366.locator('#'+mediaId).evaluate(a=>{if(Number.isFinite(a.duration))a.currentTime=Math.max(0,a.duration-.12);});
+     await after366.waitForFunction(()=>!['starting','playing'].includes(scriptShow.active?.state));
+    }
+   }
+   await after366.keyboard.press('ArrowRight');
+   assert.equal(await after366.evaluate(()=>scriptShow.index),i,'post-366 navigation '+i);
+   assert.equal(await after366.locator('#subtitleText').textContent(),to.text);
+  }
+  assert.equal(await after366.evaluate(()=>scriptShow.entry.action),'end-blackout');
+  await after366.close();
+  checks.push('step review and manual playback both reach every actual step 366-379, including Act IV narration and last blackout');
+
   // Clearing the selection explicitly restores starting at the first cue.
   await page.locator('#resetStartStep').click();
   assert.equal(await page.locator('#startLabel').textContent(),'開始');
@@ -132,8 +163,8 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   // Subsequent media still run naturally; AI subtitles are manual, never elapsed-time driven.
   const votingCountdown=data.entries.findIndex(e=>e.id==='p389-0');
   const fourthActStart=data.entries.findIndex(e=>e.id==='p408-0');
-  assert.equal(votingCountdown,368,'The voting clock starts on step 369');
-  assert.equal(fourthActStart,380,'The corner layout ends before step 381');
+  assert.equal(votingCountdown,355,'The voting clock now starts on step 355 after the requested deletions');
+  assert.equal(fourthActStart,367,'The fourth act begins at step 366 after the requested deletions');
   for(let i=clock+1;i<data.entries.length;i++){
    const from=data.entries[i-1],to=data.entries[i];
    if(from.group!==to.group&&from.group){await page.waitForFunction(()=>!['starting','playing'].includes(scriptShow.active?.state),null,{timeout:60000});}
@@ -309,7 +340,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   const deadlines=await page.evaluate(()=>({...scriptShow.deadlines}));
   for(let i=last-1;i>=0;i--){await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>scriptShow.index),i);assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);}
   assert.deepEqual(await page.evaluate(()=>({...scriptShow.deadlines})),deadlines);assert.equal(await page.locator('button:visible').count(),0);
-  checks.push('all 395 forward and reverse inputs preserve exact 374 sentences, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
+  checks.push('all 380 forward and reverse inputs preserve the 359 current text-bearing steps, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
   // Check every subtitle at all ratios, including review pane. No text leaves the fixed projection frame.
   await page.reload();await page.waitForFunction(()=>!document.querySelector('#startButton').disabled);await page.locator('#stepsViewButton').click();
   for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
@@ -320,7 +351,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     assert.ok(Math.abs(boxes.ratio-16/9)<.01);assert.ok(boxes.bx>=boxes.ax&&boxes.br<=boxes.ar+1&&boxes.by>=boxes.ay&&boxes.bb<=boxes.ab+1,JSON.stringify({i,viewport,boxes}));
    }
   }
-  checks.push('all 374 subtitles fit inside 16:9 projection at three screen ratios in step review');
+  checks.push('all 359 current text-bearing steps fit inside 16:9 projection at three screen ratios in step review');
   assert.deepEqual(errors,[]);for(const x of checks)console.log('PASS',x);
   fs.writeFileSync(path.join(out,'subtitle-results.json'),JSON.stringify({passed:true,checks},null,2));
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
