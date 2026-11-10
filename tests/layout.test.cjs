@@ -127,7 +127,7 @@ test("a static frame has no fade delay and invalid fade timing is rejected",()=>
  assert.throws(()=>fadeInProgress(0,-1),RangeError);
 });
 test("silent step frames cover every cue and cannot mutate the playback transition data",()=>{
- const expected=["bright","ai","welcome","clock","door-kick","card","card-hidden","blackout",
+ const expected=["bright","ai","welcome","clock","door-kick","card","card-hidden","door-open","blackout",
   "memory-light","memory-welcome","memory-room","memory-blackout",
   "past-intro","past-isolate","office-light","office-bang","past-reflection","memory-return",
   "discussion","vote-prompt","vote-clock","vote-one","vote-two","vote-final","vote-blackout"];
