@@ -21,7 +21,7 @@ window.OPENING_CONFIG = Object.freeze({
     Object.freeze({ from: 290, to: 402, src: "assets/audio/background/act-3/Act3.mp3" }),
     Object.freeze({ from: 407, to: 415, src: "assets/audio/background/act-4/Act4.m4a" })
   ]),
-  // The compact 25-cue scene mode follows the same soundtrack timeline.
+  // The scene mode follows the same soundtrack timeline, including Act IV.
   // Each cue points to a representative Word paragraph, not its UI step number.
   // The two modes therefore share the exact same audio files and crossfade rules.
   sceneMusicSteps: Object.freeze({
@@ -33,7 +33,9 @@ window.OPENING_CONFIG = Object.freeze({
     "office-light": 199, "office-bang": 213, "past-reflection": 269,
     "memory-return": 283, "discussion": 290, "vote-prompt": 388,
     "vote-clock": 388, "vote-one": 390, "vote-two": 395,
-    "vote-final": 402, "vote-blackout": 403
+    "vote-final": 402, "vote-blackout": 403,
+    "ending-light": 407, "ending-dialogue": 408, "ending-complete": 409,
+    "ending-question": 410, "ending-reveal": 414, "ending-blackout": 416
   }),
   narration: "assets/audio/ai-opening.m4a",
   // Original user-supplied WAV, stored locally for offline playback.
