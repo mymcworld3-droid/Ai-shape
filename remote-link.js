@@ -6,7 +6,7 @@
  "use strict";
  const actions=Object.freeze([
   "previous","next","voiceDown","voiceUp","effectDown","effectUp",
-  "otherDown","otherUp","toggleVolumeDisplay"
+  "otherDown","otherUp","toggleVolumeDisplay","setVolume"
  ]);
  const validRoom=(id,key)=>typeof id==="string"&&typeof key==="string"&&
   /^[A-Za-z0-9_-]{16}$/.test(id)&&/^[A-Za-z0-9_-]{32}$/.test(key);
