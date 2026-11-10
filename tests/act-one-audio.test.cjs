@@ -33,14 +33,14 @@ function setup(){
 const flush=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
 const close=(a,b)=>assert.ok(Math.abs(a-b)<.01,`${a} != ${b}`);
 
-test("all 25 scene cues select the existing script soundtrack, without music before Start or after blackout",()=>{
+test("all 26 scene cues select the existing script soundtrack, without music before Start or after blackout",()=>{
  const fs=require('node:fs'),vm=require('node:vm');
  const source=fs.readFileSync(require.resolve('../opening-config.js'),'utf8');
  const context={window:{}};vm.runInNewContext(source,context);
  const config=context.window.OPENING_CONFIG;
  const {STAGE_START_CUES}=require('../opening-controller.js');
  const cueSteps=config.sceneMusicSteps;
- assert.equal(Object.keys(cueSteps).length,27);
+ assert.equal(Object.keys(cueSteps).length,28);
  assert.equal(cueSteps.dark,20);
  assert.equal(trackForStep(cueSteps.dark,config.actOneMusic),null);
  assert.equal(trackForStep(cueSteps['room-reveal'],config.actOneMusic).src,
@@ -52,6 +52,8 @@ test("all 25 scene cues select the existing script soundtrack, without music bef
   else assert.ok(track,'no music for '+cue);
  }
  assert.equal(trackForStep(cueSteps.card,config.actOneMusic).src,
+  'assets/audio/background/act-1/15-91.mp3');
+ assert.equal(trackForStep(cueSteps['door-open'],config.actOneMusic).src,
   'assets/audio/background/act-1/15-91.mp3');
  assert.equal(trackForStep(cueSteps.blackout,config.actOneMusic).src,
   'assets/audio/background/act-1/91-92(轉場).mp3');
