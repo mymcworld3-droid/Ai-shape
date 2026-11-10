@@ -12,11 +12,18 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   const page=await browser.newPage({viewport:{width:1280,height:720}}),errors=[];page.on('pageerror',e=>errors.push(String(e)));
   await page.goto(url);try{await page.waitForFunction(()=>!document.querySelector('#startButton').disabled);}catch(e){console.error(await page.evaluate(()=>({flags:{...document.body.dataset},media:[...document.querySelectorAll('audio,video')].map(a=>({id:a.id,error:a.error?.message,ready:a.readyState})),text:document.querySelector('#startStatus').textContent})),errors);throw e;}
   assert.equal(await page.locator('#stepList [data-script]').count(),data.entries.length);
-  assert.equal(await page.locator('[data-script="0"] .step-audio').textContent(),'無音檔');
-  assert.match(await page.locator(`[data-script="${indexOf(87)}"] .step-audio`).textContent(),/heavy-auto-door\.mp3/);
-  assert.match(await page.locator(`[data-script="${indexOf(388)}"] .step-audio`).textContent(),/Slam-button\.m4a/);
-  assert.match(await page.locator(`[data-script="${indexOf(414)}"] .step-audio`).textContent(),/411-415ai\.m4a/);
-  assert.match(await page.locator('[data-script="366"] .step-audio').textContent(),/Act4\.m4a/);
+  await page.locator('#stepsViewButton').click();
+  assert.equal(await page.locator('#stepList .step-audio').count(),0);
+  assert.equal(await page.locator('#audioTimeline').isVisible(),true);
+  assert.equal(await page.locator('#audioTimeline .timeline-tick').count(),data.entries.length);
+  assert.match(await page.locator('.timeline-clip-effect').filter({hasText:'heavy-auto-door.mp3'}).first().textContent(),/heavy-auto-door\.mp3/);
+  assert.match(await page.locator('.timeline-clip-effect').filter({hasText:'Slam-button.m4a'}).first().textContent(),/Slam-button\.m4a/);
+  assert.match(await page.locator('.timeline-clip-voice').filter({hasText:'411-415ai.m4a'}).first().textContent(),/411-415ai\.m4a/);
+  assert.match(await page.locator('.timeline-clip-music').filter({hasText:'Act4.m4a'}).first().textContent(),/Act4\.m4a/);
+  await page.locator('.timeline-clip-effect').filter({hasText:'heavy-auto-door.mp3'}).first().click();
+  assert.equal(await page.locator('#startLabel').textContent(),`從第 ${indexOf(87)} 步開始`);
+  await page.locator('.timeline-tick').first().click();
+  assert.match(await page.locator('.timeline-selection').textContent(),/無音檔/);
   const narrationFiles={
    selectionPromptAudio:'387-389ai.m4a',selectionOneAudio:'391-392ai.m4a',
    selectionTwoAudio:'395-396ai.m4a',selectionFinalAudio:'399ai.m4a',
@@ -28,7 +35,6 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   }
   assert.ok(!data.entries.some(x=>x.paragraph===405));
   for(const p of [42,185,188,195,221,269])assert.ok(!data.entries.some(x=>x.paragraph===p&&x.kind==='cue'));
-  await page.locator('#stepsViewButton').click();
   await page.locator(`[data-script="${indexOf(83,'“Access to one\'s memory.”')}"]`).click();
   await page.waitForTimeout(100);
   assert.equal(await page.locator('#subtitles').count(),1);
