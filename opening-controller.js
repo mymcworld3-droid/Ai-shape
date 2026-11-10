@@ -522,6 +522,7 @@
         morphMs, settleMs, cardFadeMs, blackoutMs, onCue, onMediaState,
         onNarrationEnd, onError, capturePresentation, restorePresentation });
       this.state = "dark";
+      this.initialized = false;
       this.history = [];
       this.busyUntil = 0;
       this.effectState = "idle";
@@ -605,7 +606,8 @@
     // Skipped deadlines start fresh; the chosen cue's own media plays immediately.
     startAt(cue = STAGE_START_CUES[0]) {
       const index = STAGE_START_CUES.indexOf(cue);
-      if (this.destroyed || this.state !== "dark" || this.history.length || index < 0) return false;
+      if (this.destroyed || this.initialized || this.state !== "dark" || this.history.length || index < 0) return false;
+      this.initialized = true;
       if (cue === "dark") { this.setCue("dark"); return true; } // Step 0: blue room, silent.
       if (cue === "bright") return this.advance(); // Step 1: original room-reveal video.
       this.room.state = "ready";
