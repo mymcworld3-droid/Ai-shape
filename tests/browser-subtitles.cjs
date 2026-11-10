@@ -144,7 +144,8 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
    if(i===1)await page.locator('#visualizer').click();else await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i);
    assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);
    if(data.entries[i].paragraph<23){
-    assert.equal(await canvasIsBlack(),true,'Black room must not show a dim background in steps 1-3');
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    assert.equal(await canvasIsBlack(),true,'Early actor lines immediately cut to black after blue step zero');
     assert.equal(await page.locator('#actOneBgm').getAttribute('src'),null);
     assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.paused),true);
    }
