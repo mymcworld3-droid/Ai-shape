@@ -2,6 +2,7 @@
 const pageViewButton=document.getElementById("pageViewButton");
 const stepsViewButton=document.getElementById("stepsViewButton");
 const stepsPanel=document.getElementById("stepsPanel");
+const stepList=document.getElementById("stepList");
 const startButton=document.getElementById("startButton");
 const startLabel=document.getElementById("startLabel");
 const resetStartStep=document.getElementById("resetStartStep");
@@ -21,7 +22,7 @@ const stepEffectFiles={
  officeBang:config.office.bang,"selection-button":config.scriptEffects.selectionButton
 };
 const sceneVoices={
- welcome:config.narration,"memory-welcome":config.memory.narration,
+ welcome:config.narration,clock:config.narration,"memory-welcome":config.memory.narration,
  "vote-prompt":config.voting.prompt,"vote-one":config.voting.one,
  "vote-two":config.voting.two,"vote-final":config.voting.final,
  "ending-complete":config.ending.complete,"ending-reveal":config.ending.revealTruth
@@ -48,7 +49,7 @@ function sceneStepAudio(cue){
   effect:sceneEffects[cue],video:cue==="bright"?config.roomReveal:null});
 }
 if(scriptMode){
- const list=document.getElementById('stepList');list.replaceChildren();
+ stepList.replaceChildren();
  document.querySelector('#stepsPanel h1').firstChild.textContent='劇本字幕';
  document.querySelector('#stepsPanel h1 span').textContent=SHOW_SCRIPT.entries.length;
  document.querySelector('#stepsPanel header p').textContent='點選任一步驟預覽；按開始／F 便從該步驟播放';
@@ -60,7 +61,7 @@ if(scriptMode){
   timelineSteps.push({label:index,media:stepAudioFiles({paragraph:e.paragraph,
    voice:stepVoiceFiles[e.group],effect:stepEffectFiles[e.action],
    video:e.action==="reveal"?config.roomReveal:null})});
-  li.append(button);list.append(li);
+  li.append(button);stepList.append(li);
  });
 }
 const modeButton=document.getElementById('modeButton');
@@ -69,17 +70,22 @@ modeButton.addEventListener('click',()=>{if(startGate.started)return;location.se
 let selectedScript=null;
 window.selectedScriptStartIndex=null;
 const sentenceButtons=Array.from(document.querySelectorAll('[data-script]'));
+function scrollToReviewStep(button){
+ if(!button?.offsetHeight)return;
+ const row=button.getBoundingClientRect(),view=stepList.getBoundingClientRect();
+ if(row.top<view.top)stepList.scrollTop+=row.top-view.top;
+ else if(row.bottom>view.bottom)stepList.scrollTop+=row.bottom-view.bottom;
+}
 function selectScriptStep(index){
  if(startGate.started||!scriptMode)return;
  selectedScript=Number.isInteger(index)&&index>=0&&index<SHOW_SCRIPT.entries.length?index:null;
  window.selectedScriptStartIndex=selectedScript;
  for(const button of sentenceButtons)
   button.setAttribute('aria-pressed',String(Number(button.dataset.script)===selectedScript));
- timeline.select(selectedScript);
+ timeline.select(selectedScript??0);
  window.previewScriptEntry(selectedScript);
  updateStartButton();
- if(selectedScript!==null&&document.body.dataset.view==='steps')
-  sentenceButtons[selectedScript]?.scrollIntoView({block:'nearest'});
+ scrollToReviewStep(sentenceButtons[selectedScript]);
 }
 for(const button of sentenceButtons)button.addEventListener('click',()=>selectScriptStep(Number(button.dataset.script)));
 const stepButtons=Array.from(document.querySelectorAll("[data-preview]"));
@@ -103,16 +109,19 @@ const timeline=AudioTimeline.mount(audioTimeline,timelineSteps,index=>{
  if(scriptMode)selectScriptStep(index);
  else selectSceneStep(stepButtons[index]?.dataset.preview);
 });
+timeline.select(0);
 function selectSceneStep(cue){
  if(startGate.started||scriptMode)return;
- const button=stepButtons.find(item=>item.dataset.preview===cue);
+ const index=stepButtons.findIndex(item=>item.dataset.preview===cue);
+ const button=stepButtons[index];
  selectedScene=button?cue:null;
  selectedPreview=selectedScene;
  window.selectedSceneStartCue=selectedScene;
  for(const item of stepButtons)item.setAttribute('aria-pressed',String(item===button));
- timeline.select(button?stepButtons.indexOf(button):null);
+ timeline.select(Math.max(0,index));
  setProjectionPreview(selectedPreview);
  updateStartButton();
+ scrollToReviewStep(button);
 }
 resetStartStep.addEventListener('click',()=>scriptMode?selectScriptStep(null):selectSceneStep(null));
 

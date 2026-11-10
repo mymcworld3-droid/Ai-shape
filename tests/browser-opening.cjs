@@ -638,12 +638,15 @@ async function fastVoting(page){
     await ready(review,url);
     await review.locator('#stepsViewButton').click(); await flag(review,'view','steps');
     assert.equal(await review.locator('#stepList .step-audio').count(),0,'No embedded media tags inside steps');
+    assert.doesNotMatch(await review.locator('#stepList').textContent(),/404-406ai\.m4a|411-415ai\.m4a/);
     assert.equal(await review.locator('#audioTimeline').isVisible(),true);
     assert.equal(await review.locator('#audioTimeline .timeline-tick').count(),32);
+    assert.equal(await review.locator('.timeline-tick').first().getAttribute('aria-pressed'),'true');
     assert.match(await review.locator('.timeline-clip-video').first().textContent(),/Start_animation\.mp4/);
     assert.match(await review.locator('.timeline-clip-effect').filter({hasText:'heavy-auto-door.mp3'}).first().textContent(),/heavy-auto-door\.mp3/);
     assert.match(await review.locator('.timeline-clip-effect').filter({hasText:'Slam-button.m4a'}).first().textContent(),/Slam-button\.m4a/);
     assert.match(await review.locator('.timeline-clip-voice').filter({hasText:'411-415ai.m4a'}).first().textContent(),/411-415ai\.m4a/);
+    assert.equal(await review.getByRole('button',{name:'語音 ai-opening.m4a，第 03–04 步'}).count(),1);
     await review.locator('.timeline-clip-effect').filter({hasText:'heavy-auto-door.mp3'}).first().click();
     assert.equal(await review.locator('[data-preview="door-open"]').getAttribute('aria-pressed'),'true');
     assert.equal(await review.locator('#startLabel').textContent(),'從第 8 步開始');
@@ -1079,7 +1082,11 @@ async function fastVoting(page){
     const touch=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
     await ready(touch,url); await fixedFrame(touch);
     await touch.locator('#stepsViewButton').click();await touch.waitForTimeout(100);await fixedFrame(touch);
-    await touch.locator('[data-preview="card"]').click();await flag(touch,'previewCue','card');
+    await touch.locator('.timeline-tick').nth(6).tap();await flag(touch,'previewCue','card');
+    assert.equal(await touch.locator('[data-preview="card"]').getAttribute('aria-pressed'),'true');
+    const timelineScrollBox=await touch.locator('#audioTimelineScroll').boundingBox();
+    const startDockBox=await touch.locator('#startDock').boundingBox();
+    assert.ok(timelineScrollBox.y+timelineScrollBox.height<=startDockBox.y,'Start dock must leave the timeline scrollbar reachable');
     assert.equal(await touch.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await touch.locator('#resetStartStep').click();
     const startBox=await touch.locator('#startButton').boundingBox();
@@ -1229,7 +1236,7 @@ async function fastVoting(page){
     await ready(endingJump,url);
     await endingJump.locator('#stepsViewButton').click();
     await endingJump.locator('[data-preview="ending-reveal"]').click();
-    assert.equal(await endingJump.locator('#startLabel').textContent(),'從第 31 步開始');
+    assert.equal(await endingJump.locator('#startLabel').textContent(),'從第 30 步開始');
     assert.equal(await endingJump.locator('#endingRevealAudio').evaluate(m=>m.paused&&m.currentTime===0),true);
     await endingJump.locator('#startButton').click();await cue(endingJump,'ending-reveal');
     await flag(endingJump,'endingRevealState','playing');

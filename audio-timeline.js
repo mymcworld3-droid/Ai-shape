@@ -39,7 +39,7 @@
  }
  function mount(host,steps,onSelect){
   if(!host||typeof document==="undefined")return null;
-  const width=steps.length>100?68:100;
+  const width=136;
   const count=steps.length;
   host.className="audio-timeline";
   host.replaceChildren();
@@ -95,8 +95,8 @@
    segment.setAttribute("aria-label",clip.kind+" "+basename(clip.src)+"，"+range);
    segment.append(label);
    segment.addEventListener("click",event=>{
-    const offset=event.detail===0?0:Math.max(0,Math.floor((event.clientX-segment.getBoundingClientRect().left)/width));
-    onSelect(Math.min(clip.end,clip.start+offset));
+    const index=event.detail===0?clip.start:Math.floor((event.clientX-content.getBoundingClientRect().left)/width);
+    onSelect(Math.min(clip.end,Math.max(clip.start,index)));
    });
    lane.append(segment);
   }
