@@ -334,6 +334,7 @@ async function fastVoting(page){
     assert.equal(await page.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
     assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await page.locator('#startButton').click(); await cue(page,"dark");
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     await matchesStill(page,"assets/backgrounds/Start_dark.PNG");
     assert.equal(await page.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
     await page.keyboard.press('ArrowRight');await roomState(page,"playing");
