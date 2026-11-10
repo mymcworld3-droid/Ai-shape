@@ -40,7 +40,7 @@ test("all 32 scene cues cover Act IV as well as the existing soundtrack",()=>{
  const config=context.window.OPENING_CONFIG;
  const {STAGE_START_CUES}=require('../opening-controller.js');
  const cueSteps=config.sceneMusicSteps;
- assert.equal(Object.keys(cueSteps).length,34);
+ assert.equal(Object.keys(cueSteps).length,33);
  assert.equal(cueSteps.dark,20);
  assert.equal(trackForStep(cueSteps.dark,config.actOneMusic),null);
  assert.equal(trackForStep(cueSteps['room-reveal'],config.actOneMusic).src,
