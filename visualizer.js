@@ -134,9 +134,9 @@ const stage=new StageOpening.StageCueController({
    animate("scene",config.voting.discussionDim,config.voting.fadeMs);
   }
   if(cue==="vote-prompt"){
+   animate("clock",0,0);
    animate("vote",1,config.voting.fadeMs);animate("ai",1,config.voting.fadeMs);
   }
-  if(cue==="vote-clock")animate("clock",1,config.voting.fadeMs);
   if(cue==="vote-blackout")animate("blackout",1,config.blackoutMs);
   if(cue==="ending-light"){
    document.body.dataset.scene="memory";
@@ -175,13 +175,13 @@ const stage=new StageOpening.StageCueController({
   if(["selectionPrompt","selectionOne","selectionTwo","selectionFinal"].includes(kind)){
    if(state==="playing"){
     document.body.dataset.aiVoiceActive=kind;
-    animate("ai",1,config.voting.fadeMs);animate("clock",0,config.voting.fadeMs);
+    animate("ai",1,config.voting.fadeMs);animate("clock",0,0);
     animate("aiExpansion",1,config.voting.voiceExpandMs);
    }
    if(["finished","error","missing"].includes(state)){
     document.body.dataset.aiVoiceActive="none";
     animate("aiExpansion",0,config.voting.voiceSettleMs);
-    if(kind!=="selectionPrompt")animate("clock",1,config.voting.voiceSettleMs);
+    animate("clock",0,0); // Voting narration never restores a timer.
    }
   }
   if(kind==="endingComplete"||kind==="endingReveal"){
@@ -229,7 +229,10 @@ const startGate=new StageOpening.StartGate({
   if(scriptMode){transcript.start(window.selectedScriptStartIndex??0);requestStageFullscreen();}
   else{
    const cue=window.selectedSceneStartCue;
-   if(!cue||cue==="bright"||!StageOpening.STAGE_START_CUES.includes(cue))advanceStage();
+   if(!cue||cue==="dark") {
+    stage.startAt("dark");
+    requestStageFullscreen();
+   }else if(cue==="bright"||!StageOpening.STAGE_START_CUES.includes(cue))advanceStage();
    else{
     // The selected cue is the first live cue. Skipped media are never played.
     const voice={"welcome":audioElement,"memory-welcome":memoryAudio,
@@ -314,7 +317,7 @@ function projectionFrame(){
  }
  const background=document.body.dataset.scene;
  return {background,
-  caption:stage.state,timer:stage.state.startsWith("vote-")?"selection":"opening",
+  caption:stage.state,timer:"opening",
   room:background==="office"?officeBackgroundReady:background==="memory"?memoryBackgroundReady:roomReveal.state==="ready"&&backgroundReady,preview:false,
   ...Object.fromEntries(Object.entries(transitions).map(([key,t])=>[key,t.value]))};
 }
@@ -735,8 +738,7 @@ function drawTimerFace(unit,remainingMs){
 }
 function drawVoteCue(cue,opacity){
  if(!opacity)return;
- const lines={"vote-prompt":["PLEASE MAKE YOUR SELECTION.","1 MINUTE REMAINING"],
-  "vote-clock":["PLEASE MAKE YOUR SELECTION.","1 MINUTE REMAINING"],
+ const lines={"vote-prompt":["PLEASE MAKE YOUR SELECTION.",""],
   "vote-one":["SUBJECT ETHAN","ONE VOTE"],"vote-two":["SUBJECT ETHAN","TWO VOTES"],
   "vote-final":["PLEASE MAKE YOUR FINAL SELECTION.",""]}[cue];
  if(!lines)return;
@@ -753,7 +755,7 @@ function drawVoteCue(cue,opacity){
 }
 function graphicPlacement(frame,radius){
  const openingRoom=!frame.background||frame.background==="opening";
- const selection=frame.script||frame.timer==="selection"||frame.caption?.startsWith("vote-");
+ const selection=frame.script||frame.caption?.startsWith("vote-");
  const progress=openingRoom?(frame.script&&!frame.voiceGroup?0:frame.scene):frame.aiExpansion||0;
  const home=StageLayout.projectImageRegion(w,h,backgroundImage.naturalWidth,backgroundImage.naturalHeight,config.roomScreen);
  if(!openingRoom){home.x=w*config.idleShape.x-home.width/2;home.y=h*config.idleShape.y-home.height/2;}
@@ -793,9 +795,9 @@ function draw(){
  const frame=projectionFrame();
  // Complete blackout includes the room, clock, card and letterbox pixels.
  // The audio-owned deadline continues even while nothing is projected.
- // Before Start and when returning to the initial dark cue, show true black:
- // never show Start_dark.PNG as a dimly visible room.
- if(frame.blackout===1||(!frame.script&&!frame.preview&&stage.state==="dark")){
+ // Cue 0 deliberately shows the supplied blue-tinted Start_dark.PNG room.
+ // Explicit blackouts still cover the full frame with real black.
+ if(frame.blackout===1){
   ctx.fillStyle="#000";ctx.fillRect(0,0,w,h);return;
  }
  const a=analyze(),target=Math.min(1,a.avg/68);
@@ -836,7 +838,7 @@ function draw(){
   drawOuterHex(hexR,rotation,a);drawHex(hexR,rotation,a);
   ctx.restore();graphicGlowScale=1;
  }
- if(clockOpacity>0){
+ if(clockOpacity>0 && !(frame.script && transcript?.entry?.act==='III') && !(frame.caption?.startsWith("vote-"))){
   const pose=clockPlacement(frame);
   ctx.save();
   if(pose.clip){ctx.beginPath();ctx.rect(pose.clip.x,pose.clip.y,pose.clip.width,pose.clip.height);ctx.clip();}
