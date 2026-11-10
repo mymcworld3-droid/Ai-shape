@@ -37,7 +37,7 @@ const server = http.createServer((request, response) => {
   if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     response.writeHead(404).end(); return;
   }
-  // Legacy 25-cue regression tests explicitly exercise silent optional voice slots.
+  // Scene-cue regression tests explicitly exercise silent optional voice slots.
   // Production real M4As are validated by tests/browser-subtitles.cjs.
   // The votingMedia page below overrides this mock to test spoken selections.
   if(requested==="/opening-config.js"){
@@ -278,6 +278,7 @@ async function fastMemory(page){
  await page.keyboard.press('Space');await cue(page,'door-kick');await flag(page,'effectState','finished');
  await page.keyboard.press('Space');await cue(page,'card');await page.waitForTimeout(450);
  await page.keyboard.press('Space');await cue(page,'card-hidden');await page.waitForTimeout(450);
+ await page.keyboard.press('Space');await cue(page,'door-open');await flag(page,'doorOpenState','finished');
  await page.keyboard.press('Space');await cue(page,'blackout');await page.waitForTimeout(1300);
  await page.keyboard.press('Space');await cue(page,'memory-light');
  await page.waitForFunction(()=>transitions.blackout.value===0&&performance.now()>=stage.busyUntil);
@@ -417,6 +418,12 @@ async function fastVoting(page){
     await page.keyboard.press("Space"); await cue(page,"card-hidden"); await page.waitForTimeout(500);
     await matchesStill(page,"assets/backgrounds/IMG_0165.png",[0,.55,1,1]);
     await page.screenshot({path:path.join(output,"08-card-hidden.png")});
+    await page.keyboard.press("Space"); await cue(page,"door-open");
+    assert.equal(await page.locator('#memoryDoorOpenAudio').getAttribute('src'),'assets/audio/effects/heavy-auto-door.mp3');
+    await flag(page,'doorOpenState','playing');
+    assert.equal(await page.locator('#memoryDoorOpenAudio').evaluate(m=>m.paused),false);
+    await page.keyboard.press("Space");await cue(page,"door-open");
+    await flag(page,'doorOpenState','finished');
     await page.keyboard.press("Space"); await cue(page,"blackout"); await page.waitForTimeout(1300);
     const brightest=await page.locator('#visualizer').evaluate(canvas=>{
       const data=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
@@ -606,9 +613,9 @@ async function fastVoting(page){
     await review.locator('#stepsViewButton').click(); await flag(review,'view','steps');
     await review.locator('[data-preview="bright"]').click();
     await review.waitForTimeout(100);await fixedFrame(review);
-    assert.equal(await review.locator('#stepList [data-preview]').count(),25);
+    assert.equal(await review.locator('#stepList [data-preview]').count(),26);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
-    for(const preview of ['welcome','clock','door-kick','card','card-hidden','blackout','ai','bright',
+    for(const preview of ['welcome','clock','door-kick','card','card-hidden','door-open','blackout','ai','bright',
       'memory-light','memory-welcome','memory-room','memory-blackout',
       'past-intro','past-isolate','office-light','office-bang','past-reflection','memory-return',
       'discussion','vote-prompt','vote-clock','vote-one','vote-two','vote-final','vote-blackout']){
@@ -646,7 +653,7 @@ async function fastVoting(page){
     await review.locator('#stepsViewButton').click();await review.locator('[data-preview="vote-blackout"]').click();
     await flag(review,'previewCue','vote-blackout');
     // The selected last cue now starts as a blackout, without replaying earlier scenes.
-    assert.equal(await review.locator('#startLabel').textContent(),'從第 25 步開始');
+    assert.equal(await review.locator('#startLabel').textContent(),'從第 26 步開始');
     await review.locator('#startButton').click();await cue(review,'vote-blackout');await noControls(review);
     await flag(review,'view','page');
     assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.paused),true);
@@ -1139,7 +1146,7 @@ async function fastVoting(page){
     await rewind.keyboard.press('ArrowRight');await cue(rewind,'vote-clock');await rewind.waitForTimeout(700);
     const rewindOpening=await rewind.evaluate(()=>opening.deadline),rewindSelection=await rewind.evaluate(()=>stage.voting.deadline);
     const preceding=['vote-prompt','discussion','memory-return','past-reflection','office-bang','office-light','past-isolate','past-intro',
-      'memory-blackout','memory-room','memory-welcome','memory-light','blackout','card-hidden','card','door-kick','clock','welcome','ai','bright','dark'];
+      'memory-blackout','memory-room','memory-welcome','memory-light','blackout','door-open','card-hidden','card','door-kick','clock','welcome','ai','bright','dark'];
     for(const previous of preceding){
       await rewind.keyboard.press('ArrowLeft');await cue(rewind,previous);
       assert.ok(await rewind.locator('audio,video').evaluateAll(items=>items.filter(m=>!['actOneBgm','actOneBgmAlt'].includes(m.id)).every(m=>m.paused)));
@@ -1153,10 +1160,22 @@ async function fastVoting(page){
     await rewind.keyboard.press('ArrowRight');await roomState(rewind,'playing');await rewind.close();
     results.push('Left restores scene boundaries and switches BGM by cue; paused scene effects and preserved countdown deadlines; Right restarts after initial darkness without showing controls');
 
+    const doorJump=await browser.newPage();
+    await ready(doorJump,url);await doorJump.locator('#stepsViewButton').click();
+    await doorJump.locator('[data-preview="door-open"]').click();
+    assert.equal(await doorJump.locator('#startLabel').textContent(),'從第 8 步開始');
+    assert.equal(await doorJump.locator('#memoryDoorOpenAudio').evaluate(a=>a.paused&&a.currentTime===0),true);
+    await doorJump.locator('#startButton').click();await cue(doorJump,'door-open');
+    await flag(doorJump,'doorOpenState','playing');
+    await flag(doorJump,'doorOpenState','finished');
+    await doorJump.keyboard.press('ArrowRight');await cue(doorJump,'blackout');
+    assert.equal(await doorJump.locator('#doorKickAudio').evaluate(a=>a.paused&&a.currentTime===0),true);
+    await doorJump.close();
+
     const jump=await browser.newPage();
     await ready(jump,url);await jump.locator('#stepsViewButton').click();
     await jump.locator('[data-preview="office-light"]').click();
-    assert.equal(await jump.locator('#startLabel').textContent(),'從第 15 步開始');
+    assert.equal(await jump.locator('#startLabel').textContent(),'從第 16 步開始');
     assert.equal(await jump.locator('#resetStartStep').isVisible(),true);
     // Preview never loads or plays a music track.
     assert.equal(await jump.evaluate(()=>window.actOneBackgroundMusic?.current),null);
@@ -1175,7 +1194,7 @@ async function fastVoting(page){
     const resetJump=await browser.newPage();
     await ready(resetJump,url);await resetJump.locator('#stepsViewButton').click();
     await resetJump.locator('[data-preview="vote-clock"]').click();
-    assert.equal(await resetJump.locator('#startLabel').textContent(),'從第 21 步開始');
+    assert.equal(await resetJump.locator('#startLabel').textContent(),'從第 22 步開始');
     await resetJump.locator('#resetStartStep').click();
     assert.equal(await resetJump.locator('#startLabel').textContent(),'開始');
     assert.equal(await resetJump.locator('#resetStartStep').isHidden(),true);
