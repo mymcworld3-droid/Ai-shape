@@ -38,7 +38,7 @@ function stageState(state){
    nextPreview={step:next.step,label:next.label.slice(0,120),leadIn,lines};
  }
  return {started:state.started,mode:state.mode,step:state.step,total:state.total,
-  label:state.label.slice(0,500),nextPreview,
+  label:state.label.slice(0,500),...(nextPreview?{nextPreview}:{}),
   volumes:{voice,effect,music},volumeVisible:state.volumeVisible};
 }
 
