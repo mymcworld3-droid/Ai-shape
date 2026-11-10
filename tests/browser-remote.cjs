@@ -54,11 +54,20 @@ const {createServer}=require("../server.cjs");
   await stage.locator("#startButton").click();
   await guestA.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
   await guestB.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
-  await guestA.locator('[data-action="effectDown"]').click();
+  assert.equal(await guestA.locator("#nextScenePrompt").isVisible(),true);
+  assert.match(await guestA.locator("#nextPromptStep").textContent(),/第 1 步/);
+  assert.match(await guestA.locator("#nextPromptLines").textContent(),/What is going on/);
+  await guestA.locator("#sliderEffect").evaluate(slider=>{
+   slider.value="95";
+   slider.dispatchEvent(new Event("input",{bubbles:true}));
+   slider.dispatchEvent(new Event("change",{bubbles:true}));
+  });
   await guestA.waitForFunction(()=>document.getElementById("remoteEffect").textContent==="95%");
   await guestB.waitForFunction(()=>document.getElementById("remoteEffect").textContent==="95%");
   await guestA.locator('[data-action="next"]').click();
   await guestB.waitForFunction(()=>document.getElementById("remoteStep").textContent.includes("第 1 步"));
+  assert.match(await guestB.locator("#nextPromptStep").textContent(),/第 2 步/);
+  assert.equal(await guestB.locator("#meterEffect").getAttribute("min"),"-60");
   await stage.reload();
   await guestA.waitForFunction(()=>document.querySelector('[data-action="next"]').disabled);
   await guestB.waitForFunction(()=>document.querySelector('[data-action="next"]').disabled);
@@ -71,7 +80,12 @@ const {createServer}=require("../server.cjs");
    document.getElementById("scriptEffect-doorOpen").currentTime>0);
   await remote.reload();
   await waitForStep(76);
-  await remote.locator('[data-action="effectDown"]').tap();
+  assert.equal(await remote.locator("#nextScenePrompt").isVisible(),false);
+  await remote.locator("#sliderEffect").evaluate(slider=>{
+   slider.value="95";
+   slider.dispatchEvent(new Event("input",{bubbles:true}));
+   slider.dispatchEvent(new Event("change",{bubbles:true}));
+  });
   await remote.waitForFunction(()=>document.getElementById("remoteEffect").textContent==="95%");
   assert.equal(await stage.locator("#scriptEffect-doorOpen").evaluate(audio=>audio.volume),.95);
 
@@ -80,6 +94,9 @@ const {createServer}=require("../server.cjs");
   await stage.waitForFunction(()=>document.body.dataset.cue==="door-open"&&
    document.getElementById("memoryDoorOpenAudio").currentTime>.1);
   await waitForStep(8);
+  const levels=await stage.evaluate(()=>window.stageAudioLevels());
+  for(const channel of ["voice","effect","music"])assert.ok(
+   Number.isInteger(levels[channel])&&levels[channel]>=-60&&levels[channel]<=0);
   await remote.locator('[data-action="previous"]').tap();
   await waitForStep(7);
   assert.deepEqual(errors,[]);
