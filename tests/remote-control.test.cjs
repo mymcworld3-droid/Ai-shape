@@ -139,3 +139,53 @@ test("shared live show allows multiple independent controllers without pairing",
  first.send({type:"command",action:"previous"});
  assert.deepEqual(await replacement.next("command"),{type:"command",action:"previous"});
 });
+
+
+test("remote sliders accept exact levels and forward real meters to all devices", {timeout:5000},async t=>{
+ const {client}=await startRelay(t);
+ const projection=await client();
+ projection.send({type:"host"});
+ assert.deepEqual(await projection.next("ready"),{type:"ready"});
+ const a=await client(),b=await client();
+ for(const c of [a,b]){
+  c.send({type:"watch"});
+  await c.next("ready");
+  assert.equal((await c.next("peer")).connected,true);
+ }
+ const state={started:true,mode:"cues",step:7,total:32,label:"隱藏卡片",
+  nextPreview:{step:8,label:"記憶室開門音效",
+   leadIn:{speaker:"MEGAN",text:"What does that mean?"},
+   lines:[{speaker:"RACHEL",text:"Holy—"}]},
+  volumes:{voice:100,effect:100,music:100},volumeVisible:false};
+ projection.send({type:"state",state});
+ assert.deepEqual((await a.next("state")).state,state);
+ assert.deepEqual((await b.next("state")).state,state);
+ a.send({type:"command",action:"setVolume",channel:"effect",value:37});
+ assert.deepEqual(await projection.next("command"),
+  {type:"command",action:"setVolume",channel:"effect",value:37});
+ a.send({type:"command",action:"setVolume",channel:"effect",value:140});
+ a.send({type:"command",action:"setVolume",channel:"wrong",value:37});
+ b.send({type:"command",action:"next"});
+ assert.deepEqual(await projection.next("command"),{type:"command",action:"next"});
+ const levels={voice:-36,effect:-12,music:-24};
+ projection.send({type:"meter",levels});
+ assert.deepEqual((await a.next("meter")).levels,levels);
+ assert.deepEqual((await b.next("meter")).levels,levels);
+
+ const pairedStage=await client();
+ pairedStage.send({type:"create"});
+ const room=await pairedStage.next("ready");
+ await pairedStage.next("peer");
+ const remote=await client();
+ remote.send({type:"join",id:room.id,key:room.controlKey});
+ await remote.next("ready");
+ await remote.next("peer");
+ await pairedStage.next("peer");
+ pairedStage.send({type:"state",state});
+ await remote.next("state");
+ remote.send({type:"command",action:"setVolume",channel:"voice",value:48});
+ assert.deepEqual(await pairedStage.next("command"),
+  {type:"command",action:"setVolume",channel:"voice",value:48});
+ pairedStage.send({type:"meter",levels});
+ assert.deepEqual((await remote.next("meter")).levels,levels);
+});
