@@ -636,14 +636,19 @@ async function fastVoting(page){
     const reviewErrors=[];review.on('pageerror',error=>reviewErrors.push(String(error)));
     await ready(review,url);
     await review.locator('#stepsViewButton').click(); await flag(review,'view','steps');
+    assert.equal(await review.locator('[data-preview="dark"] .step-audio').textContent(),'無音檔');
+    assert.match(await review.locator('[data-preview="bright"] .step-audio').textContent(),/Start_animation\.mp4/);
+    assert.match(await review.locator('[data-preview="door-open"] .step-audio').textContent(),/heavy-auto-door\.mp3/);
+    assert.match(await review.locator('[data-preview="vote-prompt"] .step-audio').textContent(),/Slam-button\.m4a/);
+    assert.match(await review.locator('[data-preview="ending-reveal"] .step-audio').textContent(),/411-415ai\.m4a/);
     await review.locator('[data-preview="bright"]').click();
     await review.waitForTimeout(100);await fixedFrame(review);
     assert.equal(await review.locator('#stepList [data-preview]').count(),32);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
-    for(const preview of ['welcome','clock','door-kick','card','card-hidden','door-open','blackout','ai','bright',
+    for(const preview of ['dark','welcome','clock','door-kick','card','card-hidden','door-open','blackout','ai','bright',
       'memory-light','memory-welcome','memory-room','memory-blackout',
       'past-intro','past-isolate','office-light','office-bang','past-reflection','memory-return',
-      'discussion','vote-prompt','vote-clock','vote-one','vote-two','vote-final','vote-blackout',
+      'discussion','vote-prompt','vote-one','vote-two','vote-final','vote-blackout',
       'ending-light','ending-dialogue','ending-complete','ending-question','ending-reveal','ending-blackout']){
       await review.locator(`[data-preview="${preview}"]`).click();await flag(review,'previewCue',preview);
       await review.waitForTimeout(60);
@@ -675,19 +680,16 @@ async function fastVoting(page){
     await review.locator('[data-preview="vote-two"]').click();await settlePreview(review);await fixedFrame(review);
     await review.screenshot({path:path.join(output,'22-voting-step-review.png')});
     await review.locator('#pageViewButton').click();await flag(review,'view','page');await review.waitForTimeout(100);
-    await review.waitForFunction(()=>{
-      const c=document.getElementById('visualizer'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
-      for(let i=0;i<d.length;i+=4)if(d[i]||d[i+1]||d[i+2])return false;return true;
-    });await fixedFrame(review);
+    await matchesStill(review,"assets/backgrounds/Start_dark.PNG");await fixedFrame(review);
     await review.locator('#stepsViewButton').click();await review.locator('[data-preview="vote-blackout"]').click();
     await flag(review,'previewCue','vote-blackout');
     // The selected third-act blackout stays selectable without replaying earlier scenes.
-    assert.equal(await review.locator('#startLabel').textContent(),'從第 26 步開始');
+    assert.equal(await review.locator('#startLabel').textContent(),'從第 25 步開始');
     await review.locator('#startButton').click();await cue(review,'vote-blackout');await noControls(review);
     await flag(review,'view','page');
     assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.paused),true);
     assert.equal(await review.locator('#openingAudio').evaluate(a=>a.paused),true);
-    assert.equal(await review.evaluate(()=>stage.voting.deadline!==null),true);
+    assert.equal(await review.evaluate(()=>stage.voting.deadline),null);
     assert.equal(reviewErrors.length,0,reviewErrors.join('\n'));
     await review.close();
 
@@ -861,7 +863,8 @@ async function fastVoting(page){
     await slow.waitForFunction(()=>!document.getElementById('startButton').disabled);
     assert.equal(await slow.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
     assert.equal(await slow.locator('#openingAudio').evaluate(a=>a.currentTime),0);
-    await slow.locator('#startButton').press('Space');await roomState(slow,'playing');await noControls(slow);
+    await slow.locator('#startButton').press('Space');await cue(slow,'dark');
+    await slow.keyboard.press('ArrowRight');await roomState(slow,'playing');await noControls(slow);
     await slow.close();
     results.push("loading cannot start the show; readiness does not autoplay; focused Start button remains keyboard-accessible");
 
@@ -884,12 +887,10 @@ async function fastVoting(page){
       const play=HTMLMediaElement.prototype.play;let blocked=true;
       HTMLMediaElement.prototype.play=function(){if(this.tagName==="VIDEO"&&blocked){blocked=false;return Promise.reject(new DOMException("Blocked","NotAllowedError"));}return play.call(this);};
     });
-    await ready(videoRetry,url); await videoRetry.locator('#startButton').click();
-    await flag(videoRetry,"videoError","true"); await cue(videoRetry,"dark");
-    await videoRetry.waitForFunction(()=>{
-      const c=document.getElementById('visualizer'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
-      for(let i=0;i<d.length;i+=4)if(d[i]||d[i+1]||d[i+2])return false;return true;
-    });
+    await ready(videoRetry,url); await videoRetry.locator('#startButton').click();await cue(videoRetry,"dark");
+    await videoRetry.keyboard.press('Space');await flag(videoRetry,"videoError","true");
+    await cue(videoRetry,"dark");
+    await matchesStill(videoRetry,"assets/backgrounds/Start_dark.PNG");
     await videoRetry.mouse.dblclick(30,30); await roomState(videoRetry,"playing");
     await videoRetry.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
     await cue(videoRetry,"bright"); await videoRetry.waitForTimeout(400);
@@ -1083,7 +1084,8 @@ async function fastVoting(page){
     await touch.locator('#resetStartStep').click();
     const startBox=await touch.locator('#startButton').boundingBox();
     assert.ok(startBox.y+startBox.height<=844&&startBox.y>700,"Floating Start remains on-screen on mobile");
-    await touch.touchscreen.tap(startBox.x+startBox.width/2,startBox.y+startBox.height/2); await roomState(touch,"playing");
+    await touch.touchscreen.tap(startBox.x+startBox.width/2,startBox.y+startBox.height/2); await cue(touch,"dark");
+    await touch.touchscreen.tap(190,420);await roomState(touch,"playing");
     await noControls(touch);
     await touch.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
     await cue(touch,"bright"); await touch.waitForTimeout(400);
@@ -1109,7 +1111,8 @@ async function fastVoting(page){
     assert.ok(await keys.locator('#openingAudio').evaluate(m=>m.volume===.85));
     assert.ok(await keys.locator('#doorKickAudio').evaluate(m=>m.volume===1));
     await keys.keyboard.press('1');assert.equal(await keys.locator('#volumeDisplay').textContent(),'語音 90%\n音效 100%\n背景音樂 100%');
-    await keys.keyboard.press('f');await roomState(keys,'playing');await noControls(keys);
+    await keys.keyboard.press('f');await cue(keys,'dark');
+    await keys.keyboard.press('ArrowRight');await roomState(keys,'playing');await noControls(keys);
     await keys.keyboard.press('f');await cue(keys,'room-reveal');
     await keys.keyboard.press('ArrowLeft');await cue(keys,'dark');
     assert.equal(await keys.locator('#roomRevealVideo').evaluate(m=>m.paused),true);
@@ -1172,7 +1175,7 @@ async function fastVoting(page){
     results.push('F starts once; Left interrupts video and voice; Right and Space share a release gate; resumed cues preserve deadlines; 1/Q adjust narration, 2/W effects and 3/E background music independently; O toggles the subtle white bottom-right HUD at three ratios');
 
     const rewind=await browser.newPage();await ready(rewind,url);await fastVoting(rewind);
-    await rewind.keyboard.press('ArrowRight');await cue(rewind,'vote-clock');await rewind.waitForTimeout(700);
+    await rewind.keyboard.press('ArrowRight');await cue(rewind,'vote-one');await rewind.waitForTimeout(700);
     const rewindOpening=await rewind.evaluate(()=>opening.deadline),rewindSelection=await rewind.evaluate(()=>stage.voting.deadline);
     const preceding=['vote-prompt','discussion','memory-return','past-reflection','office-bang','office-light','past-isolate','past-intro',
       'memory-blackout','memory-room','memory-welcome','memory-light','blackout','door-open','card-hidden','card','door-kick','clock','welcome','ai','bright','dark'];
@@ -1261,12 +1264,13 @@ async function fastVoting(page){
     await jump.close();
     const resetJump=await browser.newPage();
     await ready(resetJump,url);await resetJump.locator('#stepsViewButton').click();
-    await resetJump.locator('[data-preview="vote-clock"]').click();
+    await resetJump.locator('[data-preview="vote-one"]').click();
     assert.equal(await resetJump.locator('#startLabel').textContent(),'從第 22 步開始');
     await resetJump.locator('#resetStartStep').click();
     assert.equal(await resetJump.locator('#startLabel').textContent(),'開始');
     assert.equal(await resetJump.locator('#resetStartStep').isHidden(),true);
-    await resetJump.locator('#startButton').click();await roomState(resetJump,'playing');
+    await resetJump.locator('#startButton').click();await cue(resetJump,'dark');
+    await resetJump.keyboard.press('ArrowRight');await roomState(resetJump,'playing');
     await resetJump.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
     assert.match(await resetJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-1\/1-14\.mp3$/);
     await resetJump.close();
