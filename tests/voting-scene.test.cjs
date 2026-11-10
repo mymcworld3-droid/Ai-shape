@@ -111,14 +111,14 @@ test("a live voice error waits for its shrink before retrying without starting a
  c.tick(1);await c.scene.advance();assert.equal(c.prompt.calls,2);
  assert.equal(c.scene.state,'vote-prompt');assert.equal(c.scene.deadline,null);
 });
-test("all twenty-five cues keep the opening deadline while selection receives its own minute",async()=>{
+test("all twenty-six cues keep the opening deadline while selection receives its own minute",async()=>{
  let time=0;const video=new Media(),audio=new Media();
  const stage=new StageCueController({video,audio,now:()=>time,memoryScene:{},officeScene:{},votingScene:{}});
  const step=async(ms=0)=>{time+=ms;return stage.advance();};
  await step();video.end();await step(300);await step(1000);await step(200);await step(2000);audio.end();
  const original=stage.opening.deadline;
  await step(1100);await step(1300);
- for(const ms of [1300,500,500,1300,1100,700,700,1300,1100,1300,1100,200,1300])await step(ms);
+ for(const ms of [1300,500,500,200,1300,1100,700,700,1300,1100,1300,1100,200,1300])await step(ms);
  assert.equal(stage.state,'memory-return');await step(1100);assert.equal(stage.state,'discussion');
  await step(700);assert.equal(stage.state,'vote-prompt');assert.equal(stage.voting.deadline,null);
  await step(700);assert.equal(stage.state,'vote-clock');const selection=stage.voting.deadline;
