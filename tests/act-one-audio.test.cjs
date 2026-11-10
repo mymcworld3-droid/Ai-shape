@@ -33,14 +33,14 @@ function setup(){
 const flush=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
 const close=(a,b)=>assert.ok(Math.abs(a-b)<.01,`${a} != ${b}`);
 
-test("all 26 scene cues select the existing script soundtrack, without music before Start or after blackout",()=>{
+test("all 32 scene cues cover Act IV as well as the existing soundtrack",()=>{
  const fs=require('node:fs'),vm=require('node:vm');
  const source=fs.readFileSync(require.resolve('../opening-config.js'),'utf8');
  const context={window:{}};vm.runInNewContext(source,context);
  const config=context.window.OPENING_CONFIG;
  const {STAGE_START_CUES}=require('../opening-controller.js');
  const cueSteps=config.sceneMusicSteps;
- assert.equal(Object.keys(cueSteps).length,28);
+ assert.equal(Object.keys(cueSteps).length,34);
  assert.equal(cueSteps.dark,20);
  assert.equal(trackForStep(cueSteps.dark,config.actOneMusic),null);
  assert.equal(trackForStep(cueSteps['room-reveal'],config.actOneMusic).src,
@@ -48,7 +48,7 @@ test("all 26 scene cues select the existing script soundtrack, without music bef
  for(const cue of STAGE_START_CUES){
   assert.equal(Number.isInteger(cueSteps[cue]),true,'missing paragraph for '+cue);
   const track=trackForStep(cueSteps[cue],config.actOneMusic);
-  if(cue==='vote-blackout')assert.equal(track,null,'closing blackout must end music');
+  if(cue==='vote-blackout'||cue==='ending-blackout')assert.equal(track,null,'blackout must end music');
   else assert.ok(track,'no music for '+cue);
  }
  assert.equal(trackForStep(cueSteps.card,config.actOneMusic).src,
@@ -69,6 +69,10 @@ test("all 26 scene cues select the existing script soundtrack, without music bef
   'assets/audio/background/act-2/264-277.mp3');
  assert.equal(trackForStep(cueSteps['discussion'],config.actOneMusic).src,
   'assets/audio/background/act-3/Act3.mp3');
+ assert.equal(trackForStep(cueSteps['ending-light'],config.actOneMusic).src,
+  'assets/audio/background/act-4/Act4.m4a');
+ assert.equal(trackForStep(cueSteps['ending-reveal'],config.actOneMusic).src,
+  'assets/audio/background/act-4/Act4.m4a');
 });
  
 test("opening first three steps are pure silence; cue 4 fades the first track in",async()=>{
