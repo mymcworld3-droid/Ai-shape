@@ -10,10 +10,10 @@ class Media extends EventTarget {
 }
 function setup(){
  let time=0,presentation={scene:'opening',value:0};
- const video=new Media(),audio=new Media(),effect=new Media(),doorOpen=new Media(),memoryVoice=new Media(),bang=new Media(),prompt=new Media(),button=new Media();
- const stage=new StageCueController({video,audio,effect,doorOpen,selectionButton:button,now:()=>time,memoryScene:{voice:memoryVoice},officeScene:{bang},votingScene:{prompt},
+ const video=new Media(),audio=new Media(),effect=new Media(),doorOpen=new Media(),memoryVoice=new Media(),bang=new Media(),prompt=new Media(),button=new Media(),complete=new Media(),reveal=new Media();
+ const stage=new StageCueController({video,audio,effect,doorOpen,selectionButton:button,now:()=>time,memoryScene:{voice:memoryVoice},officeScene:{bang},votingScene:{prompt},endingScene:{complete,revealTruth:reveal},
   capturePresentation:()=>({...presentation}),restorePresentation:saved=>{presentation=saved;}});
- return {stage,video,audio,effect,doorOpen,memoryVoice,bang,prompt,button,tick:ms=>time+=ms,
+ return {stage,video,audio,effect,doorOpen,memoryVoice,bang,prompt,button,complete,reveal,tick:ms=>time+=ms,
   setPresentation:value=>{presentation=value;},getPresentation:()=>presentation,
   async next(){time+=5000;await stage.advance();},
   async welcome(){await this.next();video.end();await this.next();await this.next();}
@@ -108,16 +108,17 @@ test('all 26 cues rewind across scene boundaries and can run forward again witho
  for(const m of [c.audio,c.doorOpen,c.memoryVoice,c.bang,c.prompt,c.button])assert.equal(m.calls,2);
 });
 
-test('every one of the 26 scene cues can be selected as the first live cue',async()=>{
+test('every one of the 32 scene cues can be selected as the first live cue',async()=>{
  const {STAGE_START_CUES}=require('../opening-controller.js');
- assert.equal(STAGE_START_CUES.length,26);
+ assert.equal(STAGE_START_CUES.length,32);
  const mediaFor={"bright":"video","welcome":"audio","door-kick":"effect","door-open":"doorOpen",
-  "memory-welcome":"memoryVoice","office-bang":"bang","vote-prompt":"prompt"};
+  "memory-welcome":"memoryVoice","office-bang":"bang","vote-prompt":"prompt",
+  "ending-complete":"complete","ending-reveal":"reveal"};
  for(const [index,cue] of STAGE_START_CUES.entries()){
   const c=setup();
   assert.equal(await c.stage.startAt(cue),true,cue);
   assert.equal(c.stage.state,index===0?'room-reveal':cue,cue);
-  for(const name of ['video','audio','effect','doorOpen','memoryVoice','bang','prompt','button']){
+  for(const name of ['video','audio','effect','doorOpen','memoryVoice','bang','prompt','button','complete','reveal']){
    const expected=mediaFor[cue]===name||(cue==='vote-prompt'&&name==='button')?1:0;
    assert.equal(c[name].calls,expected,cue+': '+name);
   }
@@ -125,7 +126,8 @@ test('every one of the 26 scene cues can be selected as the first live cue',asyn
   assert.equal(c.stage.voting.deadline,index>=21?60000:null,cue+': selection deadline');
   if(index>=9)assert.equal(c.stage.memory.state,index<=12?cue:'memory-blackout');
   if(index>=13)assert.equal(c.stage.office.state,index<=18?cue:'memory-return');
-  if(index>=19)assert.equal(c.stage.voting.state,cue);
+  if(index>=19)assert.equal(c.stage.voting.state,index>=26?'vote-blackout':cue);
+  if(index>=26)assert.equal(c.stage.ending.state,cue);
   assert.equal(c.stage.startAt('clock'),false,'cannot restart an already started scene');
   c.stage.destroy();
  }
@@ -247,6 +249,58 @@ test('selection button is independent of the voice and respects effects volume',
  assert.equal(button.volume,.95);assert.equal(voice.volume,.95);
  keys.otherDown();
  assert.equal(button.volume,.95);assert.equal(context.window.actOneBackgroundMusic.master,.38);
+});
+
+test('Act IV continues after third-act blackout, plays both original AI recordings, then ends completely black',async()=>{
+ const c=setup();
+ assert.equal(await c.stage.startAt('vote-blackout'),true);
+ const openingDeadline=c.stage.opening.deadline,selectionDeadline=c.stage.voting.deadline;
+ await c.next();assert.equal(c.stage.state,'ending-light');
+ await c.next();assert.equal(c.stage.state,'ending-dialogue');
+ await c.next();assert.equal(c.stage.state,'ending-complete');
+ assert.equal(c.complete.calls,1);
+ await c.next();assert.equal(c.stage.state,'ending-complete','Cannot skip first final narration');
+ c.complete.end();
+ await c.next();assert.equal(c.stage.state,'ending-question');
+ await c.next();assert.equal(c.stage.state,'ending-reveal');
+ assert.equal(c.reveal.calls,1);
+ await c.next();assert.equal(c.stage.state,'ending-reveal','Cannot skip truth reveal');
+ c.reveal.end();
+ await c.next();assert.equal(c.stage.state,'ending-blackout');
+ await c.next();assert.equal(c.stage.state,'ending-blackout','final blackout is terminal');
+ assert.equal(c.stage.opening.deadline,openingDeadline);
+ assert.equal(c.stage.voting.deadline,selectionDeadline);
+ assert.equal(c.stage.previous(),true);
+ assert.equal(c.stage.state,'ending-reveal');
+ assert.equal(c.stage.previous(),true);
+ assert.equal(c.stage.state,'ending-question');
+ await c.next();assert.equal(c.stage.state,'ending-reveal');
+ assert.equal(c.reveal.calls,2,'returning to revelation replays the recording');
+ c.stage.destroy();
+});
+
+test('Direct entrance and failed ending recordings preserve manual cue and retry without skipping',async()=>{
+ const c=setup();
+ assert.equal(await c.stage.startAt('ending-complete'),true);
+ assert.equal(c.complete.calls,1);
+ assert.equal(c.reveal.calls,0);
+ assert.equal(c.stage.ending.mediaStates.endingComplete,'playing');
+ c.complete.end();await c.next();
+ assert.equal(c.stage.state,'ending-question');
+ c.stage.destroy();
+
+ const failed=setup();
+ failed.reveal.result=Promise.reject(new Error('blocked'));
+ assert.equal(await failed.stage.startAt('ending-reveal'),false);
+ assert.equal(failed.stage.state,'ending-reveal');
+ assert.equal(failed.stage.ending.mediaStates.endingReveal,'error');
+ failed.reveal.result=Promise.resolve();
+ await failed.next();
+ assert.equal(failed.stage.state,'ending-reveal');
+ assert.equal(failed.reveal.calls,2);
+ failed.reveal.end();await failed.next();
+ assert.equal(failed.stage.state,'ending-blackout');
+ failed.stage.destroy();
 });
 
 test('live mixer isolates voice, effects and BGM while retaining the crossfade master gain',()=>{
