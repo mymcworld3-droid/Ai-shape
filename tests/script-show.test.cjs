@@ -106,7 +106,7 @@ test('rehearsal start inside a voice group starts the recording even if not firs
  opening.end();assert.equal(c.deadlines.opening,900000);
  assert.equal(c.next(),true);assert.equal(effect.calls,1);
 });
-test('jumping into voting starts the one-minute timer when prompt is skipped',async()=>{
+test('jumping directly into a vote plays its voice without inventing a one-minute timer',async()=>{
  let now=4200;const one=new Media(),prompt=new Media();
  const entries=[
   {text:'prompt',group:'prompt',look:{timer:'selection'}},
@@ -116,8 +116,8 @@ test('jumping into voting starts the one-minute timer when prompt is skipped',as
  const c=new Controller({entries,voices:{prompt,one},now:()=>now});
  assert.equal(c.start(1),true);await Promise.resolve();
  assert.equal(prompt.calls,0);assert.equal(one.calls,1);
- assert.equal(c.deadlines.selection,64200);
- now+=3000;assert.equal(c.remaining('selection'),57000);
+ assert.equal(c.deadlines.selection,null);
+ now+=3000;assert.equal(c.remaining('selection'),null);
 });
 test('Left pauses media, never replays effects; resume cannot skip a paused unfinished voice',async()=>{
  const {c,opening,effect}=setup();c.start();await Promise.resolve();c.next();c.previous();
@@ -130,8 +130,8 @@ test('late play results and media errors cannot restore abandoned voices, and er
  assert.equal(c.next(),false);assert.equal(c.index,1);assert.equal(opening.calls,2);
  c.previous();await Promise.resolve();assert.equal(c.active.state,'paused');
 });
-test('missing selection voice retains manual sentences and starts its own minute only when leaving the prompt',()=>{
- let now=100;const c=new Controller({entries:[{group:'prompt',text:'a'},{group:'prompt',text:'b'},{text:'Ethan.'}],now:()=>now});c.start();c.next();assert.equal(c.deadlines.selection,null);c.next();assert.equal(c.remaining('selection'),60000);now+=1000;c.previous();c.next();assert.equal(c.remaining('selection'),59000);assert.equal(c.deadlines.opening,null);
+test('missing selection voice retains manually paced sentences and never creates a deadline',()=>{
+ let now=100;const c=new Controller({entries:[{group:'prompt',text:'a'},{group:'prompt',text:'b'},{text:'Ethan.'}],now:()=>now});c.start();c.next();assert.equal(c.deadlines.selection,null);c.next();assert.equal(c.remaining('selection'),null);now+=1000;c.previous();c.next();assert.equal(c.remaining('selection'),null);assert.equal(c.deadlines.opening,null);
 });
 test('all script entries can run and rewind without audio, no wrap, both deadlines survive and no automatic subtitle advance',()=>{
  const c=new Controller({entries:data.entries});c.start();for(let i=1;i<data.entries.length;i++){assert.equal(c.next(),true);assert.equal(c.index,i);}
