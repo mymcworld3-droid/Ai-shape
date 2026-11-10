@@ -11,6 +11,29 @@
  const endButton=document.getElementById("remoteEndButton");
  let connection=null,room=null,lastState="",audioPrepared=false;
  let liveConnection=null,liveLastState="";
+ function nextScenePrompt(step){
+  const button=stepButtons[step+1];
+  if(!button)return null;
+  const cue=button.dataset.preview;
+  const paragraph=config.sceneMusicSteps[cue];
+  if(!Number.isInteger(paragraph))return null;
+  const nextParagraph=config.sceneMusicSteps[stepButtons[step+2]?.dataset.preview]??Infinity;
+  const entries=SHOW_SCRIPT.entries.filter(entry=>entry.kind==="dialogue"&&entry.text?.trim());
+  const inStep=entries.filter(entry=>entry.paragraph>=paragraph&&
+   entry.paragraph<Math.max(paragraph+1,nextParagraph));
+  // A pure visual cue may have its first speech in the following paragraph.
+  const upcoming=inStep.length?inStep:entries.filter(entry=>entry.paragraph>paragraph&&
+   entry.paragraph<=paragraph+2);
+  const before=entries.filter(entry=>entry.paragraph<paragraph).at(-1);
+  const format=entry=>({speaker:entry.speaker||"舞台",text:entry.text});
+  return {step:step+1,label:button.children[1].firstChild.textContent.trim(),
+   leadIn:before?format(before):null,lines:upcoming.slice(0,3).map(format)};
+ }
+ function applyRemoteCommand(message){
+  if(!StageRemoteLink.actions.includes(message.action))return;
+  if(message.action==="setVolume")stageActions.setVolume(message.channel,message.value);
+  else stageActions[message.action]?.(false);
+ }
 
  // Play silent PCM on each existing element during the local pairing gesture.
  // This prepares the same elements for later cues, including both music players.
@@ -72,6 +95,7 @@
    label=stepButtons[step].children[1].firstChild.textContent.trim();
   }
   return {started,step,total,label,mode:scriptMode?"script":"cues",
+   nextPreview:scriptMode?null:nextScenePrompt(step),
    volumes:{voice:voiceVolume,effect:effectVolume,music:otherVolume},
    volumeVisible:!volumeDisplay.hidden};
  }
@@ -83,6 +107,16 @@
   if(liveConnection&&serialized!==liveLastState&&liveConnection.send({type:"state",state}))
    liveLastState=serialized;
  }
+ // Transport meters separately so continuous levels do not re-render cue state.
+ function publishMeters(){
+  if(!startGate.started||!liveConnection&&!connection)return;
+  const levels=window.stageAudioLevels?.();
+  if(!levels)return;
+  const message={type:"meter",levels};
+  liveConnection?.send(message);
+  connection?.send(message);
+ }
+ setInterval(publishMeters,125);
  function startLive(){
   if(liveConnection||!startGate.started)return;
   liveConnection=StageRemoteLink.connect({
@@ -92,8 +126,8 @@
    },
    onMessage(message){
     if(message.type==="ready"){liveLastState="";publish();}
-    else if(message.type==="command"&&StageRemoteLink.actions.includes(message.action)){
-     stageActions[message.action](false);
+    else if(message.type==="command"){
+     applyRemoteCommand(message);
      publish();
     }
    }
@@ -143,8 +177,8 @@
      publish();
     }else if(message.type==="peer"){
      status.textContent=message.connected?"操控端已連線":"等待另一台裝置連線";
-    }else if(message.type==="command"&&StageRemoteLink.actions.includes(message.action)){
-     stageActions[message.action](false);
+    }else if(message.type==="command"){
+     applyRemoteCommand(message);
      publish();
     }
    }
