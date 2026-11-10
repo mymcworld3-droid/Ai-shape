@@ -4,6 +4,7 @@ const scriptMode=new URLSearchParams(location.search).get("mode")!=="cues";
 let transcript=null,scriptVideoPlaying=false;
 const audioElement=document.getElementById("openingAudio");
 const effectElement=document.getElementById("doorKickAudio");
+const memoryDoorOpenAudio=document.getElementById("memoryDoorOpenAudio");
 const memoryAudio=document.getElementById("memoryWelcomeAudio");
 const memoryLightAudio=document.getElementById("memoryLightAudio");
 const officeBangAudio=document.getElementById("officeBangAudio");
@@ -60,6 +61,7 @@ if(sceneBackgroundMusic)window.actOneBackgroundMusic=sceneBackgroundMusic;
 
 const stage=new StageOpening.StageCueController({
  video:revealVideo,audio:audioElement,effect:config.doorKick?effectElement:null,
+ doorOpen:config.scriptEffects.doorOpen?memoryDoorOpenAudio:null,
  durationMs:config.countdownMs,revealFadeMs:config.revealFadeMs,
  aiFadeMs:config.aiFadeMs,expandMs:config.sceneDurationMs,
  morphMs:config.morphDurationMs,settleMs:config.settleDurationMs,
@@ -131,7 +133,7 @@ const stage=new StageOpening.StageCueController({
   if(cue==="vote-blackout")animate("blackout",1,config.blackoutMs);
  },
  onMediaState(kind,state){
-  const key={room:"roomState",narration:"openingState",effect:"effectState",
+  const key={room:"roomState",narration:"openingState",effect:"effectState",doorOpen:"doorOpenState",
    memoryVoice:"memoryVoiceState",memoryClick:"memoryClickState",officeBang:"officeBangState",
    selectionPrompt:"selectionPromptState",selectionOne:"selectionOneState",
    selectionTwo:"selectionTwoState",selectionFinal:"selectionFinalState"}[kind];
@@ -157,7 +159,7 @@ const stage=new StageOpening.StageCueController({
  onNarrationEnd(){animate("scene",0,config.settleDurationMs);},
  onMemoryNarrationEnd(){animate("ai",0,config.memory.aiFadeMs);},
  onError(kind,error){
-  document.body.dataset[{room:"videoError",narration:"audioError",effect:"effectError",
+  document.body.dataset[{room:"videoError",narration:"audioError",effect:"effectError",doorOpen:"doorOpenError",
    memoryVoice:"memoryVoiceError",memoryClick:"memoryClickError",officeBang:"officeBangError",
    selectionPrompt:"selectionPromptError",selectionOne:"selectionOneError",
    selectionTwo:"selectionTwoError",selectionFinal:"selectionFinalError"}[kind]]="true";
@@ -203,6 +205,8 @@ document.body.dataset.openingState="ready";
 document.body.dataset.roomState="dark";
 document.body.dataset.effectState="idle";
 document.body.dataset.effectAvailable=String(Boolean(config.doorKick));
+document.body.dataset.doorOpenState="idle";
+document.body.dataset.doorOpenAvailable=String(Boolean(config.scriptEffects.doorOpen));
 document.body.dataset.scene="opening";
 document.body.dataset.memoryVoiceState="idle";
 document.body.dataset.memoryClickState="idle";
@@ -306,6 +310,7 @@ audioElement.addEventListener("canplay",()=>{document.body.dataset.audioReady="t
 audioElement.src=config.narration;
 audioElement.load();
 if(config.doorKick){effectElement.src=config.doorKick;effectElement.load();}
+if(config.scriptEffects.doorOpen){memoryDoorOpenAudio.src=config.scriptEffects.doorOpen;memoryDoorOpenAudio.load();}
 if(config.memory.narration){memoryAudio.src=config.memory.narration;memoryAudio.load();}
 if(config.memory.lightClick){memoryLightAudio.src=config.memory.lightClick;memoryLightAudio.load();}
 if(config.office.bang){officeBangAudio.src=config.office.bang;officeBangAudio.load();}
@@ -355,6 +360,7 @@ function advanceStage(){
   document.body.dataset.memoryVoiceError="false";prepareAudio(memoryAudio);
  }
  if(stage.state==="blackout"||stage.state==="memory-light")document.body.dataset.memoryClickError="false";
+ if(stage.state==="card-hidden"||stage.state==="door-open")document.body.dataset.doorOpenError="false";
  if(stage.state==="office-light"||stage.state==="office-bang")document.body.dataset.officeBangError="false";
  if(stage.state==="discussion"||stage.state.startsWith("vote-")){
   for(const [kind,media] of Object.entries(selectionAudio))if(config.voting[kind])prepareAudio(media);
