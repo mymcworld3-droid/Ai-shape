@@ -12,7 +12,7 @@
    if(video){this.videoEnd=()=>{if(video.ended)this.onVideo(false);};video.addEventListener('ended',this.videoEnd);}
   }
   get entry(){return this.entries[this.index]||null;}
-  remaining(kind){const duration=kind==='selection'?60000:900000;return this.deadlines[kind]===null?duration:Math.max(0,this.deadlines[kind]-this.now());}
+  remaining(kind){if(kind==='selection')return null;return this.deadlines.opening===null?900000:Math.max(0,this.deadlines.opening-this.now());}
   start(index=0){
    if(this.started||!Number.isInteger(index)||index<0||index>=this.entries.length)return false;
    this.started=true;this.index=index;
@@ -20,15 +20,13 @@
    const entry=this.entry,earlier=this.entries.slice(0,index);
    if(earlier.some(e=>e.group==='opening')&&entry.group!=='opening')
     this.deadlines.opening=this.now()+900000;
-   if(earlier.some(e=>e.group==='prompt')&&entry.group!=='prompt')
-    this.deadlines.selection=this.now()+60000;
+   // Third-act voting has no deadline; operator inputs alone advance it.
    this.enter(1,true);return true;
   }
   finish(group){
    if(!this.active||this.active.group!==group)return;
    this.active.state='finished';
-   const kind=group==='opening'?'opening':group==='prompt'?'selection':null;
-   if(kind&&this.deadlines[kind]===null)this.deadlines[kind]=this.now()+(kind==='opening'?900000:60000);
+   if(group==='opening'&&this.deadlines.opening===null)this.deadlines.opening=this.now()+900000;
    this.onVoice(group,'finished');
   }
   fail(group,error){if(this.active?.group!==group||this.active.state==='finished')return;this.active.media?.pause();this.active.state='error';++this.token;this.onVoice(group,'error');this.onError(group,error);}
