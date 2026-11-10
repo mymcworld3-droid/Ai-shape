@@ -152,7 +152,7 @@ test("silent step frames cover every cue and cannot mutate the playback transiti
  assert.equal(previewFrame("memory-return").background,"memory");
  for(const cue of expected.slice(18)){
   const frame=previewFrame(cue);assert.equal(frame.card,0);assert.equal(frame.background,"memory");
-  if(["vote-prompt","vote-one","vote-two","vote-final"].includes(cue)){
+  if(["vote-prompt","vote-one","vote-two","vote-final","ending-complete","ending-reveal"].includes(cue)){
    assert.equal(frame.ai,1);assert.equal(frame.aiExpansion,1);assert.equal(frame.clock,0);
   }else assert.equal(frame.ai,0);
  }
