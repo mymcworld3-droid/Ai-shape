@@ -99,7 +99,8 @@ test("crossing into the memory scene preserves the opening's running deadline an
  await step(2000);audio.end();const deadline=stage.opening.deadline;
  await step(1100);await step(1300);
  await step(1300);await step(500);await step(500);
- assert.equal(stage.state,"blackout");assert.equal(await step(500),false);
+ assert.equal(stage.state,"door-open");
+ await step(200);assert.equal(stage.state,"blackout");assert.equal(await step(500),false);
  await step(800);assert.equal(stage.state,"memory-light");
  await step(1100);assert.equal(stage.state,"memory-welcome");voice.end();
  await step(700);assert.equal(stage.state,"memory-room");
