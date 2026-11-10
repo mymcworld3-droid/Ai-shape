@@ -132,7 +132,8 @@ async function cue(page, expected) { await flag(page,"cue",expected); }
 async function state(page, expected) { await flag(page,"openingState",expected); }
 async function roomState(page, expected) { await flag(page,"roomState",expected,15000); }
 async function fastReveal(page) {
-  await page.locator('#startButton').click(); await roomState(page,"playing");
+  await page.locator('#startButton').click(); await cue(page,"dark");
+  await page.keyboard.press('ArrowRight'); await roomState(page,"playing");
   await page.locator('#roomRevealVideo').evaluate(video=>{video.currentTime=video.duration-.1;});
   await cue(page,"bright"); await page.waitForTimeout(350);
 }
@@ -322,13 +323,8 @@ async function fastVoting(page){
     assert.equal(await page.locator('#startButton').isVisible(),true);
     assert.equal(await page.locator('#stepsPanel').isVisible(),false);
     assert.equal(await page.locator('#startDock').evaluate(e=>getComputedStyle(e).position),"fixed");
-    await page.waitForFunction(()=>{
-      const c=document.getElementById('visualizer');
-      const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
-      for(let i=0;i<d.length;i+=4)if(d[i]||d[i+1]||d[i+2])return false;
-      return true;
-    });
-    assert.equal(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused)),true,'Initial cue must be silent');
+    await matchesStill(page,"assets/backgrounds/Start_dark.PNG");
+    assert.equal(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused)),true,'Blue room step zero must be silent');
     assert.equal(await page.locator('body').getAttribute('data-cue'),"dark");
     await page.screenshot({path:path.join(output,"00-dark.png")});
     await page.keyboard.press("Space"); await page.keyboard.press("Enter"); await page.keyboard.press("Shift+Space");
@@ -337,7 +333,10 @@ async function fastVoting(page){
     assert.equal(await page.evaluate(()=>stageOpening.started),false);
     assert.equal(await page.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
     assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0);
-    await page.locator('#startButton').click(); await roomState(page,"playing");
+    await page.locator('#startButton').click(); await cue(page,"dark");
+    await matchesStill(page,"assets/backgrounds/Start_dark.PNG");
+    assert.equal(await page.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
+    await page.keyboard.press('ArrowRight');await roomState(page,"playing");
     await noControls(page);
     const video=await page.locator('#roomRevealVideo').evaluate(v=>({muted:v.muted,inline:v.playsInline,loop:v.loop}));
     assert.deepEqual(video,{muted:true,inline:true,loop:false});
@@ -533,11 +532,9 @@ async function fastVoting(page){
     for(const id of ['selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio']){
       assert.equal(await page.locator('#'+id).getAttribute('src'),null);
     }
-    await page.keyboard.press('Space');await cue(page,'vote-clock');await page.waitForTimeout(700);
-    const selectionDeadline=await page.evaluate(()=>stage.voting.deadline);
-    assert.ok(await page.evaluate(()=>stage.voting.getRemainingMs())<=60000);
-    assert.ok(await page.evaluate(()=>stage.voting.getRemainingMs())>58000);
+    assert.equal(await page.evaluate(()=>stage.voting.getRemainingMs()),null);
     await page.keyboard.press('Space');await cue(page,'vote-one');await page.waitForTimeout(700);
+    assert.equal(await page.evaluate(()=>transitions.clock.value),0,'Voting must never display a timer');
     const voteOne=await page.locator('#visualizer').evaluate(c=>{
       const d=c.getContext('2d').getImageData(0,Math.round(c.height*.83),c.width,Math.round(c.height*.12)).data;
       let hash=0;for(const v of d)hash=(hash*31+v)>>>0;return hash;
@@ -555,9 +552,7 @@ async function fastVoting(page){
       const room=await expectedDifference(page,'assets/backgrounds/memory-room.png',[0,0,1,.2],15,.2);
       assert.ok(room.mean<1,'Voting retains the correct background and cover crop');
       const box=await page.locator('#visualizer').boundingBox();
-      const clock=await expectedDifference(page,'assets/backgrounds/memory-room.png',[.1,.2,.9,.55],15,.2);
-      assert.ok(Math.abs(clock.centerY-box.height*.4)<6,'Selection clock retains Y=40%');
-      assert.ok(Math.abs(clock.width-Math.min(box.width,box.height)*.23*.012*236*.37)<12,'Selection clock retains size=37%');
+      assert.equal(await page.evaluate(()=>transitions.clock.target),0,'No third-act clock at any viewport');
       const text=await expectedDifference(page,'assets/backgrounds/memory-room.png',[0,.81,1,.98],15,.2);
       assert.ok(text.x>0&&text.x+text.width<box.width,'Vote panel stays inside the stage at every ratio');
     }
@@ -565,7 +560,7 @@ async function fastVoting(page){
     await page.screenshot({path:path.join(output,'20-vote-two.png')});
     await page.keyboard.press('Space');await cue(page,'vote-final');await page.waitForTimeout(700);
     await flag(page,'selectionFinalState','missing');
-    assert.equal(await page.evaluate(()=>stage.voting.deadline),selectionDeadline);
+    assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
     await page.keyboard.press('Space');await cue(page,'vote-blackout');await page.waitForTimeout(1300);
     assert.equal(await page.locator('#visualizer').evaluate(c=>{
       const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.every((v,i)=>i%4===3||v===0);
@@ -598,7 +593,7 @@ async function fastVoting(page){
     }),true,'Final Act IV blackout must be solid black');
     assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current),null);
     await page.screenshot({path:path.join(output,'27-ending-blackout.png')});
-    assert.equal(await page.evaluate(()=>stage.voting.deadline),selectionDeadline);
+    assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
     assert.equal(await page.evaluate(()=>opening.deadline),deadline);
     assert.equal(errors.length,0,errors.join("\n"));
     assert.ok(requests.every(request=>request.startsWith(url)),"Show assets must be local");
