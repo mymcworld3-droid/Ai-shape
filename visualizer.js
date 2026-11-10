@@ -31,6 +31,8 @@ let backgroundReady=false,darkBackgroundReady=false,cardReady=false,memoryBackgr
 let previewCue=null,previewAiStartedAt=null;
 let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
 const audioSources=new Map();
+const meterChannels=["voice","effect","music"];
+const meterAnalysers=Object.create(null),meterBuffers=Object.create(null);
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1,graphicGlowScale=1;
 let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0;
 let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
@@ -220,6 +222,8 @@ const startGate=new StageOpening.StartGate({
  isReady:showAssetsReady,
  onStart(){
   previewCue=null;previewAiStartedAt=null;
+  // Register the stage's actual audio output while the user starts playback.
+  for(const media of document.querySelectorAll("audio"))prepareAudio(media);
   document.body.dataset.started="true";
   document.body.dataset.view="page";
   document.body.dataset.previewCue="dark";
@@ -380,6 +384,11 @@ for(const [kind,media] of Object.entries(selectionAudio)){
  if(config.voting[kind]){media.src=config.voting[kind];media.load();}
 }
 
+function meterChannelFor(media){
+ if(media.id==="actOneBgm"||media.id==="actOneBgmAlt")return "music";
+ if(narrationMedia.includes(media)||media.id==="completeAudio"||media.id==="revealTruthAudio")return "voice";
+ return "effect";
+}
 function prepareAudio(media=audioElement){
  try{
   if(!audioCtx){
@@ -388,15 +397,42 @@ function prepareAudio(media=audioElement){
    audioCtx=new AudioContext();analyser=audioCtx.createAnalyser();
    analyser.fftSize=1024;analyser.minDecibels=-90;analyser.maxDecibels=-10;
    analyser.smoothingTimeConstant=.22;
-   analyser.connect(audioCtx.destination);
+   for(const channel of meterChannels){
+    const node=audioCtx.createAnalyser();
+    node.fftSize=2048;
+    node.connect(audioCtx.destination);
+    meterAnalysers[channel]=node;
+    meterBuffers[channel]=new Float32Array(node.fftSize);
+   }
+   // Narration continues to drive the existing AI visualizer.
+   analyser.connect(meterAnalysers.voice);
    dataArray=new Uint8Array(analyser.frequencyBinCount);smooth=new Float32Array(analyser.frequencyBinCount);
   }
-  if(!audioSources.has(media)){
-   source=audioCtx.createMediaElementSource(media);source.connect(analyser);audioSources.set(media,source);
+  if(media&&!audioSources.has(media)){
+   source=audioCtx.createMediaElementSource(media);
+   const channel=meterChannelFor(media);
+   source.connect(channel==="voice"?analyser:meterAnalysers[channel]);
+   audioSources.set(media,source);
   }
   if(audioCtx.state==="suspended")audioCtx.resume().catch(error=>console.warn("[Opening] Audio analysis:",error));
  }catch(error){console.warn("[Opening] Audio analysis unavailable:",error);}
 }
+// Audio RMS measured after the media elements' volume settings.
+// -60 dBFS is the display's silence floor, 0 dBFS is digital full scale.
+window.stageAudioLevels=function stageAudioLevels(){
+ const result={voice:-60,effect:-60,music:-60};
+ if(!audioCtx||audioCtx.state!=="running")return result;
+ for(const channel of meterChannels){
+  const node=meterAnalysers[channel],buffer=meterBuffers[channel];
+  if(!node||!buffer)continue;
+  node.getFloatTimeDomainData(buffer);
+  let squares=0;
+  for(let i=0;i<buffer.length;i++)squares+=buffer[i]*buffer[i];
+  const rms=Math.sqrt(squares/buffer.length);
+  result[channel]=rms<=.001?-60:Math.max(-60,Math.min(0,Math.round(20*Math.log10(rms))));
+ }
+ return result;
+};
 function requestStageFullscreen(){
  if(!document.fullscreenElement&&fullscreenRoot.requestFullscreen){
   try{
@@ -457,6 +493,14 @@ function applyVolumes(){
  }
  volumeDisplay.textContent="語音 "+voiceVolume+"%\n音效 "+effectVolume+"%\n背景音樂 "+otherVolume+"%";
 }
+function setChannelVolume(channel,value){
+ if(!["voice","effect","music"].includes(channel)||!Number.isInteger(value)||value<0||value>100)return false;
+ if(channel==="voice")voiceVolume=value;
+ else if(channel==="effect")effectVolume=value;
+ else otherVolume=value;
+ applyVolumes();
+ return true;
+}
 function changeVoiceVolume(delta){voiceVolume=StageOpening.adjustVolume(voiceVolume,delta);applyVolumes();}
 function changeEffectVolume(delta){effectVolume=StageOpening.adjustVolume(effectVolume,delta);applyVolumes();}
 function changeOtherVolume(delta){otherVolume=StageOpening.adjustVolume(otherVolume,delta);applyVolumes();}
@@ -468,6 +512,7 @@ const stageActions={
  voiceUp:()=>changeVoiceVolume(5),voiceDown:()=>changeVoiceVolume(-5),
  effectUp:()=>changeEffectVolume(5),effectDown:()=>changeEffectVolume(-5),
  otherUp:()=>changeOtherVolume(5),otherDown:()=>changeOtherVolume(-5),
+ setVolume:setChannelVolume,
  toggleVolumeDisplay,
  isStarted:()=>startGate.started
 };
