@@ -174,7 +174,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     99:'assets/audio/background/act-1/91-92(轉場).mp3',
     104:'assets/audio/background/act-1/92-174.mp3',
     179:'assets/audio/background/act-1/174-175(轉場).mp3',
-    186:null,
+    186:'assets/audio/background/act-2/175-180.mp3',
     290:'assets/audio/background/act-3/Act3.mp3',
     403:null,
     407:'assets/audio/background/act-4/Act4.m4a',
