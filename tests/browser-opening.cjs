@@ -191,7 +191,8 @@ async function noControls(page) {
   assert.equal(await page.locator('button:visible,input:visible,select:visible,[role="button"]:visible,audio[controls]:visible,video[controls]:visible').count(),0);
   assert.equal(await page.getByRole('button').count(),0,"Hidden review buttons must also leave the accessibility tree");
   for(const id of ['openingAudio','roomRevealVideo','doorKickAudio','memoryWelcomeAudio','memoryLightAudio','officeBangAudio',
-    'selectionButtonAudio','selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio'])assert.equal(await page.locator('#'+id).isVisible(),false);
+    'selectionButtonAudio','selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio',
+    'endingCompleteAudio','endingRevealAudio'])assert.equal(await page.locator('#'+id).isVisible(),false);
   await fixedFrame(page);
 }
 async function naturalAudioEnd(page) {
@@ -569,9 +570,34 @@ async function fastVoting(page){
     assert.equal(await page.locator('#visualizer').evaluate(c=>{
       const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.every((v,i)=>i%4===3||v===0);
     }),true);
-    await page.keyboard.press('Space');await cue(page,'vote-blackout');await noControls(page);
+    await page.keyboard.press('Space');await cue(page,'ending-light');await noControls(page);
+    await page.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
+    assert.match(await page.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Act4\.m4a$/);
+    await page.waitForTimeout(1150);
+    await matchesStill(page,'assets/backgrounds/memory-room.png');
+    await page.keyboard.press('Space');await cue(page,'ending-dialogue');
+    await page.keyboard.press('Space');await cue(page,'ending-complete');
+    await flag(page,'endingCompleteState','playing');
+    assert.equal(await page.locator('#endingCompleteAudio').getAttribute('src'),'assets/audio/404-406ai.m4a');
+    await page.keyboard.press('Space');await cue(page,'ending-complete');
+    await page.locator('#endingCompleteAudio').evaluate(a=>{a.currentTime=a.duration-.12;});
+    await flag(page,'endingCompleteState','finished');
+    await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
+    await page.keyboard.press('Space');await cue(page,'ending-question');
+    await page.keyboard.press('Space');await cue(page,'ending-reveal');
+    await flag(page,'endingRevealState','playing');
+    assert.equal(await page.locator('#endingRevealAudio').getAttribute('src'),'assets/audio/411-415ai.m4a');
+    await page.keyboard.press('Space');await cue(page,'ending-reveal');
+    await page.locator('#endingRevealAudio').evaluate(a=>{a.currentTime=a.duration-.12;});
+    await flag(page,'endingRevealState','finished');
+    await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
+    await page.keyboard.press('Space');await cue(page,'ending-blackout');
+    assert.equal(await page.locator('#visualizer').evaluate(c=>{
+      const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.every((v,i)=>i%4===3||v===0);
+    }),true,'Final Act IV blackout must be solid black');
+    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current),null);
+    await page.screenshot({path:path.join(output,'27-ending-blackout.png')});
     assert.equal(await page.evaluate(()=>stage.voting.deadline),selectionDeadline);
-    await page.screenshot({path:path.join(output,'21-vote-blackout.png')});
     assert.equal(await page.evaluate(()=>opening.deadline),deadline);
     assert.equal(errors.length,0,errors.join("\n"));
     assert.ok(requests.every(request=>request.startsWith(url)),"Show assets must be local");
@@ -579,7 +605,7 @@ async function fastVoting(page){
     results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; shrunk opening clock fills the original TV center without overflowing, card show/hide and exact blackout pixels");
     results.push("natural opening continues into Memory Room with the original 3.7-second M4A; AI enlarges over black, real audio reaches the analyser, genuine end fades and shrinks it, held Space never skips and the original deadline never resets");
     results.push('all eighteen cues follow Act II monologue, office flashback, BANG, reflection and Memory Room return; independent pixels verify dim room, exact blackouts and clean backgrounds at three ratios; held cues never skip fades or reset the deadline');
-    results.push('all twenty-five cues continue into actor-paced discussion and selection; four silent voice slots remain explicit, the separate minute starts only at the clock cue, vote text changes visibly, three ratios retain clock placement and every blackout pixel is zero');
+    results.push('all 32 scene cues continue through Act IV: real final voices are gated by their natural ends, the existing Act IV soundtrack begins at the room reveal, and the last blackout is solid black');
 
     const fadePage=await browser.newPage({viewport:{width:1280,height:720}});
     const fadeErrors=[];fadePage.on('pageerror',error=>fadeErrors.push(String(error)));
@@ -616,12 +642,13 @@ async function fastVoting(page){
     await review.locator('#stepsViewButton').click(); await flag(review,'view','steps');
     await review.locator('[data-preview="bright"]').click();
     await review.waitForTimeout(100);await fixedFrame(review);
-    assert.equal(await review.locator('#stepList [data-preview]').count(),26);
+    assert.equal(await review.locator('#stepList [data-preview]').count(),32);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
     for(const preview of ['welcome','clock','door-kick','card','card-hidden','door-open','blackout','ai','bright',
       'memory-light','memory-welcome','memory-room','memory-blackout',
       'past-intro','past-isolate','office-light','office-bang','past-reflection','memory-return',
-      'discussion','vote-prompt','vote-clock','vote-one','vote-two','vote-final','vote-blackout']){
+      'discussion','vote-prompt','vote-clock','vote-one','vote-two','vote-final','vote-blackout',
+      'ending-light','ending-dialogue','ending-complete','ending-question','ending-reveal','ending-blackout']){
       await review.locator(`[data-preview="${preview}"]`).click();await flag(review,'previewCue',preview);
       await review.waitForTimeout(60);
       assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
@@ -630,6 +657,8 @@ async function fastVoting(page){
       assert.equal(await review.locator('#memoryLightAudio').evaluate(a=>a.currentTime),0);
       assert.equal(await review.locator('#officeBangAudio').evaluate(a=>a.currentTime),0);
       assert.equal(await review.locator('#selectionButtonAudio').evaluate(a=>a.currentTime),0);
+      assert.equal(await review.locator('#endingCompleteAudio').evaluate(a=>a.currentTime),0);
+      assert.equal(await review.locator('#endingRevealAudio').evaluate(a=>a.currentTime),0);
       for(const id of ['selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio']){
         assert.equal(await review.locator('#'+id).evaluate(a=>a.currentTime),0);
       }
@@ -656,7 +685,7 @@ async function fastVoting(page){
     });await fixedFrame(review);
     await review.locator('#stepsViewButton').click();await review.locator('[data-preview="vote-blackout"]').click();
     await flag(review,'previewCue','vote-blackout');
-    // The selected last cue now starts as a blackout, without replaying earlier scenes.
+    // The selected third-act blackout stays selectable without replaying earlier scenes.
     assert.equal(await review.locator('#startLabel').textContent(),'從第 26 步開始');
     await review.locator('#startButton').click();await cue(review,'vote-blackout');await noControls(review);
     await flag(review,'view','page');
@@ -1196,6 +1225,24 @@ async function fastVoting(page){
     assert.equal(await buttonJump.locator('#selectionButtonAudio').getAttribute('src'),'assets/audio/Slam-button.m4a');
     assert.equal(await buttonJump.evaluate(()=>stage.voting.deadline),null,'click cannot start the vote timer');
     await buttonJump.close();
+
+    const endingJump=await browser.newPage();
+    await ready(endingJump,url);
+    await endingJump.locator('#stepsViewButton').click();
+    await endingJump.locator('[data-preview="ending-reveal"]').click();
+    assert.equal(await endingJump.locator('#startLabel').textContent(),'從第 31 步開始');
+    assert.equal(await endingJump.locator('#endingRevealAudio').evaluate(m=>m.paused&&m.currentTime===0),true);
+    await endingJump.locator('#startButton').click();await cue(endingJump,'ending-reveal');
+    await flag(endingJump,'endingRevealState','playing');
+    assert.equal(await endingJump.locator('#endingCompleteAudio').evaluate(m=>m.paused&&m.currentTime===0),true);
+    assert.equal(await endingJump.evaluate(()=>stage.ending.mediaStates.endingComplete),'finished');
+    await endingJump.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
+    assert.match(await endingJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Act4\.m4a$/);
+    await endingJump.locator('#endingRevealAudio').evaluate(a=>{a.currentTime=a.duration-.12;});
+    await flag(endingJump,'endingRevealState','finished');
+    await endingJump.waitForFunction(()=>performance.now()>=stage.busyUntil);
+    await endingJump.keyboard.press('Space');await cue(endingJump,'ending-blackout');
+    await endingJump.close();
 
     const jump=await browser.newPage();
     await ready(jump,url);await jump.locator('#stepsViewButton').click();
