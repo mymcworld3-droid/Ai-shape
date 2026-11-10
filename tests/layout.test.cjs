@@ -127,10 +127,10 @@ test("a static frame has no fade delay and invalid fade timing is rejected",()=>
  assert.throws(()=>fadeInProgress(0,-1),RangeError);
 });
 test("silent step frames cover every cue and cannot mutate the playback transition data",()=>{
- const expected=["bright","ai","welcome","clock","door-kick","card","card-hidden","door-open","blackout",
+ const expected=["dark","bright","ai","welcome","clock","door-kick","card","card-hidden","door-open","blackout",
   "memory-light","memory-welcome","memory-room","memory-blackout",
   "past-intro","past-isolate","office-light","office-bang","past-reflection","memory-return",
-  "discussion","vote-prompt","vote-clock","vote-one","vote-two","vote-final","vote-blackout",
+  "discussion","vote-prompt","vote-one","vote-two","vote-final","vote-blackout",
   "ending-light","ending-dialogue","ending-complete","ending-question","ending-reveal","ending-blackout"];
  for(const cue of expected){const frame=previewFrame(cue);assert.ok(frame);assert.equal(Object.isFrozen(frame),true);}
  assert.equal(previewFrame("clock").clock,1);
@@ -156,9 +156,12 @@ test("silent step frames cover every cue and cannot mutate the playback transiti
    assert.equal(frame.ai,1);assert.equal(frame.aiExpansion,1);assert.equal(frame.clock,0);
   }else assert.equal(frame.ai,0);
  }
- assert.equal(previewFrame("vote-clock").clock,1);
+ assert.equal(previewFrame("dark").blackout,0);
+ assert.equal(previewFrame("dark").room,false);
+ assert.equal(previewFrame("vote-clock"),null);
+ for(const cue of expected.filter(name=>name.startsWith("vote-")))assert.equal(previewFrame(cue).clock,0);
  assert.equal(previewFrame("memory-welcome").aiExpansion,1);
- assert.equal(previewFrame("vote-two").timer,"selection");assert.equal(previewFrame("vote-two").vote,1);
+ assert.equal(previewFrame("vote-two").timer,undefined);assert.equal(previewFrame("vote-two").vote,1);
  assert.equal(previewFrame("vote-blackout").blackout,1);
  assert.equal(previewFrame("ending-light").background,"memory");
  assert.equal(previewFrame("ending-complete").ai,1);
