@@ -8,6 +8,7 @@ const memoryDoorOpenAudio=document.getElementById("memoryDoorOpenAudio");
 const memoryAudio=document.getElementById("memoryWelcomeAudio");
 const memoryLightAudio=document.getElementById("memoryLightAudio");
 const officeBangAudio=document.getElementById("officeBangAudio");
+const selectionButtonAudio=document.getElementById("selectionButtonAudio");
 const selectionAudio={prompt:document.getElementById("selectionPromptAudio"),
  one:document.getElementById("selectionOneAudio"),two:document.getElementById("selectionTwoAudio"),
  final:document.getElementById("selectionFinalAudio")};
@@ -62,6 +63,7 @@ if(sceneBackgroundMusic)window.actOneBackgroundMusic=sceneBackgroundMusic;
 const stage=new StageOpening.StageCueController({
  video:revealVideo,audio:audioElement,effect:config.doorKick?effectElement:null,
  doorOpen:config.scriptEffects.doorOpen?memoryDoorOpenAudio:null,
+ selectionButton:config.scriptEffects.selectionButton?selectionButtonAudio:null,
  durationMs:config.countdownMs,revealFadeMs:config.revealFadeMs,
  aiFadeMs:config.aiFadeMs,expandMs:config.sceneDurationMs,
  morphMs:config.morphDurationMs,settleMs:config.settleDurationMs,
@@ -134,6 +136,7 @@ const stage=new StageOpening.StageCueController({
  },
  onMediaState(kind,state){
   const key={room:"roomState",narration:"openingState",effect:"effectState",doorOpen:"doorOpenState",
+   selectionButton:"selectionButtonState",
    memoryVoice:"memoryVoiceState",memoryClick:"memoryClickState",officeBang:"officeBangState",
    selectionPrompt:"selectionPromptState",selectionOne:"selectionOneState",
    selectionTwo:"selectionTwoState",selectionFinal:"selectionFinalState"}[kind];
@@ -160,6 +163,7 @@ const stage=new StageOpening.StageCueController({
  onMemoryNarrationEnd(){animate("ai",0,config.memory.aiFadeMs);},
  onError(kind,error){
   document.body.dataset[{room:"videoError",narration:"audioError",effect:"effectError",doorOpen:"doorOpenError",
+   selectionButton:"selectionButtonError",
    memoryVoice:"memoryVoiceError",memoryClick:"memoryClickError",officeBang:"officeBangError",
    selectionPrompt:"selectionPromptError",selectionOne:"selectionOneError",
    selectionTwo:"selectionTwoError",selectionFinal:"selectionFinalError"}[kind]]="true";
@@ -214,6 +218,8 @@ document.body.dataset.memoryVoiceAvailable=String(Boolean(config.memory.narratio
 document.body.dataset.memoryClickAvailable=String(Boolean(config.memory.lightClick));
 document.body.dataset.officeBangState="idle";
 document.body.dataset.officeBangAvailable=String(Boolean(config.office.bang));
+document.body.dataset.selectionButtonState="idle";
+document.body.dataset.selectionButtonAvailable=String(Boolean(config.scriptEffects.selectionButton));
 document.body.dataset.aiVoiceActive="none";
 for(const kind of ["Prompt","One","Two","Final"]){
  document.body.dataset["selection"+kind+"State"]="idle";
@@ -314,6 +320,7 @@ if(config.scriptEffects.doorOpen){memoryDoorOpenAudio.src=config.scriptEffects.d
 if(config.memory.narration){memoryAudio.src=config.memory.narration;memoryAudio.load();}
 if(config.memory.lightClick){memoryLightAudio.src=config.memory.lightClick;memoryLightAudio.load();}
 if(config.office.bang){officeBangAudio.src=config.office.bang;officeBangAudio.load();}
+if(config.scriptEffects.selectionButton){selectionButtonAudio.src=config.scriptEffects.selectionButton;selectionButtonAudio.load();}
 for(const [kind,media] of Object.entries(selectionAudio)){
  if(config.voting[kind]){media.src=config.voting[kind];media.load();}
 }
@@ -365,6 +372,7 @@ function advanceStage(){
  if(stage.state==="discussion"||stage.state.startsWith("vote-")){
   for(const [kind,media] of Object.entries(selectionAudio))if(config.voting[kind])prepareAudio(media);
  }
+ if(stage.state==="discussion")document.body.dataset.selectionButtonError="false";
  for(const kind of ["Prompt","One","Two","Final"])document.body.dataset["selection"+kind+"Error"]="false";
  stage.advance();requestStageFullscreen();
 }
