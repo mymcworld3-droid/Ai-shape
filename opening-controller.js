@@ -438,7 +438,7 @@
   // Operator cues and media completion are separate. The clock may replace the
   // graphic during narration, while its deadline still belongs to audio.ended.
   class StageCueController {
-    constructor({ video, audio, effect = null, doorOpen = null, now = () => performance.now(),
+    constructor({ video, audio, effect = null, doorOpen = null, selectionButton = null, now = () => performance.now(),
       durationMs = 900000, revealFadeMs = 240, aiFadeMs = 900,
       expandMs = 1600, morphMs = 1200, settleMs = 1000,
       cardFadeMs = 400, blackoutMs = 1200,
@@ -446,7 +446,7 @@
       onNarrationEnd = () => {}, onError = () => {}, memoryScene = null, officeScene = null, votingScene = null,
       onMemoryNarrationEnd = () => {}, capturePresentation = () => null,
       restorePresentation = () => {} }) {
-      Object.assign(this, { now, effect, doorOpen, revealFadeMs, aiFadeMs, expandMs,
+      Object.assign(this, { now, effect, doorOpen, selectionButton, revealFadeMs, aiFadeMs, expandMs,
         morphMs, settleMs, cardFadeMs, blackoutMs, onCue, onMediaState,
         onNarrationEnd, onError, capturePresentation, restorePresentation });
       this.state = "dark";
@@ -456,6 +456,8 @@
       this.effectRun = 0;
       this.doorOpenState = "idle";
       this.doorOpenRun = 0;
+      this.selectionButtonState = "idle";
+      this.selectionButtonRun = 0;
       this.destroyed = false;
       this.memory = memoryScene ? new MemorySceneController({ ...memoryScene, now, blackoutMs,
         onCue: state => this.setCue(state), onMediaState,
@@ -463,7 +465,10 @@
       this.office = officeScene ? new OfficeSceneController({ ...officeScene, now, blackoutMs,
         onCue: state => this.setCue(state), onMediaState, onLock: ms => this.lock(ms), onError }) : null;
       this.voting = votingScene ? new VotingSceneController({ ...votingScene, now, blackoutMs,
-        onCue: state => this.setCue(state), onMediaState, onLock: ms => this.lock(ms), onError }) : null;
+        onCue: state => {
+          this.setCue(state);
+          if (state === "vote-prompt") void this.playSelectionButton();
+        }, onMediaState, onLock: ms => this.lock(ms), onError }) : null;
       this.room = new RoomRevealController({ video,
         onStateChange: state => {
           if (state === "starting") this.setCue("room-reveal");
@@ -502,11 +507,23 @@
         doorOpen.addEventListener("ended", this.doorOpenEnded);
         doorOpen.addEventListener("error", this.doorOpenFailed);
       }
+      this.selectionButtonEnded = () => {
+        if (selectionButton?.ended && ["starting", "playing"].includes(this.selectionButtonState)) {
+          ++this.selectionButtonRun;
+          this.setSelectionButtonState("finished");
+        }
+      };
+      this.selectionButtonFailed = () => this.failSelectionButton(new Error("Selection button audio could not be played."));
+      if (selectionButton) {
+        selectionButton.addEventListener("ended", this.selectionButtonEnded);
+        selectionButton.addEventListener("error", this.selectionButtonFailed);
+      }
     }
 
     setCue(state) { this.state = state; this.onCue(state); }
     setEffectState(state) { this.effectState = state; this.onMediaState("effect", state); }
     setDoorOpenState(state) { this.doorOpenState = state; this.onMediaState("doorOpen", state); }
+    setSelectionButtonState(state) { this.selectionButtonState = state; this.onMediaState("selectionButton", state); }
     lock(ms) { this.busyUntil = Math.max(this.busyUntil, this.now() + ms); }
 
     // Begin rehearsal at an arbitrary cue without playing skipped video, voices or effects.
@@ -533,6 +550,7 @@
         this.office.state = index <= 18 ? cue : "memory-return";
         if (index >= 17) this.office.setBangState("finished");
       }
+      if (index >= 21) this.setSelectionButtonState("finished");
       if (this.voting && index >= 19) {
         this.voting.state = cue;
         if (index >= 21) this.voting.deadline = this.now() + this.voting.durationMs;
@@ -549,7 +567,9 @@
         case "memory-light": return this.memory?.play("memoryClick") ?? false;
         case "memory-welcome": return this.memory?.play("memoryVoice") ?? false;
         case "office-bang": return this.office?.playBang() ?? false;
-        case "vote-prompt": return this.voting?.play("selectionPrompt") ?? false;
+        case "vote-prompt":
+          void this.playSelectionButton();
+          return this.voting?.play("selectionPrompt") ?? false;
         case "vote-one": return this.voting?.play("selectionOne") ?? false;
         case "vote-two": return this.voting?.play("selectionTwo") ?? false;
         case "vote-final": return this.voting?.play("selectionFinal") ?? false;
@@ -561,6 +581,7 @@
       return {
         state: this.state, room: this.room.state, opening: this.opening.state,
         effect: this.effectState, doorOpen: this.doorOpenState,
+        selectionButton: this.selectionButtonState,
         memory: this.memory && { state: this.memory.state, mediaStates: { ...this.memory.mediaStates } },
         office: this.office && { state: this.office.state, bangState: this.office.bangState },
         voting: this.voting && { state: this.voting.state, mediaStates: { ...this.voting.mediaStates } },
@@ -573,9 +594,10 @@
       const saved = this.history.pop();
       // Cancel pending play promises before pausing, so late completions cannot
       // restore a departed cue. A rewind never changes either timer deadline.
-      ++this.room.run; ++this.opening.run; ++this.effectRun; ++this.doorOpenRun;
+      ++this.room.run; ++this.opening.run; ++this.effectRun; ++this.doorOpenRun; ++this.selectionButtonRun;
       this.room.state = "dark"; this.opening.state = "ready"; this.effectState = "idle"; this.doorOpenState = "idle";
-      const media = [this.room.video, this.opening.audio, this.effect, this.doorOpen];
+      this.selectionButtonState = "idle";
+      const media = [this.room.video, this.opening.audio, this.effect, this.doorOpen, this.selectionButton];
       for (const scene of [this.memory, this.voting]) {
         if (!scene) continue;
         for (const kind of Object.keys(scene.runs)) ++scene.runs[kind];
@@ -589,6 +611,7 @@
       this.opening.state = ["starting", "narration"].includes(saved.opening) ? "ready" : saved.opening;
       this.setEffectState(saved.effect);
       this.setDoorOpenState(saved.doorOpen);
+      this.setSelectionButtonState(saved.selectionButton);
       this.onMediaState("room", saved.room);
       this.onMediaState("narration", this.opening.state);
       for (const [scene, snapshot] of [[this.memory, saved.memory], [this.voting, saved.voting]]) {
@@ -666,6 +689,33 @@
       this.onError("doorOpen", error);
     }
 
+    // The actor's button click plays alongside the AI prompt. It never delays
+    // the prompt, starts a timer, or consumes another operator step.
+    async playSelectionButton() {
+      if (!this.selectionButton) { this.setSelectionButtonState("missing"); return false; }
+      const run = ++this.selectionButtonRun;
+      this.setSelectionButtonState("starting");
+      try {
+        if (this.selectionButton.error) this.selectionButton.load();
+        this.selectionButton.currentTime = 0;
+        await this.selectionButton.play();
+        if (this.destroyed || run !== this.selectionButtonRun || this.selectionButtonState !== "starting") return false;
+        this.setSelectionButtonState("playing");
+        return true;
+      } catch (error) {
+        if (run === this.selectionButtonRun && !this.destroyed) this.failSelectionButton(error);
+        return false;
+      }
+    }
+
+    failSelectionButton(error) {
+      if (this.selectionButtonState === "finished" || this.destroyed) return;
+      ++this.selectionButtonRun;
+      this.selectionButton?.pause();
+      this.setSelectionButtonState("error");
+      this.onError("selectionButton", error);
+    }
+
     async advanceCue() {
       if (this.destroyed || this.now() < this.busyUntil) return false;
       switch (this.state) {
@@ -721,7 +771,8 @@
 
     destroy() {
       this.destroyed = true;
-      ++this.effectRun; ++this.doorOpenRun;
+      ++this.effectRun; ++this.doorOpenRun; ++this.selectionButtonRun;
+      this.selectionButton?.pause();
       this.room.destroy(); this.opening.destroy();
       this.memory?.destroy();
       this.office?.destroy();
@@ -733,6 +784,10 @@
       if (this.doorOpen) {
         this.doorOpen.removeEventListener("ended", this.doorOpenEnded);
         this.doorOpen.removeEventListener("error", this.doorOpenFailed);
+      }
+      if (this.selectionButton) {
+        this.selectionButton.removeEventListener("ended", this.selectionButtonEnded);
+        this.selectionButton.removeEventListener("error", this.selectionButtonFailed);
       }
     }
   }
