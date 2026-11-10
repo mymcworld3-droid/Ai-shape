@@ -34,6 +34,11 @@ body[data-view=steps]:not([data-started=true]) #showShell{grid-template-columns:
 #stepList button[aria-pressed=true]{border-color:#ffffff24;background:#ffffff0b;color:#f3f6fb}
 .step-number{font-size:12px;color:#637182;font-variant-numeric:tabular-nums;letter-spacing:.1em}
 #stepList small{display:block;margin-top:6px;color:#677584;font-size:11px;font-weight:400}
+#stepList .step-audio{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:0 1 45%;min-width:0;margin-left:auto;color:#9db6c8;font-size:10px;font-weight:400;line-height:1.35;overflow-wrap:anywhere}
+#stepList .step-audio>span{display:block;max-width:100%;padding:2px 5px;border-radius:4px;background:#26334577;text-align:right}
+#stepList .step-audio-empty{color:#566373}
+#stepList .step-number{flex:0 0 24px}
+#stepList button>span:nth-child(2){flex:1 1 48%;min-width:0}
 body[data-started=true]{cursor:none}
 body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[data-started=true] #stepsPanel{display:none!important}
 @media(max-width:800px){
@@ -42,6 +47,7 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
  #stepsPanel h1{font-size:18px;margin-bottom:8px}
  #stepsPanel header p{margin-bottom:12px}
  #stepList button{padding:10px 12px}
+ #stepList .step-audio{font-size:9px;flex-basis:43%}
 }
 
 #volumeDisplay{position:fixed;z-index:5;right:max(16px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));color:#fff;opacity:.38;font-size:clamp(10px,1vw,13px);font-weight:400;font-variant-numeric:tabular-nums;line-height:1.3;white-space:pre-line;text-align:right;pointer-events:none;user-select:none}
