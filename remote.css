@@ -1,25 +1,44 @@
 :root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b1018;color:#eef4fa}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#1c2c40 0,#0b1018 55%)}
-main{width:min(100%,460px);margin:auto;padding:32px 18px max(28px,env(safe-area-inset-bottom))}
-header{margin-bottom:18px}
+main{width:min(100%,460px);margin:auto;padding:24px 18px max(28px,env(safe-area-inset-bottom))}
+header{margin-bottom:16px}
 .project{margin:0 0 5px;color:#a8c8eb;font-size:.8rem;letter-spacing:.12em}
 h1{margin:0;font-size:1.7rem}
+.remote-help{margin:8px 0;color:#93a9c0;font-size:.83rem;line-height:1.55}
 #remoteStatus{min-height:1.4em;margin:8px 0 0;color:#bbcbdd;font-size:.9rem}
-.cue,.mixer{padding:16px;border:1px solid #33465c;border-radius:14px;background:#121d2a}
+.cue,.mixer,.next-prompt{padding:16px;border:1px solid #33465c;border-radius:14px;background:#121d2a}
 .cue{min-height:98px}
 #remoteStep{margin:0 0 6px;color:#a8c8eb;font-size:.85rem;font-variant-numeric:tabular-nums}
 #remoteCue{margin:0;overflow-wrap:anywhere;line-height:1.5}
 button{min-height:44px;padding:8px 12px;border:1px solid #3b526d;border-radius:10px;background:#1e2c3e;color:inherit;font:inherit;cursor:pointer;touch-action:manipulation}
-button:focus-visible{outline:2px solid #aed9ff;outline-offset:3px}
+button:focus-visible,input:focus-visible{outline:2px solid #aed9ff;outline-offset:3px}
 button:active:not(:disabled){filter:brightness(1.25)}
-button:disabled{opacity:.4;cursor:default}
+button:disabled,input:disabled{opacity:.4;cursor:default}
 .navigation{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
 .navigation button{min-height:68px;font-size:1.1rem;font-weight:650}
 [data-action=next]{background:#a6d2ff;color:#102239;border-color:#a6d2ff}
-.mixer h2{margin:0 0 10px;font-size:1rem}
-.channel{display:grid;grid-template-columns:1fr 44px minmax(48px,auto) 44px;gap:7px;align-items:center;margin:8px 0;color:#d0ddeb}
-.channel button{padding:0;font-size:1.3rem}
-.channel output{text-align:center;font-variant-numeric:tabular-nums;font-size:.92rem}
+.next-prompt{margin:0 0 14px;border-color:#526a86;background:#172437}
+.next-prompt h2,.mixer h2{margin:0 0 7px;font-size:1rem}
+.prompt-step{margin:0 0 12px;font-size:.88rem;color:#bedbfb}
+.prompt-label{font-size:.72rem;letter-spacing:.04em;color:#92a9c3;margin:10px 0 5px}
+.prompt-lead{margin:0;line-height:1.45;color:#edf3fa;font-size:.84rem;overflow-wrap:anywhere}
+.prompt-lines{margin:0;padding-left:21px;display:grid;gap:7px}
+.prompt-lines li{font-size:.87rem;line-height:1.5;overflow-wrap:anywhere}
+.prompt-lines strong{color:#a5d2ff;font-size:.75rem}
+.prompt-lines .no-dialogue{color:#a1b3c8;font-style:italic}
+.mixer-note{font-size:.79rem;color:#8ea6bf;line-height:1.5;margin:0 0 12px}
+.channel{padding:11px 0;border-top:1px solid #2b3e53}
+.channel-heading,.level-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.channel-heading{margin-bottom:7px;color:#dce7f3;font-size:.91rem}
+.channel-heading output{font-variant-numeric:tabular-nums;font-weight:600}
+.channel input[type=range]{appearance:none;-webkit-appearance:none;width:100%;height:28px;margin:0;cursor:pointer;background:transparent}
+.channel input[type=range]::-webkit-slider-runnable-track{height:7px;border-radius:99px;background:#3d5875}
+.channel input[type=range]::-moz-range-track{height:7px;border-radius:99px;background:#3d5875}
+.channel input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;margin-top:-7px;border:2px solid #d8ecff;border-radius:50%;background:#8dbff8}
+.channel input[type=range]::-moz-range-thumb{width:19px;height:19px;border:2px solid #d8ecff;border-radius:50%;background:#8dbff8}
+.level-row{margin-top:5px}
+.level-row meter{width:100%;height:12px;flex:1;accent-color:#62caa1}
+.level-row output{min-width:74px;text-align:right;color:#9ab0c9;font-size:.78rem;font-variant-numeric:tabular-nums}
 .mixer>button{width:100%;margin-top:8px;font-size:.9rem}
 .mixer>button[aria-pressed=true]{border-color:#8bbdf0;color:#cce7ff}
