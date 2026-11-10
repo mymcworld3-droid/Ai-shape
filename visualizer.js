@@ -12,7 +12,9 @@ const selectionButtonAudio=document.getElementById("selectionButtonAudio");
 const selectionAudio={prompt:document.getElementById("selectionPromptAudio"),
  one:document.getElementById("selectionOneAudio"),two:document.getElementById("selectionTwoAudio"),
  final:document.getElementById("selectionFinalAudio")};
-const narrationMedia=[audioElement,memoryAudio,...Object.values(selectionAudio)];
+const endingCompleteAudio=document.getElementById("endingCompleteAudio");
+const endingRevealAudio=document.getElementById("endingRevealAudio");
+const narrationMedia=[audioElement,memoryAudio,...Object.values(selectionAudio),endingCompleteAudio,endingRevealAudio];
 const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
@@ -76,6 +78,9 @@ const stage=new StageOpening.StageCueController({
  votingScene:{...Object.fromEntries(Object.entries(selectionAudio).map(([kind,media])=>[kind,config.voting[kind]?media:null])),
   isReady:()=>memoryBackgroundReady,durationMs:config.voting.durationMs,fadeMs:config.voting.fadeMs,
   voiceExpandMs:config.voting.voiceExpandMs,voiceSettleMs:config.voting.voiceSettleMs},
+ endingScene:{complete:config.ending.complete?endingCompleteAudio:null,
+  revealTruth:config.ending.revealTruth?endingRevealAudio:null,
+  isReady:()=>memoryBackgroundReady,fadeMs:1000,voiceSettleMs:600},
  capturePresentation(){
   return {scene:document.body.dataset.scene,values:Object.fromEntries(Object.entries(transitions).map(([name,t])=>[name,t.target]))};
  },
@@ -133,10 +138,31 @@ const stage=new StageOpening.StageCueController({
   }
   if(cue==="vote-clock")animate("clock",1,config.voting.fadeMs);
   if(cue==="vote-blackout")animate("blackout",1,config.blackoutMs);
+  if(cue==="ending-light"){
+   document.body.dataset.scene="memory";
+   for(const name of ["ai","clock","card","vote","aiExpansion","voteCorner","scene"])animate(name,0,0);
+   animate("blackout",0,1000);
+  }
+  if(cue==="ending-dialogue"||cue==="ending-question"){
+   document.body.dataset.scene="memory";
+   for(const name of ["ai","aiExpansion","clock","vote","voteCorner","scene"])animate(name,0,600);
+  }
+  if(cue==="ending-complete"||cue==="ending-reveal"){
+   document.body.dataset.scene="memory";
+   for(const name of ["clock","vote","voteCorner"])animate(name,0,0);
+   animate("ai",1,600);
+   animate("aiExpansion",1,900);
+   animate("scene",1,900);
+  }
+  if(cue==="ending-blackout"){
+   for(const name of ["ai","aiExpansion","clock","card","vote","voteCorner"])animate(name,0,0);
+   animate("blackout",1,0);
+  }
  },
  onMediaState(kind,state){
   const key={room:"roomState",narration:"openingState",effect:"effectState",doorOpen:"doorOpenState",
    selectionButton:"selectionButtonState",
+   endingComplete:"endingCompleteState",endingReveal:"endingRevealState",
    memoryVoice:"memoryVoiceState",memoryClick:"memoryClickState",officeBang:"officeBangState",
    selectionPrompt:"selectionPromptState",selectionOne:"selectionOneState",
    selectionTwo:"selectionTwoState",selectionFinal:"selectionFinalState"}[kind];
@@ -146,7 +172,7 @@ const stage=new StageOpening.StageCueController({
    if(state==="playing")animate("aiExpansion",1,config.memory.voiceExpandMs);
    if(state==="finished"||state==="error")animate("aiExpansion",0,config.memory.aiFadeMs);
   }
-  if(kind.startsWith("selection")){
+  if(["selectionPrompt","selectionOne","selectionTwo","selectionFinal"].includes(kind)){
    if(state==="playing"){
     document.body.dataset.aiVoiceActive=kind;
     animate("ai",1,config.voting.fadeMs);animate("clock",0,config.voting.fadeMs);
@@ -158,12 +184,29 @@ const stage=new StageOpening.StageCueController({
     if(kind!=="selectionPrompt")animate("clock",1,config.voting.voiceSettleMs);
    }
   }
+  if(kind==="endingComplete"||kind==="endingReveal"){
+   if(state==="starting"||state==="playing"){
+    document.body.dataset.aiVoiceActive=kind;
+    animate("ai",1,config.voting.fadeMs);
+    animate("aiExpansion",1,config.voting.voiceExpandMs);
+    animate("scene",1,config.voting.voiceExpandMs);
+   }
+   if(["finished","error","missing"].includes(state)){
+    document.body.dataset.aiVoiceActive="none";
+    if(kind==="endingComplete"){
+     animate("aiExpansion",0,600);
+     animate("scene",0,600);
+    }
+    // The final revelation keeps its graphic until the operator's blackout.
+   }
+  }
  },
  onNarrationEnd(){animate("scene",0,config.settleDurationMs);},
  onMemoryNarrationEnd(){animate("ai",0,config.memory.aiFadeMs);},
  onError(kind,error){
   document.body.dataset[{room:"videoError",narration:"audioError",effect:"effectError",doorOpen:"doorOpenError",
    selectionButton:"selectionButtonError",
+   endingComplete:"endingCompleteError",endingReveal:"endingRevealError",
    memoryVoice:"memoryVoiceError",memoryClick:"memoryClickError",officeBang:"officeBangError",
    selectionPrompt:"selectionPromptError",selectionOne:"selectionOneError",
    selectionTwo:"selectionTwoError",selectionFinal:"selectionFinalError"}[kind]]="true";
@@ -191,7 +234,8 @@ const startGate=new StageOpening.StartGate({
     // The selected cue is the first live cue. Skipped media are never played.
     const voice={"welcome":audioElement,"memory-welcome":memoryAudio,
      "vote-prompt":selectionAudio.prompt,"vote-one":selectionAudio.one,
-     "vote-two":selectionAudio.two,"vote-final":selectionAudio.final}[cue];
+     "vote-two":selectionAudio.two,"vote-final":selectionAudio.final,
+     "ending-complete":endingCompleteAudio,"ending-reveal":endingRevealAudio}[cue];
     if(voice)prepareAudio(voice);
     stage.startAt(cue);
     // A rehearsal jump must show the selected stage immediately, not animate
@@ -220,6 +264,10 @@ document.body.dataset.officeBangState="idle";
 document.body.dataset.officeBangAvailable=String(Boolean(config.office.bang));
 document.body.dataset.selectionButtonState="idle";
 document.body.dataset.selectionButtonAvailable=String(Boolean(config.scriptEffects.selectionButton));
+document.body.dataset.endingCompleteState="idle";
+document.body.dataset.endingRevealState="idle";
+document.body.dataset.endingCompleteAvailable=String(Boolean(config.ending.complete));
+document.body.dataset.endingRevealAvailable=String(Boolean(config.ending.revealTruth));
 document.body.dataset.aiVoiceActive="none";
 for(const kind of ["Prompt","One","Two","Final"]){
  document.body.dataset["selection"+kind+"State"]="idle";
@@ -235,6 +283,7 @@ window.stageOpening=Object.freeze({
  get memoryState(){return stage.memory.state;},
  get officeState(){return stage.office.state;},
  get selectionState(){return stage.voting.state;},
+ get endingState(){return stage.ending?.state;},
  get selectionRemainingMs(){return stage.voting.getRemainingMs();},
  get remainingMs(){return opening.getRemainingMs();}
 });
@@ -321,6 +370,8 @@ if(config.memory.narration){memoryAudio.src=config.memory.narration;memoryAudio.
 if(config.memory.lightClick){memoryLightAudio.src=config.memory.lightClick;memoryLightAudio.load();}
 if(config.office.bang){officeBangAudio.src=config.office.bang;officeBangAudio.load();}
 if(config.scriptEffects.selectionButton){selectionButtonAudio.src=config.scriptEffects.selectionButton;selectionButtonAudio.load();}
+if(config.ending.complete){endingCompleteAudio.src=config.ending.complete;endingCompleteAudio.load();}
+if(config.ending.revealTruth){endingRevealAudio.src=config.ending.revealTruth;endingRevealAudio.load();}
 for(const [kind,media] of Object.entries(selectionAudio)){
  if(config.voting[kind]){media.src=config.voting[kind];media.load();}
 }
@@ -373,6 +424,14 @@ function advanceStage(){
   for(const [kind,media] of Object.entries(selectionAudio))if(config.voting[kind])prepareAudio(media);
  }
  if(stage.state==="discussion")document.body.dataset.selectionButtonError="false";
+ if(stage.state==="ending-dialogue"||stage.state==="ending-complete"){
+  document.body.dataset.endingCompleteError="false";
+  if(config.ending.complete)prepareAudio(endingCompleteAudio);
+ }
+ if(stage.state==="ending-question"||stage.state==="ending-reveal"){
+  document.body.dataset.endingRevealError="false";
+  if(config.ending.revealTruth)prepareAudio(endingRevealAudio);
+ }
  for(const kind of ["Prompt","One","Two","Final"])document.body.dataset["selection"+kind+"Error"]="false";
  stage.advance();requestStageFullscreen();
 }
