@@ -42,7 +42,8 @@
     <header><h1>演出步驟<span>32</span></h1><p>點選預覽，不播放影音</p>
     </header>
     <ol id="stepList">
-      <li><button type="button" data-preview="bright" aria-pressed="true"><span class="step-number">01</span><span>暗 → 亮<small>影片播完，接回原本房間</small></span></button></li>
+      <li><button type="button" data-preview="dark" aria-pressed="true"><span class="step-number">00</span><span>藍色房間<small>第 0 步 · 無字幕、無音效，等待切換</small></span></button></li>
+      <li><button type="button" data-preview="bright" aria-pressed="false"><span class="step-number">01</span><span>暗 → 亮<small>影片播完，接回原本房間</small></span></button></li>
       <li><button type="button" data-preview="ai" aria-pressed="false"><span class="step-number">02</span><span>AI 漸顯<small>電視正中央 · 填滿內框</small></span></button></li>
       <li><button type="button" data-preview="welcome" aria-pressed="false"><span class="step-number">03</span><span>歡迎語音<small>圖形放大、背景漸至全黑</small></span></button></li>
       <li><button type="button" data-preview="clock" aria-pressed="false"><span class="step-number">04</span><span>顯示碼錶<small>語音中可切換，播完開始倒數</small></span></button></li>
@@ -68,18 +69,17 @@
       <li class="scene-divider">第三幕 · 討論與選擇</li>
       <li><button type="button" data-preview="discussion" aria-pressed="false"><span class="step-number">20</span><span>演員討論<small>房間稍暗，保留對話時間</small></span></button></li>
       <li><button type="button" data-preview="vote-prompt" aria-pressed="false"><span class="step-number">21</span><span>AI 要求選擇<small>Christopher 按下實體按鈕</small></span></button></li>
-      <li><button type="button" data-preview="vote-clock" aria-pressed="false"><span class="step-number">22</span><span>一分鐘倒數<small>語音待補，這一按開始計時</small></span></button></li>
-      <li><button type="button" data-preview="vote-one" aria-pressed="false"><span class="step-number">23</span><span>Ethan · 一票<small>Christopher 說 Ethan.</small></span></button></li>
-      <li><button type="button" data-preview="vote-two" aria-pressed="false"><span class="step-number">24</span><span>Ethan · 兩票<small>Megan 說 Ethan.</small></span></button></li>
-      <li><button type="button" data-preview="vote-final" aria-pressed="false"><span class="step-number">25</span><span>最後選擇<small>Rachel 沒有回答之後</small></span></button></li>
-      <li><button type="button" data-preview="vote-blackout" aria-pressed="false"><span class="step-number">26</span><span>第三幕全暗<small>最後提示結束，等待第四幕</small></span></button></li>
+      <li><button type="button" data-preview="vote-one" aria-pressed="false"><span class="step-number">22</span><span>Ethan · 一票<small>Christopher 說 Ethan.</small></span></button></li>
+      <li><button type="button" data-preview="vote-two" aria-pressed="false"><span class="step-number">23</span><span>Ethan · 兩票<small>Megan 說 Ethan.</small></span></button></li>
+      <li><button type="button" data-preview="vote-final" aria-pressed="false"><span class="step-number">24</span><span>最後選擇<small>Rachel 沒有回答之後</small></span></button></li>
+      <li><button type="button" data-preview="vote-blackout" aria-pressed="false"><span class="step-number">25</span><span>第三幕全暗<small>最後提示結束，等待第四幕</small></span></button></li>
       <li class="scene-divider">第四幕 · 測試結束與真相</li>
-      <li><button type="button" data-preview="ending-light" aria-pressed="false"><span class="step-number">27</span><span>記憶室重新亮起<small>原稿 p407 · 第四幕音樂開始</small></span></button></li>
-      <li><button type="button" data-preview="ending-dialogue" aria-pressed="false"><span class="step-number">28</span><span>Ethan 對話<small>I... I didn't explode...?</small></span></button></li>
-      <li><button type="button" data-preview="ending-complete" aria-pressed="false"><span class="step-number">29</span><span>AI 宣布測試完成<small>原稿 p409 · 播放 404-406ai.m4a</small></span></button></li>
-      <li><button type="button" data-preview="ending-question" aria-pressed="false"><span class="step-number">30</span><span>眾人追問真相<small>What...? · Then who is the robot?</small></span></button></li>
-      <li><button type="button" data-preview="ending-reveal" aria-pressed="false"><span class="step-number">31</span><span>AI 揭露真相<small>原稿 p414 · 播放 411-415ai.m4a</small></span></button></li>
-      <li><button type="button" data-preview="ending-blackout" aria-pressed="false"><span class="step-number">32</span><span>最終全暗<small>You may leave. · 音樂淡出</small></span></button></li>
+      <li><button type="button" data-preview="ending-light" aria-pressed="false"><span class="step-number">26</span><span>記憶室重新亮起<small>原稿 p407 · 第四幕音樂開始</small></span></button></li>
+      <li><button type="button" data-preview="ending-dialogue" aria-pressed="false"><span class="step-number">27</span><span>Ethan 對話<small>I... I didn't explode...?</small></span></button></li>
+      <li><button type="button" data-preview="ending-complete" aria-pressed="false"><span class="step-number">28</span><span>AI 宣布測試完成<small>原稿 p409 · 播放 404-406ai.m4a</small></span></button></li>
+      <li><button type="button" data-preview="ending-question" aria-pressed="false"><span class="step-number">29</span><span>眾人追問真相<small>What...? · Then who is the robot?</small></span></button></li>
+      <li><button type="button" data-preview="ending-reveal" aria-pressed="false"><span class="step-number">30</span><span>AI 揭露真相<small>原稿 p414 · 播放 411-415ai.m4a</small></span></button></li>
+      <li><button type="button" data-preview="ending-blackout" aria-pressed="false"><span class="step-number">31</span><span>最終全暗<small>You may leave. · 音樂淡出</small></span></button></li>
     </ol>
   </aside>
 </main>
