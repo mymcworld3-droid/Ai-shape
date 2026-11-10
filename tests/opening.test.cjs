@@ -423,8 +423,10 @@ test("cards and complete blackout neither pause nor reset the audio-owned deadli
   assert.equal(c.stage.state, "card");
   c.tick(5000); await c.stage.advance();
   c.tick(5000); await c.stage.advance();
+  assert.equal(c.stage.state, "door-open");
+  c.tick(200); await c.stage.advance();
   assert.equal(c.stage.state, "blackout");
-  assert.equal(c.stage.opening.getRemainingMs(), 887400);
+  assert.equal(c.stage.opening.getRemainingMs(), 887200);
   assert.equal(c.stage.opening.deadline, deadline);
   c.tick(900000); assert.equal(c.stage.opening.getRemainingMs(), 0);
   assert.equal(c.stage.opening.state, "finished");
