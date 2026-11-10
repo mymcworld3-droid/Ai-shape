@@ -25,10 +25,42 @@ function stageState(state){
   state.step<0||state.step>=state.total||state.total>10000)return null;
  const {voice,effect,music}=state.volumes??{};
  if(![voice,effect,music].every(value=>Number.isInteger(value)&&value>=0&&value<=100))return null;
+ const next=state.mode==="cues"?state.nextPreview:null;
+ let nextPreview=null;
+ if(next&&typeof next==="object"&&Number.isInteger(next.step)&&
+    next.step===state.step+1&&next.step<state.total&&typeof next.label==="string"&&
+    Array.isArray(next.lines)&&next.lines.length<=3){
+  const parseLine=line=>line&&typeof line.speaker==="string"&&
+   typeof line.text==="string"&&line.speaker.length<=60&&line.text.length<=500?
+    {speaker:line.speaker,text:line.text}:null;
+  const lines=next.lines.map(parseLine),leadIn=next.leadIn==null?null:parseLine(next.leadIn);
+  if(lines.every(Boolean)&&(next.leadIn==null||leadIn))
+   nextPreview={step:next.step,label:next.label.slice(0,120),leadIn,lines};
+ }
  return {started:state.started,mode:state.mode,step:state.step,total:state.total,
-  label:state.label.slice(0,500),volumes:{voice,effect,music},volumeVisible:state.volumeVisible};
+  label:state.label.slice(0,500),nextPreview,
+  volumes:{voice,effect,music},volumeVisible:state.volumeVisible};
 }
 
+function validateLevels(levels){
+ if(!levels||typeof levels!=="object")return null;
+ const values={};
+ for(const channel of ["voice","effect","music"]){
+  const value=levels[channel];
+  if(!Number.isInteger(value)||value< -60||value>0)return null;
+  values[channel]=value;
+ }
+ return values;
+}
+function validateCommand(message){
+ if(!actions.includes(message.action))return null;
+ if(message.action==="setVolume"){
+  const {channel,value}=message;
+  if(!["voice","effect","music"].includes(channel)||!Number.isInteger(value)||value<0||value>100)return null;
+  return {type:"command",action:"setVolume",channel,value};
+ }
+ return {type:"command",action:message.action};
+}
 function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
  const serve=serveStatic(__dirname,{dotfiles:"deny",redirect:false,maxAge:0});
  const server=createHttpServer((request,response)=>{
@@ -130,6 +162,11 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
    if(!message||typeof message.type!=="string")return;
    if(socket.role==="live-stage"){
     if(socket!==liveStage)return;
+    if(message.type==="meter"){
+     const levels=validateLevels(message.levels);
+     if(levels)for(const control of liveControls)send(control,{type:"meter",levels});
+     return;
+    }
     if(message.type==="state"){
      const state=stageState(message.state);
      if(state?.started)publishLive(state);
@@ -138,15 +175,16 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
    }
    if(socket.role==="live-control"){
     if(!liveControls.has(socket))return;
-    if(message.type==="command"&&actions.includes(message.action)&&
-       isOpen(liveStage)&&liveState?.started){
-     const now=Date.now();
-     // Suppress accidental duplicate taps, not distinct actions in quick
-     // succession (e.g. volume down followed immediately by next cue).
-     if(socket.lastAction===message.action&&now-(socket.lastCommand??0)<80)return;
-     socket.lastAction=message.action;
+    if(message.type==="command"&&isOpen(liveStage)&&liveState?.started){
+     const command=validateCommand(message);
+     if(!command)return;
+     const now=Date.now(),identifier=command.action==="setVolume"?
+      "setVolume:"+command.channel:command.action;
+     if(command.action!=="setVolume"&&socket.lastAction===identifier&&
+        now-(socket.lastCommand??0)<80)return;
+     socket.lastAction=identifier;
      socket.lastCommand=now;
-     send(liveStage,{type:"command",action:message.action});
+     send(liveStage,command);
     }
     return;
    }
@@ -155,14 +193,23 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
    if(rooms.get(room.id)!==room||room[role]!==socket)return;
    if(role==="stage"){
     if(message.type==="end"){endRoom(room);return;}
+    if(message.type==="meter"){
+     const levels=validateLevels(message.levels);
+     if(levels)send(room.control,{type:"meter",levels});
+     return;
+    }
     if(message.type!=="state")return;
     const state=stageState(message.state);
     if(state){room.state=state;send(room.control,{type:"state",state});}
-   }else if(message.type==="command"&&actions.includes(message.action)&&isOpen(room.stage)){
+   }else if(message.type==="command"&&isOpen(room.stage)){
+    const command=validateCommand(message);
+    if(!command)return;
     const now=Date.now();
-    if(now-(socket.lastCommand??0)<80)return;
+    if(command.action!=="setVolume"&&socket.lastAction===command.action&&
+       now-(socket.lastCommand??0)<80)return;
+    socket.lastAction=command.action;
     socket.lastCommand=now;
-    send(room.stage,{type:"command",action:message.action});
+    send(room.stage,command);
    }
   });
   socket.on("close",()=>{
