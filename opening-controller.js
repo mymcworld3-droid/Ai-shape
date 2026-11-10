@@ -426,9 +426,9 @@
     }
   }
 
-  // The 25 selectable scene-mode cues (the first also owns the reveal video).
+  // Scene cues include a dedicated memory-door effect between card and blackout.
   const STAGE_START_CUES = Object.freeze([
-    "bright", "ai", "welcome", "clock", "door-kick", "card", "card-hidden", "blackout",
+    "bright", "ai", "welcome", "clock", "door-kick", "card", "card-hidden", "door-open", "blackout",
     "memory-light", "memory-welcome", "memory-room", "memory-blackout",
     "past-intro", "past-isolate", "office-light", "office-bang", "past-reflection",
     "memory-return", "discussion", "vote-prompt", "vote-clock", "vote-one",
@@ -438,7 +438,7 @@
   // Operator cues and media completion are separate. The clock may replace the
   // graphic during narration, while its deadline still belongs to audio.ended.
   class StageCueController {
-    constructor({ video, audio, effect = null, now = () => performance.now(),
+    constructor({ video, audio, effect = null, doorOpen = null, now = () => performance.now(),
       durationMs = 900000, revealFadeMs = 240, aiFadeMs = 900,
       expandMs = 1600, morphMs = 1200, settleMs = 1000,
       cardFadeMs = 400, blackoutMs = 1200,
@@ -446,7 +446,7 @@
       onNarrationEnd = () => {}, onError = () => {}, memoryScene = null, officeScene = null, votingScene = null,
       onMemoryNarrationEnd = () => {}, capturePresentation = () => null,
       restorePresentation = () => {} }) {
-      Object.assign(this, { now, effect, revealFadeMs, aiFadeMs, expandMs,
+      Object.assign(this, { now, effect, doorOpen, revealFadeMs, aiFadeMs, expandMs,
         morphMs, settleMs, cardFadeMs, blackoutMs, onCue, onMediaState,
         onNarrationEnd, onError, capturePresentation, restorePresentation });
       this.state = "dark";
@@ -454,6 +454,8 @@
       this.busyUntil = 0;
       this.effectState = "idle";
       this.effectRun = 0;
+      this.doorOpenState = "idle";
+      this.doorOpenRun = 0;
       this.destroyed = false;
       this.memory = memoryScene ? new MemorySceneController({ ...memoryScene, now, blackoutMs,
         onCue: state => this.setCue(state), onMediaState,
@@ -489,10 +491,22 @@
         effect.addEventListener("ended", this.effectEnded);
         effect.addEventListener("error", this.effectFailed);
       }
+      this.doorOpenEnded = () => {
+        if (doorOpen?.ended && ["starting", "playing"].includes(this.doorOpenState)) {
+          ++this.doorOpenRun;
+          this.setDoorOpenState("finished");
+        }
+      };
+      this.doorOpenFailed = () => this.failDoorOpen(new Error("Memory door opening audio could not be played."));
+      if (doorOpen) {
+        doorOpen.addEventListener("ended", this.doorOpenEnded);
+        doorOpen.addEventListener("error", this.doorOpenFailed);
+      }
     }
 
     setCue(state) { this.state = state; this.onCue(state); }
     setEffectState(state) { this.effectState = state; this.onMediaState("effect", state); }
+    setDoorOpenState(state) { this.doorOpenState = state; this.onMediaState("doorOpen", state); }
     lock(ms) { this.busyUntil = Math.max(this.busyUntil, this.now() + ms); }
 
     // Begin rehearsal at an arbitrary cue without playing skipped video, voices or effects.
@@ -509,27 +523,29 @@
         this.onMediaState("narration", "countdown");
       }
       if (index >= 5) this.setEffectState("finished");
-      if (this.memory && index >= 8) {
-        this.memory.state = index <= 11 ? cue : "memory-blackout";
-        if (index >= 9) this.memory.setMediaState("memoryClick", "finished");
-        if (index >= 10) this.memory.setMediaState("memoryVoice", "finished");
+      if (index >= 8) this.setDoorOpenState("finished");
+      if (this.memory && index >= 9) {
+        this.memory.state = index <= 12 ? cue : "memory-blackout";
+        if (index >= 10) this.memory.setMediaState("memoryClick", "finished");
+        if (index >= 11) this.memory.setMediaState("memoryVoice", "finished");
       }
-      if (this.office && index >= 12) {
-        this.office.state = index <= 17 ? cue : "memory-return";
-        if (index >= 16) this.office.setBangState("finished");
+      if (this.office && index >= 13) {
+        this.office.state = index <= 18 ? cue : "memory-return";
+        if (index >= 17) this.office.setBangState("finished");
       }
-      if (this.voting && index >= 18) {
+      if (this.voting && index >= 19) {
         this.voting.state = cue;
-        if (index >= 20) this.voting.deadline = this.now() + this.voting.durationMs;
-        if (index >= 20) this.voting.setMediaState("selectionPrompt", "finished");
-        if (index >= 22) this.voting.setMediaState("selectionOne", "finished");
-        if (index >= 23) this.voting.setMediaState("selectionTwo", "finished");
-        if (index >= 24) this.voting.setMediaState("selectionFinal", "finished");
+        if (index >= 21) this.voting.deadline = this.now() + this.voting.durationMs;
+        if (index >= 21) this.voting.setMediaState("selectionPrompt", "finished");
+        if (index >= 23) this.voting.setMediaState("selectionOne", "finished");
+        if (index >= 24) this.voting.setMediaState("selectionTwo", "finished");
+        if (index >= 25) this.voting.setMediaState("selectionFinal", "finished");
       }
       this.setCue(cue);
       switch (cue) {
         case "welcome": return this.opening.advance();
         case "door-kick": return this.playEffect();
+        case "door-open": return this.playDoorOpen();
         case "memory-light": return this.memory?.play("memoryClick") ?? false;
         case "memory-welcome": return this.memory?.play("memoryVoice") ?? false;
         case "office-bang": return this.office?.playBang() ?? false;
@@ -544,7 +560,7 @@
     checkpoint() {
       return {
         state: this.state, room: this.room.state, opening: this.opening.state,
-        effect: this.effectState,
+        effect: this.effectState, doorOpen: this.doorOpenState,
         memory: this.memory && { state: this.memory.state, mediaStates: { ...this.memory.mediaStates } },
         office: this.office && { state: this.office.state, bangState: this.office.bangState },
         voting: this.voting && { state: this.voting.state, mediaStates: { ...this.voting.mediaStates } },
@@ -557,9 +573,9 @@
       const saved = this.history.pop();
       // Cancel pending play promises before pausing, so late completions cannot
       // restore a departed cue. A rewind never changes either timer deadline.
-      ++this.room.run; ++this.opening.run; ++this.effectRun;
-      this.room.state = "dark"; this.opening.state = "ready"; this.effectState = "idle";
-      const media = [this.room.video, this.opening.audio, this.effect];
+      ++this.room.run; ++this.opening.run; ++this.effectRun; ++this.doorOpenRun;
+      this.room.state = "dark"; this.opening.state = "ready"; this.effectState = "idle"; this.doorOpenState = "idle";
+      const media = [this.room.video, this.opening.audio, this.effect, this.doorOpen];
       for (const scene of [this.memory, this.voting]) {
         if (!scene) continue;
         for (const kind of Object.keys(scene.runs)) ++scene.runs[kind];
@@ -572,6 +588,7 @@
       this.room.state = saved.room;
       this.opening.state = ["starting", "narration"].includes(saved.opening) ? "ready" : saved.opening;
       this.setEffectState(saved.effect);
+      this.setDoorOpenState(saved.doorOpen);
       this.onMediaState("room", saved.room);
       this.onMediaState("narration", this.opening.state);
       for (const [scene, snapshot] of [[this.memory, saved.memory], [this.voting, saved.voting]]) {
@@ -624,6 +641,31 @@
       this.onError("effect", error);
     }
 
+    async playDoorOpen() {
+      if (!this.doorOpen) { this.setDoorOpenState("missing"); this.lock(150); return true; }
+      const run = ++this.doorOpenRun;
+      this.setDoorOpenState("starting");
+      try {
+        if (this.doorOpen.error) this.doorOpen.load();
+        this.doorOpen.currentTime = 0;
+        await this.doorOpen.play();
+        if (this.destroyed || run !== this.doorOpenRun || this.doorOpenState !== "starting") return false;
+        this.setDoorOpenState("playing");
+        return true;
+      } catch (error) {
+        if (run === this.doorOpenRun && !this.destroyed) this.failDoorOpen(error);
+        return false;
+      }
+    }
+
+    failDoorOpen(error) {
+      if (this.doorOpenState === "finished" || this.destroyed) return;
+      ++this.doorOpenRun;
+      this.doorOpen?.pause();
+      this.setDoorOpenState("error");
+      this.onError("doorOpen", error);
+    }
+
     async advanceCue() {
       if (this.destroyed || this.now() < this.busyUntil) return false;
       switch (this.state) {
@@ -650,6 +692,10 @@
         case "card":
           this.lock(this.cardFadeMs); this.setCue("card-hidden"); return true;
         case "card-hidden":
+          this.setCue("door-open"); return this.playDoorOpen();
+        case "door-open":
+          if (["starting", "playing"].includes(this.doorOpenState)) return false;
+          if (this.doorOpenState === "error") return this.playDoorOpen();
           this.lock(this.blackoutMs); this.setCue("blackout"); return true;
         case "blackout": return this.memory ? this.memory.enter() : false;
         case "memory-light":
@@ -675,7 +721,7 @@
 
     destroy() {
       this.destroyed = true;
-      ++this.effectRun;
+      ++this.effectRun; ++this.doorOpenRun;
       this.room.destroy(); this.opening.destroy();
       this.memory?.destroy();
       this.office?.destroy();
@@ -683,6 +729,10 @@
       if (this.effect) {
         this.effect.removeEventListener("ended", this.effectEnded);
         this.effect.removeEventListener("error", this.effectFailed);
+      }
+      if (this.doorOpen) {
+        this.doorOpen.removeEventListener("ended", this.doorOpenEnded);
+        this.doorOpen.removeEventListener("error", this.doorOpenFailed);
       }
     }
   }
