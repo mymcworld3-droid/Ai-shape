@@ -12,6 +12,17 @@ audio,video{display:none}
 #reviewControls{position:fixed;z-index:3;top:max(22px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:5px;border:1px solid #ffffff24;border-radius:999px;background:#11151bcc;backdrop-filter:blur(16px)}
 #reviewControls button{border:0;border-radius:999px;padding:10px 19px;background:transparent;color:#aeb8c4;font-size:14px;white-space:nowrap;cursor:pointer}
 #reviewControls button[aria-pressed=true]{background:#f1f4f8;color:#11161d}
+#remotePairDialog{width:min(420px,calc(100% - 28px));padding:20px;border:1px solid #35465a;border-radius:15px;background:#141e2b;color:#e7eff8;box-shadow:0 18px 65px #000a}
+#remotePairDialog::backdrop{background:#000b}
+#remotePairDialog h2{margin:0 0 10px;font-size:20px}
+#remotePairDialog p{margin:0 0 13px;color:#bac8d8;font-size:14px;line-height:1.5}
+#remotePairStatus{min-height:1.5em}
+#remotePairLinkRow,.remote-pair-actions{display:flex;gap:8px}
+#remotePairLinkRow{margin-bottom:13px}
+#remotePairLink{flex:1;min-width:0;padding:8px;border:1px solid #465c75;border-radius:7px;background:#0e1520;color:#f0f6fc}
+#remotePairDialog button{padding:8px 10px;border:1px solid #465c75;border-radius:7px;background:#24364b;color:#edf4fd;font-size:13px;white-space:nowrap;cursor:pointer}
+.remote-pair-actions form{margin-left:auto}
+@media(max-width:420px){#reviewControls button{padding-inline:11px}}
 #startDock{position:fixed;z-index:4;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px}
 #resetStartStep{border:0;background:#11151bd9;color:#d6dde6;border-radius:999px;padding:7px 13px;font-size:12px;cursor:pointer;white-space:nowrap}
 #resetStartStep:hover{background:#303946}

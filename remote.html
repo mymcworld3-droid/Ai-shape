@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <meta name="referrer" content="no-referrer">
+ <meta name="theme-color" content="#0b1018">
+ <title>Ai-shape 演出遙控</title>
+ <link rel="stylesheet" href="remote.css">
+</head>
+<body>
+ <main>
+  <header>
+   <p class="project">Ai-shape</p>
+   <h1>演出遙控</h1>
+   <p id="remoteStatus" role="status">正在連線…</p>
+  </header>
+  <section class="cue" aria-label="目前步驟" aria-live="polite">
+   <p id="remoteStep">等待投影端</p>
+   <p id="remoteCue">—</p>
+  </section>
+  <nav class="navigation" aria-label="切換演出步驟">
+   <button type="button" data-action="previous" disabled>← 上一步</button>
+   <button type="button" data-action="next" disabled>下一步 →</button>
+  </nav>
+  <section class="mixer" aria-labelledby="mixerHeading">
+   <h2 id="mixerHeading">投影音量</h2>
+   <div class="channel">
+    <span>語音</span>
+    <button type="button" data-action="voiceDown" aria-label="降低語音音量" disabled>−</button>
+    <output id="remoteVoice">—</output>
+    <button type="button" data-action="voiceUp" aria-label="提高語音音量" disabled>+</button>
+   </div>
+   <div class="channel">
+    <span>音效</span>
+    <button type="button" data-action="effectDown" aria-label="降低音效音量" disabled>−</button>
+    <output id="remoteEffect">—</output>
+    <button type="button" data-action="effectUp" aria-label="提高音效音量" disabled>+</button>
+   </div>
+   <div class="channel">
+    <span>背景音樂</span>
+    <button type="button" data-action="otherDown" aria-label="降低背景音樂音量" disabled>−</button>
+    <output id="remoteMusic">—</output>
+    <button type="button" data-action="otherUp" aria-label="提高背景音樂音量" disabled>+</button>
+   </div>
+   <button type="button" data-action="toggleVolumeDisplay" aria-pressed="false" disabled>在投影上顯示音量</button>
+  </section>
+ </main>
+ <script src="remote-link.js"></script>
+ <script src="remote-control.js"></script>
+</body>
+</html>

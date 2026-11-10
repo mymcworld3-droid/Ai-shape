@@ -2,6 +2,7 @@
 const config=window.OPENING_CONFIG;
 const scriptMode=new URLSearchParams(location.search).get("mode")!=="cues";
 let transcript=null,scriptVideoPlaying=false;
+let remoteAudioPreparing=false;
 const audioElement=document.getElementById("openingAudio");
 const effectElement=document.getElementById("doorKickAudio");
 const memoryDoorOpenAudio=document.getElementById("memoryDoorOpenAudio");
@@ -292,7 +293,7 @@ window.stageOpening=Object.freeze({
 });
 
 function showAssetsReady(){
- return backgroundReady&&darkBackgroundReady&&cardReady&&memoryBackgroundReady&&officeBackgroundReady&&revealVideo.readyState>=2&&audioElement.readyState>=2;
+ return !remoteAudioPreparing&&backgroundReady&&darkBackgroundReady&&cardReady&&memoryBackgroundReady&&officeBackgroundReady&&revealVideo.readyState>=2&&audioElement.readyState>=2;
 }
 function notifyAssetsChange(){window.dispatchEvent(new Event("stageassetschange"));}
 function setProjectionPreview(cue){
@@ -404,9 +405,9 @@ function requestStageFullscreen(){
   }catch(_){}
  }
 }
-function advanceStage(){
+function advanceStage(fullscreen=true){
  if(!startGate.started)return;
- if(scriptMode){transcript.next();requestStageFullscreen();return;}
+ if(scriptMode){transcript.next();if(fullscreen)requestStageFullscreen();return;}
  if(!backgroundReady||!darkBackgroundReady)return;
  if(stage.state==="door-kick"&&!cardReady)return;
  if(performance.now()<stage.busyUntil)return;
@@ -436,7 +437,7 @@ function advanceStage(){
   if(config.ending.revealTruth)prepareAudio(endingRevealAudio);
  }
  for(const kind of ["Prompt","One","Two","Final"])document.body.dataset["selection"+kind+"Error"]="false";
- stage.advance();requestStageFullscreen();
+ stage.advance();if(fullscreen)requestStageFullscreen();
 }
 let voiceVolume=100,effectVolume=100,otherVolume=100;
 const volumeDisplay=document.getElementById("volumeDisplay");
@@ -461,7 +462,7 @@ function changeEffectVolume(delta){effectVolume=StageOpening.adjustVolume(effect
 function changeOtherVolume(delta){otherVolume=StageOpening.adjustVolume(otherVolume,delta);applyVolumes();}
 function toggleVolumeDisplay(){volumeDisplay.hidden=!volumeDisplay.hidden;}
 applyVolumes();
-StageOpening.bindStageKeys(window,{
+const stageActions={
  start:()=>startGate.start(),next:advanceStage,
  previous:()=>{if(startGate.started){if(scriptMode)transcript.previous();else stage.previous();}},
  voiceUp:()=>changeVoiceVolume(5),voiceDown:()=>changeVoiceVolume(-5),
@@ -469,7 +470,8 @@ StageOpening.bindStageKeys(window,{
  otherUp:()=>changeOtherVolume(5),otherDown:()=>changeOtherVolume(-5),
  toggleVolumeDisplay,
  isStarted:()=>startGate.started
-});
+};
+StageOpening.bindStageKeys(window,stageActions);
 StageOpening.bindAdvanceClick(projectionViewport,advanceStage);
 document.addEventListener("fullscreenchange",resizeCanvas);
 window.addEventListener("resize",resizeCanvas);

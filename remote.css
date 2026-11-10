@@ -1,0 +1,25 @@
+:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b1018;color:#eef4fa}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#1c2c40 0,#0b1018 55%)}
+main{width:min(100%,460px);margin:auto;padding:32px 18px max(28px,env(safe-area-inset-bottom))}
+header{margin-bottom:18px}
+.project{margin:0 0 5px;color:#a8c8eb;font-size:.8rem;letter-spacing:.12em}
+h1{margin:0;font-size:1.7rem}
+#remoteStatus{min-height:1.4em;margin:8px 0 0;color:#bbcbdd;font-size:.9rem}
+.cue,.mixer{padding:16px;border:1px solid #33465c;border-radius:14px;background:#121d2a}
+.cue{min-height:98px}
+#remoteStep{margin:0 0 6px;color:#a8c8eb;font-size:.85rem;font-variant-numeric:tabular-nums}
+#remoteCue{margin:0;overflow-wrap:anywhere;line-height:1.5}
+button{min-height:44px;padding:8px 12px;border:1px solid #3b526d;border-radius:10px;background:#1e2c3e;color:inherit;font:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:2px solid #aed9ff;outline-offset:3px}
+button:active:not(:disabled){filter:brightness(1.25)}
+button:disabled{opacity:.4;cursor:default}
+.navigation{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.navigation button{min-height:68px;font-size:1.1rem;font-weight:650}
+[data-action=next]{background:#a6d2ff;color:#102239;border-color:#a6d2ff}
+.mixer h2{margin:0 0 10px;font-size:1rem}
+.channel{display:grid;grid-template-columns:1fr 44px minmax(48px,auto) 44px;gap:7px;align-items:center;margin:8px 0;color:#d0ddeb}
+.channel button{padding:0;font-size:1.3rem}
+.channel output{text-align:center;font-variant-numeric:tabular-nums;font-size:.92rem}
+.mixer>button{width:100%;margin-top:8px;font-size:.9rem}
+.mixer>button[aria-pressed=true]{border-color:#8bbdf0;color:#cce7ff}

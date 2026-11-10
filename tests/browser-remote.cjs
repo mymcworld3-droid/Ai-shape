@@ -1,0 +1,66 @@
+"use strict";
+const assert=require("node:assert/strict");
+const {once}=require("node:events");
+const {chromium}=require("playwright");
+const {createServer}=require("../server.cjs");
+
+(async()=>{
+ const server=createServer();
+ server.listen(0,"127.0.0.1");
+ await once(server,"listening");
+ const origin="http://127.0.0.1:"+server.address().port;
+ let browser;
+ try{
+  browser=await chromium.launch({
+   ...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{channel:"chrome"}),
+   args:["--autoplay-policy=user-gesture-required"]
+  });
+  const stage=await browser.newPage({viewport:{width:1440,height:900}});
+  const remote=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const errors=[];
+  for(const page of [stage,remote])page.on("pageerror",error=>errors.push(String(error)));
+  const next=remote.locator('[data-action="next"]');
+  const waitForStep=index=>remote.waitForFunction(n=>
+   document.getElementById("remoteStep").textContent.includes("第 "+n+" 步"),index);
+
+  async function start(path,cue,index){
+   await stage.goto(origin+path);
+   await stage.locator("#stepsViewButton").click();
+   await stage.locator(cue).click();
+   await stage.locator("#remotePairButton").click();
+   await stage.locator("#remotePairLink").waitFor({state:"visible"});
+   await remote.goto(await stage.locator("#remotePairLink").inputValue());
+   await waitForStep(index);
+   assert.equal(await next.isDisabled(),true);
+   await stage.waitForFunction(()=>document.getElementById("remotePairStatus").textContent==="操控端已連線");
+   assert.equal(await stage.locator("body").getAttribute("data-started"),"false");
+   await stage.getByRole("button",{name:"關閉",exact:true}).click();
+   await stage.locator("#startButton").click();
+   await remote.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
+   assert.equal(await stage.locator("#remotePairButton").isVisible(),false);
+  }
+
+  await start("/",'[data-script="75"]',75);
+  await next.tap();
+  await stage.waitForFunction(()=>document.body.dataset.scriptIndex==="76"&&
+   document.getElementById("scriptEffect-doorOpen").currentTime>0);
+  await remote.reload();
+  await waitForStep(76);
+  await remote.locator('[data-action="effectDown"]').tap();
+  await remote.waitForFunction(()=>document.getElementById("remoteEffect").textContent==="95%");
+  assert.equal(await stage.locator("#scriptEffect-doorOpen").evaluate(audio=>audio.volume),.95);
+
+  await start("/?mode=cues",'[data-preview="card-hidden"]',7);
+  await next.tap();
+  await stage.waitForFunction(()=>document.body.dataset.cue==="door-open"&&
+   document.getElementById("memoryDoorOpenAudio").currentTime>.1);
+  await waitForStep(8);
+  await remote.locator('[data-action="previous"]').tap();
+  await waitForStep(7);
+  assert.deepEqual(errors,[]);
+  console.log("PASS paired browsers control real cues and audio in both modes");
+ }finally{
+  await browser?.close();
+  await new Promise(resolve=>server.close(resolve));
+ }
+})().catch(error=>{console.error(error);process.exitCode=1;});

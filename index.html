@@ -94,7 +94,22 @@
   <button type="button" id="pageViewButton" aria-pressed="true">全頁</button>
   <button type="button" id="stepsViewButton" aria-pressed="false">步驟檢視</button>
   <button type="button" id="modeButton">場景模式</button>
+  <button type="button" id="remotePairButton" hidden>遠端</button>
 </nav>
+<dialog id="remotePairDialog" aria-labelledby="remotePairHeading">
+  <h2 id="remotePairHeading">雙裝置操控</h2>
+  <p>在另一台裝置開啟配對連結，再在這台投影裝置按「開始」。</p>
+  <p id="remotePairStatus" role="status"></p>
+  <div id="remotePairLinkRow" hidden>
+    <input type="url" id="remotePairLink" aria-label="操控端配對連結" readonly>
+    <button type="button" id="remoteCopyButton">複製連結</button>
+  </div>
+  <div class="remote-pair-actions">
+    <button type="button" id="remoteCreateButton">建立配對</button>
+    <button type="button" id="remoteEndButton" hidden>結束配對</button>
+    <form method="dialog"><button type="submit">關閉</button></form>
+  </div>
+</dialog>
 <div id="startDock">
   <button type="button" id="startButton" aria-keyshortcuts="F" disabled><span class="play-mark" aria-hidden="true"></span><span id="startLabel">載入中…</span></button>
   <button type="button" id="resetStartStep" hidden>取消指定步驟，改從開頭開始</button>
@@ -111,5 +126,7 @@
 <script src="script-runtime.js"></script>
 <script src="audio-timeline.js"></script>
 <script src="stage-review.js"></script>
+<script src="remote-link.js"></script>
+<script src="remote-stage.js"></script>
 </body>
 </html>
