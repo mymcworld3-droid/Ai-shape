@@ -66,7 +66,7 @@
     return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
   }
   const previews = Object.freeze({
-    dark: { room: false, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
+    dark: { background: "opening", room: false, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     bright: { room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     ai: { room: true, ai: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
     welcome: { room: true, ai: 1, scene: 1, clock: 0, card: 0, blackout: 0 },
@@ -88,10 +88,9 @@
     "memory-return": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     discussion: { background: "memory", room: true, ai: 0, scene: 0.2, clock: 0, card: 0, blackout: 0 },
     "vote-prompt": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1 },
-    "vote-clock": { background: "memory", room: true, ai: 0, scene: 0.2, clock: 1, card: 0, blackout: 0, vote: 1, timer: "selection" },
-    "vote-one": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1, timer: "selection" },
-    "vote-two": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1, timer: "selection" },
-    "vote-final": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1, timer: "selection" },
+    "vote-one": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1 },
+    "vote-two": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1 },
+    "vote-final": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1 },
     "vote-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     "ending-light": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     "ending-dialogue": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
