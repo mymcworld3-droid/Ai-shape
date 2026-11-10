@@ -48,7 +48,7 @@ test("all 32 scene cues cover Act IV as well as the existing soundtrack",()=>{
  for(const cue of STAGE_START_CUES){
   assert.equal(Number.isInteger(cueSteps[cue]),true,'missing paragraph for '+cue);
   const track=trackForStep(cueSteps[cue],config.actOneMusic);
-  if(cue==='vote-blackout'||cue==='ending-blackout')assert.equal(track,null,'blackout must end music');
+  if(['dark','vote-blackout','ending-blackout'].includes(cue))assert.equal(track,null,'pre-show and blackouts remain silent');
   else assert.ok(track,'no music for '+cue);
  }
  assert.equal(trackForStep(cueSteps.card,config.actOneMusic).src,
