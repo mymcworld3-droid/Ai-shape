@@ -32,7 +32,7 @@ window.OPENING_CONFIG = Object.freeze({
     "memory-blackout": 179, "past-intro": 185, "past-isolate": 194,
     "office-light": 199, "office-bang": 213, "past-reflection": 269,
     "memory-return": 283, "discussion": 290, "vote-prompt": 388,
-    "vote-clock": 388, "vote-one": 390, "vote-two": 395,
+    "vote-one": 390, "vote-two": 395,
     "vote-final": 402, "vote-blackout": 403,
     "ending-light": 407, "ending-dialogue": 408, "ending-complete": 409,
     "ending-question": 410, "ending-reveal": 414, "ending-blackout": 416
@@ -63,7 +63,7 @@ window.OPENING_CONFIG = Object.freeze({
     one: "assets/audio/391-392ai.m4a",
     two: "assets/audio/395-396ai.m4a",
     final: "assets/audio/399ai.m4a",
-    durationMs: 60 * 1000,
+    // Third act has no timer; every vote advances only by operator cue.
     fadeMs: 600,
     voiceExpandMs: 900,
     voiceSettleMs: 600,
