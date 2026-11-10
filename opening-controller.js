@@ -326,8 +326,8 @@
     }
   }
 
-  // Act III's one-minute selection deadline is separate from the opening
-  // deadline. Voice completion never consumes an actor's next manual cue.
+  // Act III remains manually cued. No election/vote timer is started or shown;
+  // voice completion alone gates the next deliberate stage input.
   class VotingSceneController {
     constructor({ prompt = null, one = null, two = null, final = null,
       isReady = () => true, now = () => performance.now(), durationMs = 60000,
@@ -352,7 +352,7 @@
     setCue(state) { this.state = state; this.onCue(state); }
     setMediaState(kind, state) { this.mediaStates[kind] = state; this.onMediaState(kind, state); }
     lock(ms) { this.busyUntil = Math.max(this.busyUntil, this.now() + ms); this.onLock(ms); }
-    getRemainingMs() { return this.deadline === null ? this.durationMs : Math.max(0, this.deadline - this.now()); }
+    getRemainingMs() { return null; }
 
     enter() {
       if (this.destroyed || this.state !== "waiting" || !this.isReady()) return false;
@@ -378,7 +378,6 @@
     finish(kind) {
       if (this.destroyed || !this.media[kind]?.ended || !["starting", "playing"].includes(this.mediaStates[kind])) return;
       ++this.runs[kind]; this.lock(this.voiceSettleMs);
-      if (kind === "selectionPrompt" && this.deadline === null) this.deadline = this.now() + this.durationMs;
       this.setMediaState(kind, "finished");
     }
 
@@ -401,11 +400,6 @@
         case "discussion":
           this.lock(this.fadeMs); this.setCue("vote-prompt"); return this.play("selectionPrompt");
         case "vote-prompt":
-          // Without a recording, this explicit operator cue starts the minute.
-          // No synthetic ended event or guessed narration length is used.
-          if (this.deadline === null && this.mediaStates.selectionPrompt === "missing") this.deadline = this.now() + this.durationMs;
-          this.lock(this.fadeMs); this.setCue("vote-clock"); return true;
-        case "vote-clock":
           this.lock(this.fadeMs); this.setCue("vote-one"); return this.play("selectionOne");
         case "vote-one":
           this.lock(this.fadeMs); this.setCue("vote-two"); return this.play("selectionTwo");
@@ -504,10 +498,10 @@
 
   // Scene cues include a dedicated memory-door effect between card and blackout.
   const STAGE_START_CUES = Object.freeze([
-    "bright", "ai", "welcome", "clock", "door-kick", "card", "card-hidden", "door-open", "blackout",
+    "dark", "bright", "ai", "welcome", "clock", "door-kick", "card", "card-hidden", "door-open", "blackout",
     "memory-light", "memory-welcome", "memory-room", "memory-blackout",
     "past-intro", "past-isolate", "office-light", "office-bang", "past-reflection",
-    "memory-return", "discussion", "vote-prompt", "vote-clock", "vote-one",
+    "memory-return", "discussion", "vote-prompt", "vote-one",
     "vote-two", "vote-final", "vote-blackout",
     "ending-light", "ending-dialogue", "ending-complete", "ending-question",
     "ending-reveal", "ending-blackout"
@@ -612,35 +606,35 @@
     startAt(cue = STAGE_START_CUES[0]) {
       const index = STAGE_START_CUES.indexOf(cue);
       if (this.destroyed || this.state !== "dark" || this.history.length || index < 0) return false;
-      if (index === 0) return this.advance(); // Keep the original room-reveal video.
+      if (cue === "dark") { this.setCue("dark"); return true; } // Step 0: blue room, silent.
+      if (cue === "bright") return this.advance(); // Step 1: original room-reveal video.
       this.room.state = "ready";
       this.onMediaState("room", "ready");
-      if (index >= 3) {
+      if (index >= STAGE_START_CUES.indexOf("clock")) {
         this.opening.state = "countdown";
         this.opening.deadline = this.now() + this.opening.durationMs;
         this.onMediaState("narration", "countdown");
       }
-      if (index >= 5) this.setEffectState("finished");
-      if (index >= 8) this.setDoorOpenState("finished");
-      if (this.memory && index >= 9) {
-        this.memory.state = index <= 12 ? cue : "memory-blackout";
-        if (index >= 10) this.memory.setMediaState("memoryClick", "finished");
-        if (index >= 11) this.memory.setMediaState("memoryVoice", "finished");
+      if (index >= STAGE_START_CUES.indexOf("card")) this.setEffectState("finished");
+      if (index >= STAGE_START_CUES.indexOf("blackout")) this.setDoorOpenState("finished");
+      if (this.memory && index >= STAGE_START_CUES.indexOf("memory-light")) {
+        this.memory.state = index <= STAGE_START_CUES.indexOf("memory-blackout") ? cue : "memory-blackout";
+        if (index >= STAGE_START_CUES.indexOf("memory-welcome")) this.memory.setMediaState("memoryClick", "finished");
+        if (index >= STAGE_START_CUES.indexOf("memory-room")) this.memory.setMediaState("memoryVoice", "finished");
       }
-      if (this.office && index >= 13) {
-        this.office.state = index <= 18 ? cue : "memory-return";
-        if (index >= 17) this.office.setBangState("finished");
+      if (this.office && index >= STAGE_START_CUES.indexOf("past-intro")) {
+        this.office.state = index <= STAGE_START_CUES.indexOf("memory-return") ? cue : "memory-return";
+        if (index >= STAGE_START_CUES.indexOf("past-reflection")) this.office.setBangState("finished");
       }
-      if (index >= 21) this.setSelectionButtonState("finished");
-      if (this.voting && index >= 19) {
-        this.voting.state = index >= 26 ? "vote-blackout" : cue;
-        if (index >= 21) this.voting.deadline = this.now() + this.voting.durationMs;
-        if (index >= 21) this.voting.setMediaState("selectionPrompt", "finished");
-        if (index >= 23) this.voting.setMediaState("selectionOne", "finished");
-        if (index >= 24) this.voting.setMediaState("selectionTwo", "finished");
-        if (index >= 25) this.voting.setMediaState("selectionFinal", "finished");
+      if (index >= STAGE_START_CUES.indexOf("vote-one")) this.setSelectionButtonState("finished");
+      if (this.voting && index >= STAGE_START_CUES.indexOf("discussion")) {
+        this.voting.state = index >= STAGE_START_CUES.indexOf("ending-light") ? "vote-blackout" : cue;
+        if (index >= STAGE_START_CUES.indexOf("vote-one")) this.voting.setMediaState("selectionPrompt", "finished");
+        if (index >= STAGE_START_CUES.indexOf("vote-two")) this.voting.setMediaState("selectionOne", "finished");
+        if (index >= STAGE_START_CUES.indexOf("vote-final")) this.voting.setMediaState("selectionTwo", "finished");
+        if (index >= STAGE_START_CUES.indexOf("vote-blackout")) this.voting.setMediaState("selectionFinal", "finished");
       }
-      if (this.ending && index >= 26) {
+      if (this.ending && index >= STAGE_START_CUES.indexOf("ending-light")) {
         this.ending.state = cue;
         if (index >= 29) this.ending.setMediaState("endingComplete", "finished");
         if (index >= 31) this.ending.setMediaState("endingReveal", "finished");
@@ -682,7 +676,7 @@
       if (this.destroyed || !this.history.length) return false;
       const saved = this.history.pop();
       // Cancel pending play promises before pausing, so late completions cannot
-      // restore a departed cue. A rewind never changes either timer deadline.
+      // restore a departed cue. Rewinding keeps the opening deadline unchanged.
       ++this.room.run; ++this.opening.run; ++this.effectRun; ++this.doorOpenRun; ++this.selectionButtonRun;
       this.room.state = "dark"; this.opening.state = "ready"; this.effectState = "idle"; this.doorOpenState = "idle";
       this.selectionButtonState = "idle";
@@ -849,7 +843,6 @@
         case "memory-return": return this.voting ? this.voting.enter() : false;
         case "discussion":
         case "vote-prompt":
-        case "vote-clock":
         case "vote-one":
         case "vote-two":
         case "vote-final": return this.voting ? this.voting.advance() : false;
