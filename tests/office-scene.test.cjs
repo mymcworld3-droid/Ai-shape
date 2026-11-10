@@ -79,14 +79,14 @@ test("destroy detaches BANG events, pauses audio and prevents pending media or n
  assert.equal(c.bang.paused,true);assert.equal(c.errors.length,0);
  c.tick(20000);assert.equal(c.scene.advance(),false);assert.equal(c.scene.enter(),false);
 });
-test("all eighteen cues leave the opening deadline and completed opening media untouched",async()=>{
+test("all nineteen cues leave the opening deadline and completed opening media untouched",async()=>{
  let time=0;const video=new Media(),audio=new Media(),bang=new Media(),cues=[];
  const stage=new StageCueController({video,audio,now:()=>time,memoryScene:{},officeScene:{bang},onCue:cue=>cues.push(cue)});
  const step=async(ms=0)=>{time+=ms;return stage.advance();};
  await step();video.end();await step(300);await step(1000);await step(200);await step(2000);
  audio.end();const deadline=stage.opening.deadline;
  await step(1100);await step(1300);
- for(const ms of [1300,500,500,1300,1100,700,700])await step(ms);
+ for(const ms of [1300,500,500,200,1300,1100,700,700])await step(ms);
  assert.equal(stage.state,"memory-blackout");assert.equal(await step(500),false);
  await step(800);assert.equal(stage.state,"past-intro");
  for(const ms of [1100,1300,1100])await step(ms);
