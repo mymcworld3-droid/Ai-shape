@@ -13,6 +13,7 @@ jobs:
       - run: node --check visualizer.js
       - run: node --check stage-layout.js
       - run: node --check stage-review.js
+      - run: node --check audio-timeline.js
       - run: npm test
   opening-browser:
     runs-on: ubuntu-latest
