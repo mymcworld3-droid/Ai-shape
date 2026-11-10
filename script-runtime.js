@@ -87,7 +87,9 @@ if(scriptMode){
   if(entry.id==='pre-show'){
    values.room=false;values.blackout=0;values.ai=0;values.clock=0;
   }
-  const duration=direction<=0||!startGate.started||transcript?.index===0||['opening-dark','end-blackout'].includes(entry.action)?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
+  const duration=direction<=0||!startGate.started||transcript?.index===0||
+   (entry.act==='I'&&entry.paragraph<=22&&values.blackout===1)||
+   ['opening-dark','end-blackout'].includes(entry.action)?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
   for(const name of Object.keys(transitions))animate(name,values[name]||0,duration);
   subtitleRenderer.render(entry);
   // The flash is triggered only on operator input; AI callbacks do not replay it.
