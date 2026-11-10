@@ -141,7 +141,10 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
     if(message.type==="command"&&actions.includes(message.action)&&
        isOpen(liveStage)&&liveState?.started){
      const now=Date.now();
-     if(now-(socket.lastCommand??0)<80)return;
+     // Suppress accidental duplicate taps, not distinct actions in quick
+     // succession (e.g. volume down followed immediately by next cue).
+     if(socket.lastAction===message.action&&now-(socket.lastCommand??0)<80)return;
+     socket.lastAction=message.action;
      socket.lastCommand=now;
      send(liveStage,{type:"command",action:message.action});
     }
