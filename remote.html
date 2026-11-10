@@ -24,29 +24,34 @@
    <button type="button" data-action="previous" disabled>← 上一步</button>
    <button type="button" data-action="next" disabled>下一步 →</button>
   </nav>
+  <section class="next-prompt" id="nextScenePrompt" aria-labelledby="nextPromptHeading" hidden>
+   <h2 id="nextPromptHeading">下一步台詞提示</h2>
+   <p id="nextPromptStep" class="prompt-step"></p>
+   <p class="prompt-label">切換前，留意這句台詞</p>
+   <p id="nextPromptLead" class="prompt-lead"></p>
+   <p class="prompt-label">下一步開場台詞</p>
+   <ol id="nextPromptLines" class="prompt-lines"></ol>
+  </section>
   <section class="mixer" aria-labelledby="mixerHeading">
-   <h2 id="mixerHeading">投影音量</h2>
+   <h2 id="mixerHeading">投影音量控制</h2>
+   <p class="mixer-note">拉桿是設定音量；下方電平表是播放裝置正在輸出的實際聲音強度。</p>
    <div class="channel">
-    <span>語音</span>
-    <button type="button" data-action="voiceDown" aria-label="降低語音音量" disabled>−</button>
-    <output id="remoteVoice">—</output>
-    <button type="button" data-action="voiceUp" aria-label="提高語音音量" disabled>+</button>
+    <div class="channel-heading"><label for="sliderVoice">語音</label><output id="remoteVoice">—</output></div>
+    <input type="range" id="sliderVoice" data-channel="voice" min="0" max="100" step="1" value="100" disabled>
+    <div class="level-row"><meter id="meterVoice" min="-60" max="0" value="-60" aria-label="語音即時音訊電平"></meter><output id="levelVoice">靜音</output></div>
    </div>
    <div class="channel">
-    <span>音效</span>
-    <button type="button" data-action="effectDown" aria-label="降低音效音量" disabled>−</button>
-    <output id="remoteEffect">—</output>
-    <button type="button" data-action="effectUp" aria-label="提高音效音量" disabled>+</button>
+    <div class="channel-heading"><label for="sliderEffect">音效</label><output id="remoteEffect">—</output></div>
+    <input type="range" id="sliderEffect" data-channel="effect" min="0" max="100" step="1" value="100" disabled>
+    <div class="level-row"><meter id="meterEffect" min="-60" max="0" value="-60" aria-label="音效即時音訊電平"></meter><output id="levelEffect">靜音</output></div>
    </div>
    <div class="channel">
-    <span>背景音樂</span>
-    <button type="button" data-action="otherDown" aria-label="降低背景音樂音量" disabled>−</button>
-    <output id="remoteMusic">—</output>
-    <button type="button" data-action="otherUp" aria-label="提高背景音樂音量" disabled>+</button>
+    <div class="channel-heading"><label for="sliderMusic">背景音樂</label><output id="remoteMusic">—</output></div>
+    <input type="range" id="sliderMusic" data-channel="music" min="0" max="100" step="1" value="100" disabled>
+    <div class="level-row"><meter id="meterMusic" min="-60" max="0" value="-60" aria-label="背景音樂即時音訊電平"></meter><output id="levelMusic">靜音</output></div>
    </div>
    <button type="button" data-action="toggleVolumeDisplay" aria-pressed="false" disabled>在投影上顯示音量</button>
-  </section>
- </main>
+  </section></main>
  <script src="remote-link.js"></script>
  <script src="remote-control.js"></script>
 </body>
