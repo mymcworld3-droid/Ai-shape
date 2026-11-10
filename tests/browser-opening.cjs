@@ -1038,9 +1038,9 @@ async function fastVoting(page){
       };
     });
     await ready(votingMedia,url);await fastVoting(votingMedia);
-    const votingOpeningDeadline=await votingMedia.evaluate(()=>opening.deadline);let votingDeadline;
+    const votingOpeningDeadline=await votingMedia.evaluate(()=>opening.deadline);
     const voteIdle=await expectedDifference(votingMedia,'assets/backgrounds/memory-room.png',[0,0,1,.8],15,.2);
-    for(const [kind,current,next] of [['Prompt','vote-prompt','vote-clock'],['One','vote-one','vote-two'],['Two','vote-two','vote-final'],['Final','vote-final','vote-blackout']]){
+    for(const [kind,current,next] of [['Prompt','vote-prompt','vote-one'],['One','vote-one','vote-two'],['Two','vote-two','vote-final'],['Final','vote-final','vote-blackout']]){
       await flag(votingMedia,'selection'+kind+'State','error');await cue(votingMedia,current);
       if(kind==='Prompt')assert.equal(await votingMedia.evaluate(()=>stage.voting.deadline),null);
       await votingMedia.waitForFunction(()=>performance.now()>=stage.busyUntil);
@@ -1053,28 +1053,20 @@ async function fastVoting(page){
       await votingMedia.keyboard.down('Space');await cue(votingMedia,current);
       await flag(votingMedia,'selection'+kind+'State','finished');
       assert.equal(await votingMedia.locator('#selection'+kind+'Audio').evaluate(a=>a.ended),true);
-      if(kind==='Prompt')votingDeadline=await votingMedia.evaluate(()=>stage.voting.deadline);
-      assert.equal(await votingMedia.evaluate(()=>stage.voting.deadline),votingDeadline);
+      assert.equal(await votingMedia.evaluate(()=>stage.voting.deadline),null);
+      assert.equal(await votingMedia.evaluate(()=>stage.voting.getRemainingMs()),null);
       await votingMedia.keyboard.down('Space');await cue(votingMedia,current);
       await votingMedia.waitForFunction(()=>transitions.aiExpansion.value===0&&performance.now()>=stage.busyUntil);
-      if(kind==='Prompt'){
-        const small=await expectedDifference(votingMedia,'assets/backgrounds/memory-room.png',[0,0,1,.8],15,.2);
-        assert.ok(small.height<large.height*.65,'Prompt completion must visibly shrink AI before the manual clock cue');
-      }else{
-        assert.equal(await votingMedia.evaluate(()=>transitions.clock.value),1,'Vote completion restores the clock automatically');
-        const clock=await expectedDifference(votingMedia,'assets/backgrounds/memory-room.png',[0,.2,1,.55],15,.2);
-        assert.ok(clock.height<large.height*.65,'Clock replaces the enlarged figure after real voice end');
-      }
+      const small=await expectedDifference(votingMedia,'assets/backgrounds/memory-room.png',[0,0,1,.8],15,.2);
+      assert.ok(small.height<large.height*.65,'AI shrinks after every voting voice without any timer');
+      assert.equal(await votingMedia.evaluate(()=>transitions.clock.target),0,'Voting never reactivates a clock');
       await votingMedia.keyboard.up('Space');await votingMedia.keyboard.press('Space');await cue(votingMedia,next);
-      if(kind==='Prompt'){
-        await votingMedia.waitForFunction(()=>performance.now()>=stage.busyUntil);
-        await votingMedia.keyboard.press('Space');await cue(votingMedia,'vote-one');
-      }
+
     }
     await votingMedia.waitForFunction(()=>performance.now()>=stage.busyUntil);
     assert.equal(await votingMedia.evaluate(()=>opening.deadline),votingOpeningDeadline);
     await noControls(votingMedia);await votingMedia.close();
-    results.push('all four selection voices use real PCM playback, retry only their own failures and wait for genuine end plus a released key; only the prompt owns the minute and the original opening deadline remains unchanged');
+    results.push('all four selection voices use real PCM playback, retry only their own failures and wait for genuine end; no third-act countdown starts and the opening deadline is preserved');
 
     const touch=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
     await ready(touch,url); await fixedFrame(touch);
