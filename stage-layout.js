@@ -74,6 +74,7 @@
     "door-kick": { room: true, ai: 1, scene: 0, clock: 1, card: 0, blackout: 0 },
     card: { room: true, ai: 1, scene: 0, clock: 1, card: 1, blackout: 0 },
     "card-hidden": { room: true, ai: 1, scene: 0, clock: 1, card: 0, blackout: 0 },
+    "door-open": { room: true, ai: 1, scene: 0, clock: 1, card: 0, blackout: 0 },
     blackout: { room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     "memory-light": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     "memory-welcome": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
