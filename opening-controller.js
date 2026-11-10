@@ -426,13 +426,91 @@
     }
   }
 
+  // Act IV remains actor-paced. The two original AI recordings play in
+  // separate cues and cannot be skipped until they have really finished.
+  class EndingSceneController {
+    constructor({ complete = null, revealTruth = null, isReady = () => true,
+      now = () => performance.now(), fadeMs = 1000, voiceSettleMs = 600,
+      onCue = () => {}, onMediaState = () => {}, onLock = () => {}, onError = () => {} }) {
+      Object.assign(this, { isReady, now, fadeMs, voiceSettleMs, onCue, onMediaState, onLock, onError });
+      this.state = "waiting"; this.destroyed = false; this.busyUntil = 0;
+      this.media = { endingComplete: complete, endingReveal: revealTruth };
+      this.mediaStates = { endingComplete: "idle", endingReveal: "idle" };
+      this.runs = { endingComplete: 0, endingReveal: 0 };
+      this.listeners = [];
+      for (const [kind, media] of Object.entries(this.media)) {
+        if (!media) continue;
+        const ended = () => this.finish(kind);
+        const failed = () => this.fail(kind, new Error("Ending narration could not be played: " + kind));
+        media.addEventListener("ended", ended); media.addEventListener("error", failed);
+        this.listeners.push({ media, ended, failed });
+      }
+    }
+    setCue(cue) { this.state = cue; this.onCue(cue); }
+    setMediaState(kind, state) { this.mediaStates[kind] = state; this.onMediaState(kind, state); }
+    lock(ms) { this.busyUntil = Math.max(this.busyUntil, this.now() + ms); this.onLock(ms); }
+    enter() {
+      if (this.destroyed || this.state !== "waiting" || !this.isReady()) return false;
+      this.lock(this.fadeMs); this.setCue("ending-light"); return true;
+    }
+    async play(kind) {
+      const media = this.media[kind];
+      if (!media) { this.setMediaState(kind, "missing"); return true; }
+      const run = ++this.runs[kind]; this.setMediaState(kind, "starting");
+      try {
+        if (media.error) media.load();
+        media.currentTime = 0; await media.play();
+        if (this.destroyed || run !== this.runs[kind] || this.mediaStates[kind] !== "starting") return false;
+        this.setMediaState(kind, "playing"); return true;
+      } catch (error) {
+        if (run === this.runs[kind] && !this.destroyed) this.fail(kind, error);
+        return false;
+      }
+    }
+    finish(kind) {
+      if (this.destroyed || !this.media[kind]?.ended ||
+          !["starting", "playing"].includes(this.mediaStates[kind])) return;
+      ++this.runs[kind]; this.lock(this.voiceSettleMs); this.setMediaState(kind, "finished");
+    }
+    fail(kind, error) {
+      if (this.destroyed || this.mediaStates[kind] === "finished") return;
+      ++this.runs[kind]; this.media[kind]?.pause();
+      this.setMediaState(kind, "error"); this.onError(kind, error);
+    }
+    advance() {
+      if (this.destroyed || this.now() < this.busyUntil) return false;
+      const current = { "ending-complete": "endingComplete", "ending-reveal": "endingReveal" }[this.state];
+      if (current) {
+        if (["starting", "playing"].includes(this.mediaStates[current])) return false;
+        if (this.mediaStates[current] === "error") return this.play(current);
+      }
+      switch (this.state) {
+        case "ending-light": this.setCue("ending-dialogue"); return true;
+        case "ending-dialogue": this.setCue("ending-complete"); return this.play("endingComplete");
+        case "ending-complete": this.setCue("ending-question"); return true;
+        case "ending-question": this.setCue("ending-reveal"); return this.play("endingReveal");
+        case "ending-reveal": this.setCue("ending-blackout"); return true;
+        default: return false;
+      }
+    }
+    destroy() {
+      this.destroyed = true;
+      for (const kind of Object.keys(this.runs)) ++this.runs[kind];
+      for (const { media, ended, failed } of this.listeners) {
+        media.removeEventListener("ended", ended); media.removeEventListener("error", failed); media.pause();
+      }
+    }
+  }
+
   // Scene cues include a dedicated memory-door effect between card and blackout.
   const STAGE_START_CUES = Object.freeze([
     "bright", "ai", "welcome", "clock", "door-kick", "card", "card-hidden", "door-open", "blackout",
     "memory-light", "memory-welcome", "memory-room", "memory-blackout",
     "past-intro", "past-isolate", "office-light", "office-bang", "past-reflection",
     "memory-return", "discussion", "vote-prompt", "vote-clock", "vote-one",
-    "vote-two", "vote-final", "vote-blackout"
+    "vote-two", "vote-final", "vote-blackout",
+    "ending-light", "ending-dialogue", "ending-complete", "ending-question",
+    "ending-reveal", "ending-blackout"
   ]);
 
   // Operator cues and media completion are separate. The clock may replace the
@@ -443,7 +521,7 @@
       expandMs = 1600, morphMs = 1200, settleMs = 1000,
       cardFadeMs = 400, blackoutMs = 1200,
       onCue = () => {}, onMediaState = () => {},
-      onNarrationEnd = () => {}, onError = () => {}, memoryScene = null, officeScene = null, votingScene = null,
+      onNarrationEnd = () => {}, onError = () => {}, memoryScene = null, officeScene = null, votingScene = null, endingScene = null,
       onMemoryNarrationEnd = () => {}, capturePresentation = () => null,
       restorePresentation = () => {} }) {
       Object.assign(this, { now, effect, doorOpen, selectionButton, revealFadeMs, aiFadeMs, expandMs,
@@ -469,6 +547,9 @@
           this.setCue(state);
           if (state === "vote-prompt") void this.playSelectionButton();
         }, onMediaState, onLock: ms => this.lock(ms), onError }) : null;
+      this.ending = endingScene ? new EndingSceneController({ ...endingScene, now,
+        onCue: state => this.setCue(state), onMediaState,
+        onLock: ms => this.lock(ms), onError }) : null;
       this.room = new RoomRevealController({ video,
         onStateChange: state => {
           if (state === "starting") this.setCue("room-reveal");
@@ -552,12 +633,17 @@
       }
       if (index >= 21) this.setSelectionButtonState("finished");
       if (this.voting && index >= 19) {
-        this.voting.state = cue;
+        this.voting.state = index >= 26 ? "vote-blackout" : cue;
         if (index >= 21) this.voting.deadline = this.now() + this.voting.durationMs;
         if (index >= 21) this.voting.setMediaState("selectionPrompt", "finished");
         if (index >= 23) this.voting.setMediaState("selectionOne", "finished");
         if (index >= 24) this.voting.setMediaState("selectionTwo", "finished");
         if (index >= 25) this.voting.setMediaState("selectionFinal", "finished");
+      }
+      if (this.ending && index >= 26) {
+        this.ending.state = cue;
+        if (index >= 29) this.ending.setMediaState("endingComplete", "finished");
+        if (index >= 31) this.ending.setMediaState("endingReveal", "finished");
       }
       this.setCue(cue);
       switch (cue) {
@@ -573,6 +659,8 @@
         case "vote-one": return this.voting?.play("selectionOne") ?? false;
         case "vote-two": return this.voting?.play("selectionTwo") ?? false;
         case "vote-final": return this.voting?.play("selectionFinal") ?? false;
+        case "ending-complete": return this.ending?.play("endingComplete") ?? false;
+        case "ending-reveal": return this.ending?.play("endingReveal") ?? false;
         default: return true;
       }
     }
@@ -585,6 +673,7 @@
         memory: this.memory && { state: this.memory.state, mediaStates: { ...this.memory.mediaStates } },
         office: this.office && { state: this.office.state, bangState: this.office.bangState },
         voting: this.voting && { state: this.voting.state, mediaStates: { ...this.voting.mediaStates } },
+        ending: this.ending && { state: this.ending.state, mediaStates: { ...this.ending.mediaStates } },
         presentation: this.capturePresentation()
       };
     }
@@ -598,7 +687,7 @@
       this.room.state = "dark"; this.opening.state = "ready"; this.effectState = "idle"; this.doorOpenState = "idle";
       this.selectionButtonState = "idle";
       const media = [this.room.video, this.opening.audio, this.effect, this.doorOpen, this.selectionButton];
-      for (const scene of [this.memory, this.voting]) {
+      for (const scene of [this.memory, this.voting, this.ending]) {
         if (!scene) continue;
         for (const kind of Object.keys(scene.runs)) ++scene.runs[kind];
         media.push(...Object.values(scene.media));
@@ -614,7 +703,7 @@
       this.setSelectionButtonState(saved.selectionButton);
       this.onMediaState("room", saved.room);
       this.onMediaState("narration", this.opening.state);
-      for (const [scene, snapshot] of [[this.memory, saved.memory], [this.voting, saved.voting]]) {
+      for (const [scene, snapshot] of [[this.memory, saved.memory], [this.voting, saved.voting], [this.ending, saved.ending]]) {
         if (!scene || !snapshot) continue;
         scene.state = snapshot.state;
         for (const [kind, value] of Object.entries(snapshot.mediaStates)) scene.setMediaState(kind, value);
@@ -763,8 +852,14 @@
         case "vote-clock":
         case "vote-one":
         case "vote-two":
-        case "vote-final":
-        case "vote-blackout": return this.voting ? this.voting.advance() : false;
+        case "vote-final": return this.voting ? this.voting.advance() : false;
+        case "vote-blackout": return this.ending ? this.ending.enter() : false;
+        case "ending-light":
+        case "ending-dialogue":
+        case "ending-complete":
+        case "ending-question":
+        case "ending-reveal":
+        case "ending-blackout": return this.ending ? this.ending.advance() : false;
         default: return false;
       }
     }
@@ -777,6 +872,7 @@
       this.memory?.destroy();
       this.office?.destroy();
       this.voting?.destroy();
+      this.ending?.destroy();
       if (this.effect) {
         this.effect.removeEventListener("ended", this.effectEnded);
         this.effect.removeEventListener("error", this.effectFailed);
