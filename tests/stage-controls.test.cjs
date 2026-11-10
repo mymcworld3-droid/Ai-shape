@@ -10,10 +10,10 @@ class Media extends EventTarget {
 }
 function setup(){
  let time=0,presentation={scene:'opening',value:0};
- const video=new Media(),audio=new Media(),effect=new Media(),memoryVoice=new Media(),bang=new Media(),prompt=new Media();
- const stage=new StageCueController({video,audio,effect,now:()=>time,memoryScene:{voice:memoryVoice},officeScene:{bang},votingScene:{prompt},
+ const video=new Media(),audio=new Media(),effect=new Media(),doorOpen=new Media(),memoryVoice=new Media(),bang=new Media(),prompt=new Media();
+ const stage=new StageCueController({video,audio,effect,doorOpen,now:()=>time,memoryScene:{voice:memoryVoice},officeScene:{bang},votingScene:{prompt},
   capturePresentation:()=>({...presentation}),restorePresentation:saved=>{presentation=saved;}});
- return {stage,video,audio,effect,memoryVoice,bang,prompt,tick:ms=>time+=ms,
+ return {stage,video,audio,effect,doorOpen,memoryVoice,bang,prompt,tick:ms=>time+=ms,
   setPresentation:value=>{presentation=value;},getPresentation:()=>presentation,
   async next(){time+=5000;await stage.advance();},
   async welcome(){await this.next();video.end();await this.next();await this.next();}
@@ -84,48 +84,85 @@ test('rewind restores the departing frame and replay never resets a running open
  await c.next();assert.equal(c.stage.opening.state,'narration');assert.equal(c.stage.opening.deadline,deadline);
  assert.ok(c.stage.opening.getRemainingMs()<remaining);c.audio.end();assert.equal(c.stage.opening.deadline,deadline);
 });
-test('all 25 cues rewind across scene boundaries and can run forward again without frozen media or reset deadlines',async()=>{
+test('all 26 cues rewind across scene boundaries and can run forward again without frozen media or reset deadlines',async()=>{
  const c=setup(),visited=[];
- for(let i=0;i<25;i++){
+ for(let i=0;i<26;i++){
   await c.next();if(c.stage.state==='room-reveal')c.video.end();visited.push(c.stage.state);
   if(c.stage.state==='welcome')c.audio.end();if(c.stage.state==='door-kick')c.effect.end();
+  if(c.stage.state==='door-open')c.doorOpen.end();
   if(c.stage.state==='memory-welcome')c.memoryVoice.end();if(c.stage.state==='office-bang')c.bang.end();
   if(c.stage.state==='vote-prompt')c.prompt.end();
  }
- assert.equal(visited.length,25);assert.equal(c.stage.state,'vote-blackout');
+ assert.equal(visited.length,26);assert.equal(c.stage.state,'vote-blackout');
  const opening=c.stage.opening.deadline,selection=c.stage.voting.deadline;
- for(let i=23;i>=-1;i--){assert.equal(c.stage.previous(),true);assert.equal(c.stage.state,i<0?'dark':visited[i]);}
+ for(let i=24;i>=-1;i--){assert.equal(c.stage.previous(),true);assert.equal(c.stage.state,i<0?'dark':visited[i]);}
  assert.equal(c.stage.previous(),false);assert.equal(c.stage.opening.deadline,opening);assert.equal(c.stage.voting.deadline,selection);
- for(let i=0;i<25;i++){
+ for(let i=0;i<26;i++){
   await c.next();if(c.stage.state==='room-reveal')c.video.end();assert.equal(c.stage.state,visited[i]);
   if(c.stage.state==='welcome')c.audio.end();if(c.stage.state==='door-kick')c.effect.end();
+  if(c.stage.state==='door-open')c.doorOpen.end();
   if(c.stage.state==='memory-welcome')c.memoryVoice.end();if(c.stage.state==='office-bang')c.bang.end();
   if(c.stage.state==='vote-prompt')c.prompt.end();
  }
  assert.equal(c.stage.opening.deadline,opening);assert.equal(c.stage.voting.deadline,selection);
- for(const m of [c.audio,c.memoryVoice,c.bang,c.prompt])assert.equal(m.calls,2);
+ for(const m of [c.audio,c.doorOpen,c.memoryVoice,c.bang,c.prompt])assert.equal(m.calls,2);
 });
 
-test('every one of the 25 scene cues can be selected as the first live cue',async()=>{
+test('every one of the 26 scene cues can be selected as the first live cue',async()=>{
  const {STAGE_START_CUES}=require('../opening-controller.js');
- assert.equal(STAGE_START_CUES.length,25);
- const mediaFor={"bright":"video","welcome":"audio","door-kick":"effect",
+ assert.equal(STAGE_START_CUES.length,26);
+ const mediaFor={"bright":"video","welcome":"audio","door-kick":"effect","door-open":"doorOpen",
   "memory-welcome":"memoryVoice","office-bang":"bang","vote-prompt":"prompt"};
  for(const [index,cue] of STAGE_START_CUES.entries()){
   const c=setup();
   assert.equal(await c.stage.startAt(cue),true,cue);
   assert.equal(c.stage.state,index===0?'room-reveal':cue,cue);
-  for(const name of ['video','audio','effect','memoryVoice','bang','prompt']){
+  for(const name of ['video','audio','effect','doorOpen','memoryVoice','bang','prompt']){
    assert.equal(c[name].calls,mediaFor[cue]===name?1:0,cue+': '+name);
   }
   assert.equal(c.stage.opening.deadline,index>=3?900000:null,cue+': opening deadline');
-  assert.equal(c.stage.voting.deadline,index>=20?60000:null,cue+': selection deadline');
-  if(index>=8)assert.equal(c.stage.memory.state,index<=11?cue:'memory-blackout');
-  if(index>=12)assert.equal(c.stage.office.state,index<=17?cue:'memory-return');
-  if(index>=18)assert.equal(c.stage.voting.state,cue);
+  assert.equal(c.stage.voting.deadline,index>=21?60000:null,cue+': selection deadline');
+  if(index>=9)assert.equal(c.stage.memory.state,index<=12?cue:'memory-blackout');
+  if(index>=13)assert.equal(c.stage.office.state,index<=18?cue:'memory-return');
+  if(index>=19)assert.equal(c.stage.voting.state,cue);
   assert.equal(c.stage.startAt('clock'),false,'cannot restart an already started scene');
   c.stage.destroy();
  }
+});
+
+test('memory door has its own sound, waits for completion, retries failures, and rewinds cleanly',async()=>{
+ const c=setup();
+ assert.equal(await c.stage.startAt('card-hidden'),true);
+ assert.equal(c.doorOpen.calls,0,'entering card-hidden cannot play opening sound');
+ await c.stage.advance();
+ assert.equal(c.stage.state,'door-open');
+ assert.equal(c.doorOpen.calls,1,'door-open must play its own media');
+ assert.equal(c.stage.doorOpenState,'playing');
+ await c.stage.advance();
+ assert.equal(c.stage.state,'door-open','cannot blackout during door effect');
+ c.doorOpen.end();
+ assert.equal(c.stage.doorOpenState,'finished');
+ await c.stage.advance();
+ assert.equal(c.stage.state,'blackout');
+ assert.equal(c.stage.previous(),true);
+ assert.equal(c.stage.state,'door-open');
+ assert.equal(c.doorOpen.paused,true);
+ assert.equal(c.stage.previous(),true);
+ assert.equal(c.stage.state,'card-hidden');
+ await c.stage.advance();
+ assert.equal(c.stage.state,'door-open');
+ assert.equal(c.doorOpen.calls,2,'manual replay after rewind plays the door sound again');
+ c.stage.destroy();
+ const failed=setup();
+ failed.doorOpen.result=Promise.reject(new Error('blocked'));
+ assert.equal(await failed.stage.startAt('door-open'),false);
+ assert.equal(failed.stage.state,'door-open');
+ assert.equal(failed.stage.doorOpenState,'error');
+ failed.doorOpen.result=Promise.resolve();
+ assert.equal(await failed.stage.advance(),true);
+ assert.equal(failed.stage.doorOpenState,'playing');
+ assert.equal(failed.doorOpen.calls,2);
+ failed.stage.destroy();
 });
 
 test('a direct scene jump starts fresh timers and advances from the chosen scene',async()=>{
