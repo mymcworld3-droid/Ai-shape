@@ -39,48 +39,55 @@
 音效 100%
 背景音樂 100%</output>
   <aside id="stepsPanel" aria-label="演出步驟檢視" hidden>
-    <header><h1>演出步驟<span>32</span></h1><p>點選預覽，不播放影音</p>
+    <header><h1>演出步驟<span>32</span></h1><p>點選步驟靜音預覽，按開始／F 從該步播放</p>
     </header>
-    <ol id="stepList">
-      <li><button type="button" data-preview="dark" aria-pressed="true"><span class="step-number">00</span><span>藍色房間<small>第 0 步 · 無字幕、無音效，等待切換</small></span></button></li>
-      <li><button type="button" data-preview="bright" aria-pressed="false"><span class="step-number">01</span><span>暗 → 亮<small>影片播完，接回原本房間</small></span></button></li>
-      <li><button type="button" data-preview="ai" aria-pressed="false"><span class="step-number">02</span><span>AI 漸顯<small>電視正中央 · 填滿內框</small></span></button></li>
-      <li><button type="button" data-preview="welcome" aria-pressed="false"><span class="step-number">03</span><span>歡迎語音<small>圖形放大、背景漸至全黑</small></span></button></li>
-      <li><button type="button" data-preview="clock" aria-pressed="false"><span class="step-number">04</span><span>顯示碼錶<small>語音中可切換，播完開始倒數</small></span></button></li>
-      <li><button type="button" data-preview="door-kick" aria-pressed="false"><span class="step-number">05</span><span>踢門音效<small>碼錶保持顯示，音效播完再繼續</small></span></button></li>
-      <li><button type="button" data-preview="card" aria-pressed="false"><span class="step-number">06</span><span>顯示卡片<small>Access to One’s Memory</small></span></button></li>
-      <li><button type="button" data-preview="card-hidden" aria-pressed="false"><span class="step-number">07</span><span>隱藏卡片<small>倒數繼續</small></span></button></li>
-      <li><button type="button" data-preview="door-open" aria-pressed="false"><span class="step-number">08</span><span>記憶室開門音效<small>開門聲結束後，再進入全暗</small></span></button></li>
-      <li><button type="button" data-preview="blackout" aria-pressed="false"><span class="step-number">09</span><span>全暗<small>記憶室進場，等待台詞</small></span></button></li>
-      <li class="scene-divider">第一幕 · 第二場</li>
-      <li><button type="button" data-preview="memory-light" aria-pressed="false"><span class="step-number">10</span><span>記憶室亮起<small>Where’s the light?</small></span></button></li>
-      <li><button type="button" data-preview="memory-welcome" aria-pressed="false"><span class="step-number">11</span><span>記憶室 AI<small>語音中圖形放大，播完縮回</small></span></button></li>
-      <li><button type="button" data-preview="memory-room" aria-pressed="false"><span class="step-number">12</span><span>演員對話<small>AI 退場，保留房間</small></span></button></li>
-      <li><button type="button" data-preview="memory-blackout" aria-pressed="false"><span class="step-number">13</span><span>記憶室全暗<small>Go ahead. → 獨白進場</small></span></button></li>
-      <li class="scene-divider">第二幕 · 第一場</li>
-      <li><button type="button" data-preview="past-intro" aria-pressed="false"><span class="step-number">14</span><span>Christopher 獨白<small>房間稍暗，演員走到中央</small></span></button></li>
-      <li><button type="button" data-preview="past-isolate" aria-pressed="false"><span class="step-number">15</span><span>只留中央追光<small>投影全暗 · There was this guy.</small></span></button></li>
-      <li class="scene-divider">第二幕 · 第二場</li>
-      <li><button type="button" data-preview="office-light" aria-pressed="false"><span class="step-number">16</span><span>辦公室回憶<small>Liam 進場，保留演員對話</small></span></button></li>
-      <li><button type="button" data-preview="office-bang" aria-pressed="false"><span class="step-number">17</span><span>BANG · Ben 進場<small>保留辦公室背景</small></span></button></li>
-      <li class="scene-divider">第二幕 · 第三場</li>
-      <li><button type="button" data-preview="past-reflection" aria-pressed="false"><span class="step-number">18</span><span>回憶退場 · 自白<small>Liam 離場後，投影全暗</small></span></button></li>
-      <li><button type="button" data-preview="memory-return" aria-pressed="false"><span class="step-number">19</span><span>回到記憶室<small>自白結束，等待第三幕</small></span></button></li>
-      <li class="scene-divider">第三幕 · 討論與選擇</li>
-      <li><button type="button" data-preview="discussion" aria-pressed="false"><span class="step-number">20</span><span>演員討論<small>房間稍暗，保留對話時間</small></span></button></li>
-      <li><button type="button" data-preview="vote-prompt" aria-pressed="false"><span class="step-number">21</span><span>AI 要求選擇<small>Christopher 按下實體按鈕</small></span></button></li>
-      <li><button type="button" data-preview="vote-one" aria-pressed="false"><span class="step-number">22</span><span>Ethan · 一票<small>Christopher 說 Ethan.</small></span></button></li>
-      <li><button type="button" data-preview="vote-two" aria-pressed="false"><span class="step-number">23</span><span>Ethan · 兩票<small>Megan 說 Ethan.</small></span></button></li>
-      <li><button type="button" data-preview="vote-final" aria-pressed="false"><span class="step-number">24</span><span>最後選擇<small>Rachel 沒有回答之後</small></span></button></li>
-      <li><button type="button" data-preview="vote-blackout" aria-pressed="false"><span class="step-number">25</span><span>第三幕全暗<small>最後提示結束，等待第四幕</small></span></button></li>
-      <li class="scene-divider">第四幕 · 測試結束與真相</li>
-      <li><button type="button" data-preview="ending-light" aria-pressed="false"><span class="step-number">26</span><span>記憶室重新亮起<small>原稿 p407 · 第四幕音樂開始</small></span></button></li>
-      <li><button type="button" data-preview="ending-dialogue" aria-pressed="false"><span class="step-number">27</span><span>Ethan 對話<small>I... I didn't explode...?</small></span></button></li>
-      <li><button type="button" data-preview="ending-complete" aria-pressed="false"><span class="step-number">28</span><span>AI 宣布測試完成<small>原稿 p409</small></span></button></li>
-      <li><button type="button" data-preview="ending-question" aria-pressed="false"><span class="step-number">29</span><span>眾人追問真相<small>What...? · Then who is the robot?</small></span></button></li>
-      <li><button type="button" data-preview="ending-reveal" aria-pressed="false"><span class="step-number">30</span><span>AI 揭露真相<small>原稿 p414</small></span></button></li>
-      <li><button type="button" data-preview="ending-blackout" aria-pressed="false"><span class="step-number">31</span><span>最終全暗<small>You may leave. · 音樂淡出</small></span></button></li>
-    </ol>
+    <div class="timeline-controls">
+      <label for="timelineTrack">媒體軌</label>
+      <select id="timelineTrack"></select>
+    </div>
+    <div id="stepReviewScroll" tabindex="0" role="group" aria-label="步驟與媒體軌">
+      <ol id="stepList">
+        <li><button type="button" data-preview="dark" aria-pressed="true"><span class="step-number">00</span><span>藍色房間<small>第 0 步 · 無字幕、無音效，等待切換</small></span></button></li>
+        <li><button type="button" data-preview="bright" aria-pressed="false"><span class="step-number">01</span><span>暗 → 亮<small>影片播完，接回原本房間</small></span></button></li>
+        <li><button type="button" data-preview="ai" aria-pressed="false"><span class="step-number">02</span><span>AI 漸顯<small>電視正中央 · 填滿內框</small></span></button></li>
+        <li><button type="button" data-preview="welcome" aria-pressed="false"><span class="step-number">03</span><span>歡迎語音<small>圖形放大、背景漸至全黑</small></span></button></li>
+        <li><button type="button" data-preview="clock" aria-pressed="false"><span class="step-number">04</span><span>顯示碼錶<small>語音中可切換，播完開始倒數</small></span></button></li>
+        <li><button type="button" data-preview="door-kick" aria-pressed="false"><span class="step-number">05</span><span>踢門音效<small>碼錶保持顯示，音效播完再繼續</small></span></button></li>
+        <li><button type="button" data-preview="card" aria-pressed="false"><span class="step-number">06</span><span>顯示卡片<small>Access to One’s Memory</small></span></button></li>
+        <li><button type="button" data-preview="card-hidden" aria-pressed="false"><span class="step-number">07</span><span>隱藏卡片<small>倒數繼續</small></span></button></li>
+        <li><button type="button" data-preview="door-open" aria-pressed="false"><span class="step-number">08</span><span>記憶室開門音效<small>開門聲結束後，再進入全暗</small></span></button></li>
+        <li><button type="button" data-preview="blackout" aria-pressed="false"><span class="step-number">09</span><span>全暗<small>記憶室進場，等待台詞</small></span></button></li>
+        <li class="scene-divider">第一幕 · 第二場</li>
+        <li><button type="button" data-preview="memory-light" aria-pressed="false"><span class="step-number">10</span><span>記憶室亮起<small>Where’s the light?</small></span></button></li>
+        <li><button type="button" data-preview="memory-welcome" aria-pressed="false"><span class="step-number">11</span><span>記憶室 AI<small>語音中圖形放大，播完縮回</small></span></button></li>
+        <li><button type="button" data-preview="memory-room" aria-pressed="false"><span class="step-number">12</span><span>演員對話<small>AI 退場，保留房間</small></span></button></li>
+        <li><button type="button" data-preview="memory-blackout" aria-pressed="false"><span class="step-number">13</span><span>記憶室全暗<small>Go ahead. → 獨白進場</small></span></button></li>
+        <li class="scene-divider">第二幕 · 第一場</li>
+        <li><button type="button" data-preview="past-intro" aria-pressed="false"><span class="step-number">14</span><span>Christopher 獨白<small>房間稍暗，演員走到中央</small></span></button></li>
+        <li><button type="button" data-preview="past-isolate" aria-pressed="false"><span class="step-number">15</span><span>只留中央追光<small>投影全暗 · There was this guy.</small></span></button></li>
+        <li class="scene-divider">第二幕 · 第二場</li>
+        <li><button type="button" data-preview="office-light" aria-pressed="false"><span class="step-number">16</span><span>辦公室回憶<small>Liam 進場，保留演員對話</small></span></button></li>
+        <li><button type="button" data-preview="office-bang" aria-pressed="false"><span class="step-number">17</span><span>BANG · Ben 進場<small>保留辦公室背景</small></span></button></li>
+        <li class="scene-divider">第二幕 · 第三場</li>
+        <li><button type="button" data-preview="past-reflection" aria-pressed="false"><span class="step-number">18</span><span>回憶退場 · 自白<small>Liam 離場後，投影全暗</small></span></button></li>
+        <li><button type="button" data-preview="memory-return" aria-pressed="false"><span class="step-number">19</span><span>回到記憶室<small>自白結束，等待第三幕</small></span></button></li>
+        <li class="scene-divider">第三幕 · 討論與選擇</li>
+        <li><button type="button" data-preview="discussion" aria-pressed="false"><span class="step-number">20</span><span>演員討論<small>房間稍暗，保留對話時間</small></span></button></li>
+        <li><button type="button" data-preview="vote-prompt" aria-pressed="false"><span class="step-number">21</span><span>AI 要求選擇<small>Christopher 按下實體按鈕</small></span></button></li>
+        <li><button type="button" data-preview="vote-one" aria-pressed="false"><span class="step-number">22</span><span>Ethan · 一票<small>Christopher 說 Ethan.</small></span></button></li>
+        <li><button type="button" data-preview="vote-two" aria-pressed="false"><span class="step-number">23</span><span>Ethan · 兩票<small>Megan 說 Ethan.</small></span></button></li>
+        <li><button type="button" data-preview="vote-final" aria-pressed="false"><span class="step-number">24</span><span>最後選擇<small>Rachel 沒有回答之後</small></span></button></li>
+        <li><button type="button" data-preview="vote-blackout" aria-pressed="false"><span class="step-number">25</span><span>第三幕全暗<small>最後提示結束，等待第四幕</small></span></button></li>
+        <li class="scene-divider">第四幕 · 測試結束與真相</li>
+        <li><button type="button" data-preview="ending-light" aria-pressed="false"><span class="step-number">26</span><span>記憶室重新亮起<small>原稿 p407 · 第四幕音樂開始</small></span></button></li>
+        <li><button type="button" data-preview="ending-dialogue" aria-pressed="false"><span class="step-number">27</span><span>Ethan 對話<small>I... I didn't explode...?</small></span></button></li>
+        <li><button type="button" data-preview="ending-complete" aria-pressed="false"><span class="step-number">28</span><span>AI 宣布測試完成<small>原稿 p409</small></span></button></li>
+        <li><button type="button" data-preview="ending-question" aria-pressed="false"><span class="step-number">29</span><span>眾人追問真相<small>What...? · Then who is the robot?</small></span></button></li>
+        <li><button type="button" data-preview="ending-reveal" aria-pressed="false"><span class="step-number">30</span><span>AI 揭露真相<small>原稿 p414</small></span></button></li>
+        <li><button type="button" data-preview="ending-blackout" aria-pressed="false"><span class="step-number">31</span><span>最終全暗<small>You may leave. · 音樂淡出</small></span></button></li>
+      </ol>
+      <section id="audioTimeline" aria-label="直式媒體軌"></section>
+    </div>
   </aside>
 </main>
 <nav id="reviewControls" aria-label="檢視模式">

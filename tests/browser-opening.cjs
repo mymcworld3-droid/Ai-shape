@@ -189,6 +189,7 @@ async function fixedFrame(page) {
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight),false);
 }
 async function noControls(page) {
+  assert.equal(await page.locator('#audioTimeline').isVisible(),false);
   assert.equal(await page.locator('button:visible,input:visible,select:visible,[role="button"]:visible,audio[controls]:visible,video[controls]:visible').count(),0);
   assert.equal(await page.getByRole('button').count(),0,"Hidden review buttons must also leave the accessibility tree");
   for(const id of ['openingAudio','roomRevealVideo','doorKickAudio','memoryWelcomeAudio','memoryLightAudio','officeBangAudio',
@@ -639,19 +640,31 @@ async function fastVoting(page){
     await review.locator('#stepsViewButton').click(); await flag(review,'view','steps');
     assert.equal(await review.locator('#stepList .step-audio').count(),0,'No embedded media tags inside steps');
     assert.doesNotMatch(await review.locator('#stepList').textContent(),/404-406ai\.m4a|411-415ai\.m4a/);
-    assert.equal(await review.locator('#audioTimeline').isVisible(),true);
-    assert.equal(await review.locator('#audioTimeline .timeline-tick').count(),32);
-    assert.equal(await review.locator('.timeline-tick').first().getAttribute('aria-pressed'),'true');
-    assert.match(await review.locator('.timeline-clip-video').first().textContent(),/Start_animation\.mp4/);
-    assert.match(await review.locator('.timeline-clip-effect').filter({hasText:'heavy-auto-door.mp3'}).first().textContent(),/heavy-auto-door\.mp3/);
-    assert.match(await review.locator('.timeline-clip-effect').filter({hasText:'Slam-button.m4a'}).first().textContent(),/Slam-button\.m4a/);
-    assert.match(await review.locator('.timeline-clip-voice').filter({hasText:'411-415ai.m4a'}).first().textContent(),/411-415ai\.m4a/);
-    assert.equal(await review.getByRole('button',{name:'語音 ai-opening.m4a，第 03–04 步'}).count(),1);
-    await review.locator('.timeline-clip-effect').filter({hasText:'heavy-auto-door.mp3'}).first().click();
+    const trackSelect=review.locator('#timelineTrack');
+    const track=review.locator('#audioTimeline');
+    assert.equal(await trackSelect.inputValue(),'音效');
+    const doorClip=track.getByRole('button',{name:'音效 heavy-auto-door.mp3，第 08 步'});
+    const doorRow=review.locator('[data-preview="door-open"]').locator('..');
+    const [rail,clip,row]=await Promise.all([track.boundingBox(),doorClip.boundingBox(),doorRow.boundingBox()]);
+    assert.ok(rail.width<=112&&rail.x>=row.x+row.width,'The narrow media track sits to the right of the steps');
+    assert.ok(Math.abs(clip.y-row.y-3)<=1&&Math.abs(clip.y+clip.height-row.y-row.height+3)<=1,'The door effect aligns with its step');
+    assert.equal(await track.getByRole('button',{name:/^音效 Slam-button\.m4a/}).count(),1);
+    await trackSelect.selectOption('影片');
+    assert.equal(await track.getByRole('button',{name:/^影片 Start_animation\.mp4/}).count(),1);
+    await trackSelect.selectOption('語音');
+    assert.equal(await track.getByRole('button',{name:/^語音 411-415ai\.m4a/}).count(),1);
+    assert.equal(await track.getByRole('button',{name:'語音 ai-opening.m4a，第 03–04 步'}).count(),1);
+    await trackSelect.selectOption('音效');
+    const markDoor=doorRow.getByRole('button',{name:/標記第 08 步/});
+    const markedFilter=review.locator('.step-mark-tools button');
+    await markDoor.click();
+    await markedFilter.click();
+    assert.equal(await track.getByRole('button').count(),1,'Only the media for visible bookmarked steps remains');
+    await doorClip.click();
     assert.equal(await review.locator('[data-preview="door-open"]').getAttribute('aria-pressed'),'true');
     assert.equal(await review.locator('#startLabel').textContent(),'從第 8 步開始');
-    await review.locator('.timeline-tick').first().click();
-    assert.match(await review.locator('.timeline-selection').textContent(),/無音檔/);
+    await markedFilter.click();
+    await markDoor.click();
     await review.locator('[data-preview="bright"]').click();
     await review.waitForTimeout(100);await fixedFrame(review);
     assert.equal(await review.locator('#stepList [data-preview]').count(),32);
@@ -1082,11 +1095,12 @@ async function fastVoting(page){
     const touch=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
     await ready(touch,url); await fixedFrame(touch);
     await touch.locator('#stepsViewButton').click();await touch.waitForTimeout(100);await fixedFrame(touch);
-    await touch.locator('.timeline-tick').nth(6).tap();await flag(touch,'previewCue','card');
-    assert.equal(await touch.locator('[data-preview="card"]').getAttribute('aria-pressed'),'true');
-    const timelineScrollBox=await touch.locator('#audioTimelineScroll').boundingBox();
+    await touch.getByRole('button',{name:'音效 heavy-auto-door.mp3，第 08 步'}).tap();await flag(touch,'previewCue','door-open');
+    assert.equal(await touch.locator('[data-preview="door-open"]').getAttribute('aria-pressed'),'true');
+    assert.ok((await touch.locator('#audioTimeline').boundingBox()).width<=88,'The phone media track remains narrow');
+    const timelineScrollBox=await touch.locator('#stepReviewScroll').boundingBox();
     const startDockBox=await touch.locator('#startDock').boundingBox();
-    assert.ok(timelineScrollBox.y+timelineScrollBox.height<=startDockBox.y,'Start dock must leave the timeline scrollbar reachable');
+    assert.ok(timelineScrollBox.y+timelineScrollBox.height<=startDockBox.y,'Start dock must leave the shared scroll area reachable');
     assert.equal(await touch.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await touch.locator('#resetStartStep').click();
     const startBox=await touch.locator('#startButton').boundingBox();

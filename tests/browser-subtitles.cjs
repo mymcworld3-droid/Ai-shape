@@ -14,16 +14,18 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.equal(await page.locator('#stepList [data-script]').count(),data.entries.length);
   await page.locator('#stepsViewButton').click();
   assert.equal(await page.locator('#stepList .step-audio').count(),0);
-  assert.equal(await page.locator('#audioTimeline').isVisible(),true);
-  assert.equal(await page.locator('#audioTimeline .timeline-tick').count(),data.entries.length);
-  assert.match(await page.locator('.timeline-clip-effect').filter({hasText:'heavy-auto-door.mp3'}).first().textContent(),/heavy-auto-door\.mp3/);
-  assert.match(await page.locator('.timeline-clip-effect').filter({hasText:'Slam-button.m4a'}).first().textContent(),/Slam-button\.m4a/);
-  assert.match(await page.locator('.timeline-clip-voice').filter({hasText:'411-415ai.m4a'}).first().textContent(),/411-415ai\.m4a/);
-  assert.match(await page.locator('.timeline-clip-music').filter({hasText:'Act4.m4a'}).first().textContent(),/Act4\.m4a/);
-  await page.locator('.timeline-clip-effect').filter({hasText:'heavy-auto-door.mp3'}).first().click();
+  const track=page.locator('#audioTimeline'),trackSelect=page.locator('#timelineTrack');
+  assert.equal(await trackSelect.inputValue(),'音效');
+  assert.equal(await track.getByRole('button',{name:/^音效 Slam-button\.m4a/}).count(),1);
+  await trackSelect.selectOption('語音');
+  assert.equal(await track.getByRole('button',{name:/^語音 411-415ai\.m4a/}).count(),1);
+  await trackSelect.selectOption('配樂');
+  assert.equal(await track.getByRole('button',{name:/^配樂 Act4\.m4a/}).count(),1);
+  await trackSelect.selectOption('音效');
+  await track.getByRole('button',{name:/^音效 heavy-auto-door\.mp3/}).click();
   assert.equal(await page.locator('#startLabel').textContent(),`從第 ${indexOf(87)} 步開始`);
-  await page.locator('.timeline-tick').first().click();
-  assert.match(await page.locator('.timeline-selection').textContent(),/無音檔/);
+  await page.locator('[data-script="0"]').click();
+  assert.equal(await track.locator('.timeline-cursor').isVisible(),true);
   const narrationFiles={
    selectionPromptAudio:'387-389ai.m4a',selectionOneAudio:'391-392ai.m4a',
    selectionTwoAudio:'395-396ai.m4a',selectionFinalAudio:'399ai.m4a',

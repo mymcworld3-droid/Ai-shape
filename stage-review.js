@@ -3,6 +3,7 @@ const pageViewButton=document.getElementById("pageViewButton");
 const stepsViewButton=document.getElementById("stepsViewButton");
 const stepsPanel=document.getElementById("stepsPanel");
 const stepList=document.getElementById("stepList");
+const stepReviewScroll=document.getElementById("stepReviewScroll");
 const startButton=document.getElementById("startButton");
 const startLabel=document.getElementById("startLabel");
 const resetStartStep=document.getElementById("resetStartStep");
@@ -41,7 +42,7 @@ function stepAudioFiles({paragraph,voice=null,effect=null,video=null}){
  if(video)media.push({kind:"影片",src:video});
  return media;
 }
-// Media labels belong to the standalone editing-style timeline, not the step buttons.
+// The media track is aligned to the rows in the step list.
 const timelineSteps=[];
 function sceneStepAudio(cue){
  const paragraph=config.sceneMusicSteps[cue];
@@ -52,7 +53,6 @@ if(scriptMode){
  stepList.replaceChildren();
  document.querySelector('#stepsPanel h1').firstChild.textContent='劇本字幕';
  document.querySelector('#stepsPanel h1 span').textContent=SHOW_SCRIPT.entries.length;
- document.querySelector('#stepsPanel header p').textContent='點選任一步驟預覽；按開始／F 便從該步驟播放';
  SHOW_SCRIPT.entries.forEach((e,index)=>{
   const li=document.createElement('li'),button=document.createElement('button'),number=document.createElement('span'),text=document.createElement('span'),small=document.createElement('small');
   button.type='button';button.dataset.script=index;button.setAttribute('aria-pressed','false');number.className='step-number';number.textContent=index;
@@ -72,9 +72,9 @@ window.selectedScriptStartIndex=null;
 const sentenceButtons=Array.from(document.querySelectorAll('[data-script]'));
 function scrollToReviewStep(button){
  if(!button?.offsetHeight)return;
- const row=button.getBoundingClientRect(),view=stepList.getBoundingClientRect();
- if(row.top<view.top)stepList.scrollTop+=row.top-view.top;
- else if(row.bottom>view.bottom)stepList.scrollTop+=row.bottom-view.bottom;
+ const row=button.getBoundingClientRect(),view=stepReviewScroll.getBoundingClientRect();
+ if(row.top<view.top)stepReviewScroll.scrollTop+=row.top-view.top;
+ else if(row.bottom>view.bottom)stepReviewScroll.scrollTop+=row.bottom-view.bottom;
 }
 function selectScriptStep(index){
  if(startGate.started||!scriptMode)return;
@@ -92,22 +92,20 @@ const stepButtons=Array.from(document.querySelectorAll("[data-preview]"));
 let selectedPreview=null,selectedScene=null;
 window.selectedSceneStartCue=null;
 if(!scriptMode){
- document.querySelector('#stepsPanel header p').textContent='點選任一步驟預覽；下方媒體時間軸顯示音檔，按開始／F 從選定步驟播放';
  for(const button of stepButtons){
   button.setAttribute('aria-pressed','false');
   timelineSteps.push({label:button.querySelector('.step-number')?.textContent||'0',
    media:sceneStepAudio(button.dataset.preview)});
  }
 }
-// Keep the media tracks outside the list and synchronized by step index.
-const audioTimeline=document.createElement('section');
-audioTimeline.id='audioTimeline';
-audioTimeline.setAttribute('aria-label','獨立音訊軌道與媒體步驟時間軸');
-audioTimeline.hidden=true;
-document.getElementById('showShell').append(audioTimeline);
-const timeline=AudioTimeline.mount(audioTimeline,timelineSteps,index=>{
- if(scriptMode)selectScriptStep(index);
- else selectSceneStep(stepButtons[index]?.dataset.preview);
+const timeline=AudioTimeline.mount(document.getElementById('audioTimeline'),{
+ steps:timelineSteps,
+ rows:(scriptMode?sentenceButtons:stepButtons).map(button=>button.closest('li')),
+ trackSelect:document.getElementById('timelineTrack'),
+ onSelect(index){
+  if(scriptMode)selectScriptStep(index);
+  else selectSceneStep(stepButtons[index]?.dataset.preview);
+ }
 });
 timeline.select(0);
 function selectSceneStep(cue){
@@ -131,7 +129,7 @@ function setReviewView(view){
  pageViewButton.setAttribute("aria-pressed",String(view==="page"));
  stepsViewButton.setAttribute("aria-pressed",String(view==="steps"));
  stepsPanel.hidden=view!=="steps";
- audioTimeline.hidden=view!=="steps";
+ if(view==="steps")timeline.layout();
  if(scriptMode)window.previewScriptEntry(view==="steps"?selectedScript:null);
  setProjectionPreview(view==="steps"?selectedPreview:null);
  resizeCanvas();
@@ -171,7 +169,7 @@ function setupStepMarks(){
  const count=document.createElement('span');count.setAttribute('role','status');
  const empty=document.createElement('p');empty.className='step-marks-empty';empty.textContent='尚未標記步驟。點步驟右側的 ☆ 即可標記。';empty.hidden=true;
  toolbar.append(filter,count);document.querySelector('#stepsPanel header').append(toolbar);
- document.getElementById('stepList').after(empty);
+ stepReviewScroll.append(empty);
  let saveFailed=false;
  function refresh(){
   let total=0;
@@ -186,6 +184,7 @@ function setupStepMarks(){
   count.textContent=total+' 個標記'+(saveFailed?'（目前無法儲存）':'');
   filter.setAttribute('aria-pressed',String(onlyMarked));
   empty.hidden=!onlyMarked||total>0;
+  timeline.layout();
  }
  for(const button of document.querySelectorAll('#stepList [data-script], #stepList [data-preview]')){
   const index=Number(button.dataset.script);

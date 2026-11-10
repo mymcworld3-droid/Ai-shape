@@ -12,7 +12,7 @@
   {kind:"影片",title:"影片素材",css:"video"}
  ];
  const basename=src=>String(src).split("/").pop();
- // Each column is an operator cue, not a claim about media duration in seconds.
+ // Each row follows an operator cue in the step list.
  // Only continuous music/voice annotations are joined into one visual clip.
  function buildSegments(steps){
   const result=[];
@@ -37,85 +37,74 @@
   }
   return result;
  }
- function mount(host,steps,onSelect){
-  if(!host||typeof document==="undefined")return null;
-  const width=136;
-  const count=steps.length;
-  host.className="audio-timeline";
-  host.replaceChildren();
-  const header=document.createElement("div");header.className="timeline-heading";
-  const heading=document.createElement("strong");heading.textContent="媒體時間軸";
-  const info=document.createElement("span");info.className="timeline-help";
-  info.textContent="依步驟排列 · 不代表實際秒數 · 點選標尺或音軌可指定起點";
-  const selection=document.createElement("span");selection.className="timeline-selection";
-  selection.setAttribute("aria-live","polite");selection.textContent="尚未選擇步驟";
-  header.append(heading,info,selection);
-  const viewport=document.createElement("div");viewport.className="timeline-viewport";
-  const labels=document.createElement("div");labels.className="timeline-labels";
-  const rulerLabel=document.createElement("div");rulerLabel.className="timeline-label timeline-ruler-label";rulerLabel.textContent="步驟";
-  labels.append(rulerLabel);
-  for(const lane of lanes){
-   const label=document.createElement("div");label.className="timeline-label timeline-label-"+lane.css;
-   label.textContent=lane.title;labels.append(label);
-  }
-  const scroll=document.createElement("div");scroll.className="timeline-scroll";
-  scroll.id="audioTimelineScroll";scroll.tabIndex=0;
-  scroll.setAttribute("aria-label","音效軌道，可水平捲動檢視全部步驟");
-  const content=document.createElement("div");content.className="timeline-content";
-  content.style.width=(count*width)+"px";content.style.setProperty("--cue-width",width+"px");
-  const cursor=document.createElement("div");cursor.className="timeline-cursor";cursor.hidden=true;
-  const ruler=document.createElement("div");ruler.className="timeline-ruler";
-  const marks=[];
-  const fragment=document.createDocumentFragment();
-  steps.forEach((step,index)=>{
-   const button=document.createElement("button");button.type="button";button.className="timeline-tick";
-   button.textContent=step.label===undefined?String(index):String(step.label);
-   button.title="預覽第 "+button.textContent+" 步";
-   button.setAttribute("aria-label","選擇第 "+button.textContent+" 步");
-   button.setAttribute("aria-pressed","false");
-   button.addEventListener("click",()=>onSelect(index));
-   fragment.append(button);marks.push(button);
-  });
-  ruler.append(fragment);
-  content.append(cursor,ruler);
-  const rows=new Map();
-  for(const lane of lanes){
-   const row=document.createElement("div");row.className="timeline-lane timeline-lane-"+lane.css;
-   row.setAttribute("aria-label",lane.title);rows.set(lane.kind,row);content.append(row);
-  }
-  for(const clip of buildSegments(steps)){
-   const lane=rows.get(clip.kind);
-   const segment=document.createElement("button");segment.type="button";
-   segment.className="timeline-clip timeline-clip-"+lanes.find(x=>x.kind===clip.kind).css;
-   segment.style.left=(clip.start*width+2)+"px";
-   segment.style.width=((clip.end-clip.start+1)*width-4)+"px";
-   const label=document.createElement("span");label.textContent=basename(clip.src);
-   const range=clip.start===clip.end?"第 "+steps[clip.start].label+" 步":"第 "+steps[clip.start].label+"–"+steps[clip.end].label+" 步";
-   segment.title=clip.kind+" · "+basename(clip.src)+"\n"+range+"\n"+clip.src;
-   segment.setAttribute("aria-label",clip.kind+" "+basename(clip.src)+"，"+range);
-   segment.append(label);
-   segment.addEventListener("click",event=>{
-    const index=event.detail===0?clip.start:Math.floor((event.clientX-content.getBoundingClientRect().left)/width);
-    onSelect(Math.min(clip.end,Math.max(clip.start,index)));
+ function mount(host,{steps,rows,trackSelect,onSelect}){
+  for(const lane of lanes)trackSelect.add(new Option(lane.title,lane.kind));
+  trackSelect.value="音效";
+
+  const cursor=document.createElement("div");
+  cursor.className="timeline-cursor";
+  cursor.setAttribute("aria-hidden","true");
+  cursor.hidden=true;
+  host.append(cursor);
+
+  const clips=buildSegments(steps).map(clip=>{
+   const button=document.createElement("button");
+   const label=document.createElement("span");
+   const filename=basename(clip.src);
+   const range=clip.start===clip.end?`第 ${steps[clip.start].label} 步`:
+    `第 ${steps[clip.start].label}–${steps[clip.end].label} 步`;
+   button.type="button";
+   button.className="timeline-clip timeline-clip-"+lanes.find(lane=>lane.kind===clip.kind).css;
+   button.title=`${filename}\n${range}`;
+   button.setAttribute("aria-label",`${clip.kind} ${filename}，${range}`);
+   button.hidden=true;
+   label.textContent=filename;
+   button.append(label);
+   host.append(button);
+   const segment={...clip,button,visibleRows:[]};
+   button.addEventListener("click",event=>{
+    const visible=segment.visibleRows;
+    const y=event.clientY-host.getBoundingClientRect().top;
+    const row=event.detail===0?visible[0]:visible.find(item=>y<item.bottom)??visible.at(-1);
+    if(row)onSelect(row.index);
    });
-   lane.append(segment);
+   return segment;
+  });
+
+  let positions=[],selected=null;
+  function placeCursor(){
+   const row=positions[selected];
+   cursor.hidden=!row;
+   if(row){
+    cursor.style.top=`${row.top}px`;
+    cursor.style.height=`${row.bottom-row.top}px`;
+   }
   }
-  scroll.append(content);viewport.append(labels,scroll);host.append(header,viewport);
-  let selected=null;
-  function select(index){
-   if(selected!==null)marks[selected].setAttribute("aria-pressed","false");
-   selected=Number.isInteger(index)&&index>=0&&index<count?index:null;
-   cursor.hidden=selected===null;
-   if(selected===null){selection.textContent="尚未選擇步驟";return;}
-   marks[selected].setAttribute("aria-pressed","true");
-   cursor.style.left=(selected*width)+"px";cursor.style.width=width+"px";
-   const step=steps[selected],media=step.media||[];
-   selection.textContent="第 "+step.label+" 步 · "+(media.length?media.map(m=>m.kind+" "+basename(m.src)).join(" / "):"無音檔");
-   const left=selected*width,right=left+width;
-   if(left<scroll.scrollLeft+width||right>scroll.scrollLeft+scroll.clientWidth-width)
-    scroll.scrollLeft=Math.max(0,left-scroll.clientWidth/3);
+  function layout(){
+   if(!host.offsetWidth)return;
+   const origin=host.getBoundingClientRect().top;
+   positions=rows.map((row,index)=>{
+    if(row.hidden)return null;
+    const bounds=row.getBoundingClientRect();
+    return {index,top:bounds.top-origin,bottom:bounds.bottom-origin};
+   });
+   for(const clip of clips){
+    // The bookmark filter removes rows from the same scrollable sheet.
+    clip.visibleRows=clip.kind===trackSelect.value?
+     positions.slice(clip.start,clip.end+1).filter(Boolean):[];
+    const first=clip.visibleRows[0],last=clip.visibleRows.at(-1);
+    clip.button.hidden=!first;
+    if(first){
+     clip.button.style.top=`${first.top+3}px`;
+     clip.button.style.height=`${last.bottom-first.top-6}px`;
+    }
+   }
+   placeCursor();
   }
-  return {select,buildSegments:()=>buildSegments(steps)};
+  trackSelect.addEventListener("change",layout);
+  const list=rows[0]?.parentElement;
+  if(list&&typeof ResizeObserver==="function")new ResizeObserver(layout).observe(list);
+  return {layout,select(index){selected=index;placeCursor();}};
  }
  return {buildSegments,mount,lanes};
 });
