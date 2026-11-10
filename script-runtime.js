@@ -62,28 +62,30 @@ if(scriptMode){
     // The next manual cue cuts directly to black; never flash the lit room.
     if(entry.group==='revealTruth'){values.ai=1;values.aiExpansion=1;}
     else if(entry.group==='opening')values.scene=0;
-    else{values.ai=0;values.aiExpansion=0;if(['prompt','one','two'].includes(entry.group))values.clock=1;}
+    else{values.ai=0;values.aiExpansion=0;}
    }
   }
-  // Operator cues 366–367 show the AI alone; the clock first appears at 368.
-  // Apply after narration callbacks so finishing a voice cannot reveal it early.
+  // Act III is untimed. Preserve the script's AI and voting stage directions,
+  // but never render the clock, even during speech completion or rewinding.
   if(['p384-0','p388-0'].includes(entry.id)){
-   values.ai=1;values.aiExpansion=1;values.clock=0;
+   values.ai=1;values.aiExpansion=1;
   }
-  if(['p388-1','p388-2'].includes(entry.id))values.clock=1;
-  // Both the AI and the clock stay present at every voting cue, even when
-  // a narration starts/ends. Only the dedicated blackout conceals both.
   values.voteCorner=voteState.corner?1:0;
-  if(voteState.corner){values.ai=1;values.clock=1;values.aiExpansion=1;}
+  if(voteState.corner){values.ai=1;values.aiExpansion=1;}
   if(voteState.backgroundOnly){
    // The memory room appears alone in steps 380–381.
    values.ai=0;values.clock=0;values.card=0;values.vote=0;values.aiExpansion=0;
   }
   if(voteState.finalShape){
-   // From 382 through 392, keep the full AI artwork alive even on actor
-   // dialogue and after either AI recording naturally finishes.
+   // Keep the final AI artwork alive after either AI recording finishes.
    values.ai=1;values.aiExpansion=1;
    values.clock=0;values.card=0;values.vote=0;values.voteCorner=0;
+  }
+  if(entry.act==='III')values.clock=0;
+  // Step 0 displays the original blue-tinted Start_dark.PNG room, without a
+  // subtitle, timer, music or any sound. The first live reveal comes later.
+  if(entry.id==='pre-show'){
+   values.room=false;values.blackout=0;values.ai=0;values.clock=0;
   }
   const duration=direction<=0||!startGate.started||transcript?.index===0||['opening-dark','end-blackout'].includes(entry.action)?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
   for(const name of Object.keys(transitions))animate(name,values[name]||0,duration);
@@ -106,7 +108,7 @@ if(scriptMode){
  window.scriptShow=transcript;
  window.scriptProjectionFrame=()=>{
   const entry=startGate.started?transcript.entry:previewEntry;
-  if(!entry)return null;
+  if(!entry)return {...StageLayout.previewFrame("dark"),script:true,preview:true,caption:null};
   return {...entry.look,voiceGroup:entry.group,preview:!startGate.started,caption:null,script:true,
    hideBackground:votingState(entry).hideBackground,
    backgroundOnly:votingState(entry).backgroundOnly,
