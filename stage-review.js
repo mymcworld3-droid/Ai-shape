@@ -5,6 +5,61 @@ const stepsPanel=document.getElementById("stepsPanel");
 const startButton=document.getElementById("startButton");
 const startLabel=document.getElementById("startLabel");
 const resetStartStep=document.getElementById("resetStartStep");
+
+// Audio annotations come from the same cue and track configuration as playback.
+// They describe media audible during a cue (including continuing background
+// music and AI narration), not speculative music files or new playback actions.
+const stepVoiceFiles={
+ opening:config.narration,memory:config.memory.narration,
+ prompt:config.voting.prompt,one:config.voting.one,two:config.voting.two,
+ final:config.voting.final,complete:config.ending.complete,
+ revealTruth:config.ending.revealTruth
+};
+const stepEffectFiles={
+ doorKick:config.doorKick,doorOpen:config.scriptEffects.doorOpen,
+ timerClick:config.scriptEffects.timerClick,memoryClick:config.memory.lightClick,
+ officeBang:config.office.bang,"selection-button":config.scriptEffects.selectionButton
+};
+const sceneVoices={
+ welcome:config.narration,"memory-welcome":config.memory.narration,
+ "vote-prompt":config.voting.prompt,"vote-one":config.voting.one,
+ "vote-two":config.voting.two,"vote-final":config.voting.final,
+ "ending-complete":config.ending.complete,"ending-reveal":config.ending.revealTruth
+};
+const sceneEffects={
+ "door-kick":config.doorKick,"door-open":config.scriptEffects.doorOpen,
+ "memory-light":config.memory.lightClick,"office-bang":config.office.bang,
+ "vote-prompt":config.scriptEffects.selectionButton
+};
+function stepAudioFiles({paragraph,voice=null,effect=null,video=null}){
+ const media=[];
+ const track=ActOneMusic.trackForStep(paragraph,config.actOneMusic);
+ if(track?.src)media.push({kind:"配樂",src:track.src});
+ if(voice)media.push({kind:"語音",src:voice});
+ if(effect)media.push({kind:"音效",src:effect});
+ if(video)media.push({kind:"影片",src:video});
+ return media;
+}
+function labelStepAudio(button,media){
+ const container=document.createElement("span");
+ container.className="step-audio";
+ if(!media.length) {
+  container.textContent="無音檔";
+  container.classList.add("step-audio-empty");
+ } else for(const {kind,src} of media) {
+  const label=document.createElement("span");
+  label.textContent=kind+" · "+src.split("/").at(-1);
+  label.title=src;container.append(label);
+ }
+ container.setAttribute("aria-label",media.length
+  ?media.map(({kind,src})=>kind+"："+src).join("；"):"本步驟無音檔");
+ button.append(container);
+}
+function sceneStepAudio(cue){
+ const paragraph=config.sceneMusicSteps[cue];
+ return stepAudioFiles({paragraph,voice:sceneVoices[cue],
+  effect:sceneEffects[cue],video:cue==="bright"?config.roomReveal:null});
+}
 if(scriptMode){
  const list=document.getElementById('stepList');list.replaceChildren();
  document.querySelector('#stepsPanel h1').firstChild.textContent='劇本字幕';
@@ -14,7 +69,11 @@ if(scriptMode){
   const li=document.createElement('li'),button=document.createElement('button'),number=document.createElement('span'),text=document.createElement('span'),small=document.createElement('small');
   button.type='button';button.dataset.script=index;button.setAttribute('aria-pressed','false');number.className='step-number';number.textContent=index;
   text.textContent=e.text||e.note||e.action;small.textContent=`ACT ${e.act} · SCENE ${e.scene}${e.speaker?' · '+e.speaker:''}`;
-  text.append(small);button.append(number,text);li.append(button);list.append(li);
+  text.append(small);button.append(number,text);
+  labelStepAudio(button,stepAudioFiles({paragraph:e.paragraph,
+   voice:stepVoiceFiles[e.group],effect:stepEffectFiles[e.action],
+   video:e.action==="reveal"?config.roomReveal:null}));
+  li.append(button);list.append(li);
  });
 }
 const modeButton=document.getElementById('modeButton');
@@ -39,8 +98,11 @@ const stepButtons=Array.from(document.querySelectorAll("[data-preview]"));
 let selectedPreview=null,selectedScene=null;
 window.selectedSceneStartCue=null;
 if(!scriptMode){
- document.querySelector('#stepsPanel header p').textContent='點選任一步驟預覽；按開始／F 便從該步驟播放';
- for(const button of stepButtons)button.setAttribute('aria-pressed','false');
+ document.querySelector('#stepsPanel header p').textContent='點選任一步驟預覽；右側顯示此步播放的音檔，按開始／F 從選定步驟播放';
+ for(const button of stepButtons){
+  button.setAttribute('aria-pressed','false');
+  labelStepAudio(button,sceneStepAudio(button.dataset.preview));
+ }
 }
 function selectSceneStep(cue){
  if(startGate.started||scriptMode)return;
@@ -77,7 +139,7 @@ function updateStartButton(){
  startButton.disabled=!showAssetsReady();
  startLabel.textContent=startButton.disabled?"載入中…":
   scriptMode&&selectedScript!==null?`從第 ${selectedScript} 步開始`:
-  !scriptMode&&selectedScene!==null?`從第 ${stepButtons.findIndex(item=>item.dataset.preview===selectedScene)+1} 步開始`:"開始";
+  !scriptMode&&selectedScene!==null?`從第 ${Number(stepButtons.find(item=>item.dataset.preview===selectedScene)?.querySelector(".step-number")?.textContent)} 步開始`:"開始";
  resetStartStep.hidden=scriptMode?selectedScript===null:selectedScene===null;
  const failed=["backgroundReady","darkBackgroundReady","cardReady","memoryBackgroundReady","officeBackgroundReady","videoError","audioError"]
   .some(key=>document.body.dataset[key]===(key.endsWith("Error")?"true":"false"));
