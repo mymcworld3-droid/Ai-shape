@@ -10,10 +10,10 @@ class Media extends EventTarget {
 }
 function setup(){
  let time=0,presentation={scene:'opening',value:0};
- const video=new Media(),audio=new Media(),effect=new Media(),doorOpen=new Media(),memoryVoice=new Media(),bang=new Media(),prompt=new Media();
- const stage=new StageCueController({video,audio,effect,doorOpen,now:()=>time,memoryScene:{voice:memoryVoice},officeScene:{bang},votingScene:{prompt},
+ const video=new Media(),audio=new Media(),effect=new Media(),doorOpen=new Media(),memoryVoice=new Media(),bang=new Media(),prompt=new Media(),button=new Media();
+ const stage=new StageCueController({video,audio,effect,doorOpen,selectionButton:button,now:()=>time,memoryScene:{voice:memoryVoice},officeScene:{bang},votingScene:{prompt},
   capturePresentation:()=>({...presentation}),restorePresentation:saved=>{presentation=saved;}});
- return {stage,video,audio,effect,doorOpen,memoryVoice,bang,prompt,tick:ms=>time+=ms,
+ return {stage,video,audio,effect,doorOpen,memoryVoice,bang,prompt,button,tick:ms=>time+=ms,
   setPresentation:value=>{presentation=value;},getPresentation:()=>presentation,
   async next(){time+=5000;await stage.advance();},
   async welcome(){await this.next();video.end();await this.next();await this.next();}
@@ -105,7 +105,7 @@ test('all 26 cues rewind across scene boundaries and can run forward again witho
   if(c.stage.state==='vote-prompt')c.prompt.end();
  }
  assert.equal(c.stage.opening.deadline,opening);assert.equal(c.stage.voting.deadline,selection);
- for(const m of [c.audio,c.doorOpen,c.memoryVoice,c.bang,c.prompt])assert.equal(m.calls,2);
+ for(const m of [c.audio,c.doorOpen,c.memoryVoice,c.bang,c.prompt,c.button])assert.equal(m.calls,2);
 });
 
 test('every one of the 26 scene cues can be selected as the first live cue',async()=>{
@@ -117,8 +117,9 @@ test('every one of the 26 scene cues can be selected as the first live cue',asyn
   const c=setup();
   assert.equal(await c.stage.startAt(cue),true,cue);
   assert.equal(c.stage.state,index===0?'room-reveal':cue,cue);
-  for(const name of ['video','audio','effect','doorOpen','memoryVoice','bang','prompt']){
-   assert.equal(c[name].calls,mediaFor[cue]===name?1:0,cue+': '+name);
+  for(const name of ['video','audio','effect','doorOpen','memoryVoice','bang','prompt','button']){
+   const expected=mediaFor[cue]===name||(cue==='vote-prompt'&&name==='button')?1:0;
+   assert.equal(c[name].calls,expected,cue+': '+name);
   }
   assert.equal(c.stage.opening.deadline,index>=3?900000:null,cue+': opening deadline');
   assert.equal(c.stage.voting.deadline,index>=21?60000:null,cue+': selection deadline');
@@ -182,10 +183,70 @@ test('a direct scene jump starts fresh timers and advances from the chosen scene
  assert.equal(vote.stage.voting.getRemainingMs(),58000);
  await vote.stage.advance();assert.equal(vote.stage.state,'vote-one');
  assert.equal(vote.prompt.calls,0,'skipped AI prompt must not replay');
+ assert.equal(vote.button.calls,0,'skipped button click must not replay');
  const invalid=setup();
  assert.equal(invalid.stage.startAt('not-a-cue'),false);
  assert.equal(invalid.stage.state,'dark');
  invalid.stage.destroy();vote.stage.destroy();c.stage.destroy();
+});
+
+test('voting button sound fires with the AI prompt once, never during preview or voice retries',async()=>{
+ const c=setup();
+ assert.equal(await c.stage.startAt('discussion'),true);
+ assert.equal(c.button.calls,0);
+ await c.stage.advance();
+ assert.equal(c.stage.state,'vote-prompt');
+ assert.equal(c.button.calls,1);
+ assert.equal(c.prompt.calls,1);
+ assert.equal(c.stage.selectionButtonState,'playing');
+ // The sound completes independently: it does not end or restart the voice.
+ c.button.end();
+ assert.equal(c.stage.selectionButtonState,'finished');
+ assert.equal(c.stage.voting.mediaStates.selectionPrompt,'playing');
+ assert.equal(await c.stage.advance(),false);
+ c.prompt.end();c.tick(700);
+ await c.stage.advance();
+ assert.equal(c.stage.state,'vote-clock');
+ assert.equal(c.button.calls,1);
+ assert.equal(c.stage.previous(),true);
+ assert.equal(c.stage.state,'vote-prompt');
+ assert.equal(c.stage.previous(),true);
+ assert.equal(c.stage.state,'discussion');
+ await c.stage.advance();
+ assert.equal(c.stage.state,'vote-prompt');
+ assert.equal(c.button.calls,2,'re-entering cue deliberately replays button');
+ assert.equal(c.prompt.calls,2);
+ c.stage.destroy();
+
+ const failed=setup();
+ failed.button.result=Promise.reject(new Error('blocked'));
+ assert.equal(await failed.stage.startAt('vote-prompt'),true);
+ assert.equal(failed.stage.selectionButtonState,'error');
+ assert.equal(failed.prompt.calls,1,'failed click cannot block or replay the AI voice');
+ failed.prompt.end();
+ failed.tick(700);
+ assert.equal(await failed.stage.advance(),true);
+ assert.equal(failed.stage.state,'vote-clock');
+ assert.equal(failed.button.calls,1,'narration completion does not retry the click');
+ failed.stage.destroy();
+});
+
+test('selection button is independent of the voice and respects effects volume',()=>{
+ const fs=require('node:fs'),vm=require('node:vm');
+ const src=fs.readFileSync(require.resolve('../visualizer.js'),'utf8');
+ const mixer=src.slice(src.indexOf('let voiceVolume='),src.indexOf('StageOpening.bindAdvanceClick(projectionViewport'));
+ const voice={id:'selectionPromptAudio'},button={id:'selectionButtonAudio'},bgm={id:'actOneBgm'},alt={id:'actOneBgmAlt'},hud={hidden:false};
+ const elements=[voice,button,bgm,alt];let keys;
+ const context={document:{querySelectorAll:()=>elements,getElementById:id=>id==='volumeDisplay'?hud:elements.find(e=>e.id===id)},
+  narrationMedia:[voice],window:{actOneBackgroundMusic:{setMasterVolume(value){this.master=value;}}},
+  StageOpening:{adjustVolume,bindStageKeys(target,actions){keys=actions;}},startGate:{started:false},advanceStage(){}};
+ vm.runInNewContext(mixer,context);
+ keys.effectDown();
+ assert.equal(button.volume,.95);assert.equal(voice.volume,1);
+ keys.voiceDown();
+ assert.equal(button.volume,.95);assert.equal(voice.volume,.95);
+ keys.otherDown();
+ assert.equal(button.volume,.95);assert.equal(context.window.actOneBackgroundMusic.master,.38);
 });
 
 test('live mixer isolates voice, effects and BGM while retaining the crossfade master gain',()=>{
