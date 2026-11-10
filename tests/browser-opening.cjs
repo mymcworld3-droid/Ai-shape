@@ -592,6 +592,7 @@ async function fastVoting(page){
     await flag(page,'endingRevealState','finished');
     await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
     await page.keyboard.press('Space');await cue(page,'ending-blackout');
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     assert.equal(await page.locator('#visualizer').evaluate(c=>{
       const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.every((v,i)=>i%4===3||v===0);
     }),true,'Final Act IV blackout must be solid black');
