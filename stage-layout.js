@@ -92,7 +92,13 @@
     "vote-one": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1, timer: "selection" },
     "vote-two": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1, timer: "selection" },
     "vote-final": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0.2, clock: 0, card: 0, blackout: 0, vote: 1, timer: "selection" },
-    "vote-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 }
+    "vote-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
+    "ending-light": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
+    "ending-dialogue": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
+    "ending-complete": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
+    "ending-question": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
+    "ending-reveal": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
+    "ending-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 }
   });
   for (const frame of Object.values(previews)) Object.freeze(frame);
   function previewFrame(cue) {
