@@ -57,6 +57,20 @@ test('F during loading never queues Start; shortcuts and composing input are ign
  }
  assert.equal(starts,1);assert.equal(next,0);
 });
+test('blue-room step zero is silent, startable once, and advances to the original reveal',async()=>{
+ const c=setup();
+ assert.equal(await c.stage.startAt('dark'),true);
+ assert.equal(c.stage.state,'dark');
+ assert.equal(c.video.calls,0);
+ assert.equal(c.audio.calls,0);
+ assert.equal(c.stage.voting.deadline,null);
+ assert.equal(c.stage.startAt('bright'),false,'Start at step zero can happen only once');
+ await c.stage.advance();
+ assert.equal(c.stage.state,'room-reveal');
+ assert.equal(c.video.calls,1);
+ c.stage.destroy();
+});
+
 test('each volume channel changes by five percentage points and clamps at silence and full volume',()=>{
  assert.equal(adjustVolume(100,-5),95);assert.equal(adjustVolume(95,5),100);
  assert.equal(adjustVolume(0,-5),0);assert.equal(adjustVolume(100,5),100);
@@ -84,20 +98,20 @@ test('rewind restores the departing frame and replay never resets a running open
  await c.next();assert.equal(c.stage.opening.state,'narration');assert.equal(c.stage.opening.deadline,deadline);
  assert.ok(c.stage.opening.getRemainingMs()<remaining);c.audio.end();assert.equal(c.stage.opening.deadline,deadline);
 });
-test('all 26 cues rewind across scene boundaries and can run forward again without frozen media or reset deadlines',async()=>{
+test('all third-act scene cues rewind and replay without starting any voting deadline',async()=>{
  const c=setup(),visited=[];
- for(let i=0;i<26;i++){
+ for(let i=0;i<25;i++){
   await c.next();if(c.stage.state==='room-reveal')c.video.end();visited.push(c.stage.state);
   if(c.stage.state==='welcome')c.audio.end();if(c.stage.state==='door-kick')c.effect.end();
   if(c.stage.state==='door-open')c.doorOpen.end();
   if(c.stage.state==='memory-welcome')c.memoryVoice.end();if(c.stage.state==='office-bang')c.bang.end();
   if(c.stage.state==='vote-prompt')c.prompt.end();
  }
- assert.equal(visited.length,26);assert.equal(c.stage.state,'vote-blackout');
+ assert.equal(visited.length,25);assert.equal(c.stage.state,'vote-blackout');
  const opening=c.stage.opening.deadline,selection=c.stage.voting.deadline;
- for(let i=24;i>=-1;i--){assert.equal(c.stage.previous(),true);assert.equal(c.stage.state,i<0?'dark':visited[i]);}
+ for(let i=23;i>=-1;i--){assert.equal(c.stage.previous(),true);assert.equal(c.stage.state,i<0?'dark':visited[i]);}
  assert.equal(c.stage.previous(),false);assert.equal(c.stage.opening.deadline,opening);assert.equal(c.stage.voting.deadline,selection);
- for(let i=0;i<26;i++){
+ for(let i=0;i<25;i++){
   await c.next();if(c.stage.state==='room-reveal')c.video.end();assert.equal(c.stage.state,visited[i]);
   if(c.stage.state==='welcome')c.audio.end();if(c.stage.state==='door-kick')c.effect.end();
   if(c.stage.state==='door-open')c.doorOpen.end();
@@ -117,16 +131,16 @@ test('every one of the 32 scene cues can be selected as the first live cue',asyn
  for(const [index,cue] of STAGE_START_CUES.entries()){
   const c=setup();
   assert.equal(await c.stage.startAt(cue),true,cue);
-  assert.equal(c.stage.state,index===0?'room-reveal':cue,cue);
+  assert.equal(c.stage.state,cue==='bright'?'room-reveal':cue,cue);
   for(const name of ['video','audio','effect','doorOpen','memoryVoice','bang','prompt','button','complete','reveal']){
    const expected=mediaFor[cue]===name||(cue==='vote-prompt'&&name==='button')?1:0;
    assert.equal(c[name].calls,expected,cue+': '+name);
   }
-  assert.equal(c.stage.opening.deadline,index>=3?900000:null,cue+': opening deadline');
-  assert.equal(c.stage.voting.deadline,index>=21?60000:null,cue+': selection deadline');
-  if(index>=9)assert.equal(c.stage.memory.state,index<=12?cue:'memory-blackout');
-  if(index>=13)assert.equal(c.stage.office.state,index<=18?cue:'memory-return');
-  if(index>=19)assert.equal(c.stage.voting.state,index>=26?'vote-blackout':cue);
+  assert.equal(c.stage.opening.deadline,index>=4?900000:null,cue+': opening deadline');
+  assert.equal(c.stage.voting.deadline,null,cue+': voting has no timer');
+  if(index>=10)assert.equal(c.stage.memory.state,index<=13?cue:'memory-blackout');
+  if(index>=14)assert.equal(c.stage.office.state,index<=19?cue:'memory-return');
+  if(index>=20)assert.equal(c.stage.voting.state,index>=26?'vote-blackout':cue);
   if(index>=26)assert.equal(c.stage.ending.state,cue);
   assert.equal(c.stage.startAt('clock'),false,'cannot restart an already started scene');
   c.stage.destroy();
@@ -168,7 +182,7 @@ test('memory door has its own sound, waits for completion, retries failures, and
  failed.stage.destroy();
 });
 
-test('a direct scene jump starts fresh timers and advances from the chosen scene',async()=>{
+test('a direct scene jump preserves the opening timer while voting has no clock',async()=>{
  const c=setup();
  assert.equal(await c.stage.startAt('clock'),true);
  assert.equal(c.stage.opening.state,'countdown');
@@ -179,11 +193,11 @@ test('a direct scene jump starts fresh timers and advances from the chosen scene
  assert.equal(c.stage.state,'door-kick');
  assert.equal(c.effect.calls,1);
  const vote=setup();
- assert.equal(await vote.stage.startAt('vote-clock'),true);
- assert.equal(vote.stage.voting.getRemainingMs(),60000);
+ assert.equal(await vote.stage.startAt('vote-one'),true);
+ assert.equal(vote.stage.voting.getRemainingMs(),null);
  vote.tick(2000);
- assert.equal(vote.stage.voting.getRemainingMs(),58000);
- await vote.stage.advance();assert.equal(vote.stage.state,'vote-one');
+ assert.equal(vote.stage.voting.deadline,null);
+ await vote.stage.advance();assert.equal(vote.stage.state,'vote-two');
  assert.equal(vote.prompt.calls,0,'skipped AI prompt must not replay');
  assert.equal(vote.button.calls,0,'skipped button click must not replay');
  const invalid=setup();
@@ -208,7 +222,7 @@ test('voting button sound fires with the AI prompt once, never during preview or
  assert.equal(await c.stage.advance(),false);
  c.prompt.end();c.tick(700);
  await c.stage.advance();
- assert.equal(c.stage.state,'vote-clock');
+ assert.equal(c.stage.state,'vote-one');
  assert.equal(c.button.calls,1);
  assert.equal(c.stage.previous(),true);
  assert.equal(c.stage.state,'vote-prompt');
@@ -228,7 +242,7 @@ test('voting button sound fires with the AI prompt once, never during preview or
  failed.prompt.end();
  failed.tick(700);
  assert.equal(await failed.stage.advance(),true);
- assert.equal(failed.stage.state,'vote-clock');
+ assert.equal(failed.stage.state,'vote-one');
  assert.equal(failed.button.calls,1,'narration completion does not retry the click');
  failed.stage.destroy();
 });
