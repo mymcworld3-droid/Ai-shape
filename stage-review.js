@@ -40,21 +40,8 @@ function stepAudioFiles({paragraph,voice=null,effect=null,video=null}){
  if(video)media.push({kind:"影片",src:video});
  return media;
 }
-function labelStepAudio(button,media){
- const container=document.createElement("span");
- container.className="step-audio";
- if(!media.length) {
-  container.textContent="無音檔";
-  container.classList.add("step-audio-empty");
- } else for(const {kind,src} of media) {
-  const label=document.createElement("span");
-  label.textContent=kind+" · "+src.split("/").at(-1);
-  label.title=src;container.append(label);
- }
- container.setAttribute("aria-label",media.length
-  ?media.map(({kind,src})=>kind+"："+src).join("；"):"本步驟無音檔");
- button.append(container);
-}
+// Media labels belong to the standalone editing-style timeline, not the step buttons.
+const timelineSteps=[];
 function sceneStepAudio(cue){
  const paragraph=config.sceneMusicSteps[cue];
  return stepAudioFiles({paragraph,voice:sceneVoices[cue],
@@ -70,9 +57,9 @@ if(scriptMode){
   button.type='button';button.dataset.script=index;button.setAttribute('aria-pressed','false');number.className='step-number';number.textContent=index;
   text.textContent=e.text||e.note||e.action;small.textContent=`ACT ${e.act} · SCENE ${e.scene}${e.speaker?' · '+e.speaker:''}`;
   text.append(small);button.append(number,text);
-  labelStepAudio(button,stepAudioFiles({paragraph:e.paragraph,
+  timelineSteps.push({label:index,media:stepAudioFiles({paragraph:e.paragraph,
    voice:stepVoiceFiles[e.group],effect:stepEffectFiles[e.action],
-   video:e.action==="reveal"?config.roomReveal:null}));
+   video:e.action==="reveal"?config.roomReveal:null})});
   li.append(button);list.append(li);
  });
 }
@@ -88,6 +75,7 @@ function selectScriptStep(index){
  window.selectedScriptStartIndex=selectedScript;
  for(const button of sentenceButtons)
   button.setAttribute('aria-pressed',String(Number(button.dataset.script)===selectedScript));
+ timeline.select(selectedScript);
  window.previewScriptEntry(selectedScript);
  updateStartButton();
  if(selectedScript!==null&&document.body.dataset.view==='steps')
@@ -98,12 +86,23 @@ const stepButtons=Array.from(document.querySelectorAll("[data-preview]"));
 let selectedPreview=null,selectedScene=null;
 window.selectedSceneStartCue=null;
 if(!scriptMode){
- document.querySelector('#stepsPanel header p').textContent='點選任一步驟預覽；右側顯示此步播放的音檔，按開始／F 從選定步驟播放';
+ document.querySelector('#stepsPanel header p').textContent='點選任一步驟預覽；下方媒體時間軸顯示音檔，按開始／F 從選定步驟播放';
  for(const button of stepButtons){
   button.setAttribute('aria-pressed','false');
-  labelStepAudio(button,sceneStepAudio(button.dataset.preview));
+  timelineSteps.push({label:button.querySelector('.step-number')?.textContent||'0',
+   media:sceneStepAudio(button.dataset.preview)});
  }
 }
+// Keep the media tracks outside the list and synchronized by step index.
+const audioTimeline=document.createElement('section');
+audioTimeline.id='audioTimeline';
+audioTimeline.setAttribute('aria-label','獨立音訊軌道與媒體步驟時間軸');
+audioTimeline.hidden=true;
+document.getElementById('showShell').append(audioTimeline);
+const timeline=AudioTimeline.mount(audioTimeline,timelineSteps,index=>{
+ if(scriptMode)selectScriptStep(index);
+ else selectSceneStep(stepButtons[index]?.dataset.preview);
+});
 function selectSceneStep(cue){
  if(startGate.started||scriptMode)return;
  const button=stepButtons.find(item=>item.dataset.preview===cue);
@@ -111,6 +110,7 @@ function selectSceneStep(cue){
  selectedPreview=selectedScene;
  window.selectedSceneStartCue=selectedScene;
  for(const item of stepButtons)item.setAttribute('aria-pressed',String(item===button));
+ timeline.select(button?stepButtons.indexOf(button):null);
  setProjectionPreview(selectedPreview);
  updateStartButton();
 }
@@ -122,6 +122,7 @@ function setReviewView(view){
  pageViewButton.setAttribute("aria-pressed",String(view==="page"));
  stepsViewButton.setAttribute("aria-pressed",String(view==="steps"));
  stepsPanel.hidden=view!=="steps";
+ audioTimeline.hidden=view!=="steps";
  if(scriptMode)window.previewScriptEntry(view==="steps"?selectedScript:null);
  setProjectionPreview(view==="steps"?selectedPreview:null);
  resizeCanvas();
