@@ -27,7 +27,7 @@ window.OPENING_CONFIG = Object.freeze({
   sceneMusicSteps: Object.freeze({
     "dark": 20, "room-reveal": 23, "bright": 23, "ai": 27,
     "welcome": 28, "clock": 28, "door-kick": 33,
-    "card": 83, "card-hidden": 85, "blackout": 99,
+    "card": 83, "card-hidden": 85, "door-open": 87, "blackout": 99,
     "memory-light": 109, "memory-welcome": 115, "memory-room": 150,
     "memory-blackout": 179, "past-intro": 185, "past-isolate": 194,
     "office-light": 199, "office-bang": 213, "past-reflection": 269,
