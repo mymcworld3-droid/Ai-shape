@@ -12,6 +12,11 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   const page=await browser.newPage({viewport:{width:1280,height:720}}),errors=[];page.on('pageerror',e=>errors.push(String(e)));
   await page.goto(url);try{await page.waitForFunction(()=>!document.querySelector('#startButton').disabled);}catch(e){console.error(await page.evaluate(()=>({flags:{...document.body.dataset},media:[...document.querySelectorAll('audio,video')].map(a=>({id:a.id,error:a.error?.message,ready:a.readyState})),text:document.querySelector('#startStatus').textContent})),errors);throw e;}
   assert.equal(await page.locator('#stepList [data-script]').count(),data.entries.length);
+  assert.equal(await page.locator('[data-script="0"] .step-audio').textContent(),'無音檔');
+  assert.match(await page.locator(`[data-script="${indexOf(87)}"] .step-audio`).textContent(),/heavy-auto-door\.mp3/);
+  assert.match(await page.locator(`[data-script="${indexOf(388)}"] .step-audio`).textContent(),/Slam-button\.m4a/);
+  assert.match(await page.locator(`[data-script="${indexOf(414)}"] .step-audio`).textContent(),/411-415ai\.m4a/);
+  assert.match(await page.locator('[data-script="366"] .step-audio').textContent(),/Act4\.m4a/);
   const narrationFiles={
    selectionPromptAudio:'387-389ai.m4a',selectionOneAudio:'391-392ai.m4a',
    selectionTwoAudio:'395-396ai.m4a',selectionFinalAudio:'399ai.m4a',
@@ -32,7 +37,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
   assert.match(await page.locator('#startLabel').textContent(),/從第 .* 步開始/);
-  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('380 quiet previews never play media; opening live cues are pixel-black and silent until room reveal');
+  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('380 quiet previews show media filenames; step zero uses the blue room, remains silent and does not autoplay');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
@@ -92,7 +97,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   }
   assert.equal(await after366.evaluate(()=>scriptShow.entry.action),'end-blackout');
   await after366.close();
-  checks.push('step review and manual playback both reach every actual step 366-379, including Act IV narration and last blackout');
+  checks.push('step review displays the Act IV soundtrack and manual playback reaches steps 366-379 without voting timer');
 
   // Clearing the selection explicitly restores starting at the first cue.
   await page.locator('#resetStartStep').click();
@@ -109,10 +114,12 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     return true;
   });
   await page.waitForFunction(()=>{
-    const c=document.getElementById('visualizer'),pixels=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
-    return pixels.length>0 && pixels.every((v,i)=>i%4===3||v===0);
+    const c=document.getElementById('visualizer'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+    return d.some((v,i)=>i%4!==3&&v>15);
   });
-  assert.equal(await canvasIsBlack(),true,'Start must leave the whole canvas genuinely black');
+  assert.equal(await canvasIsBlack(),false,'Step zero must show the blue room, not a black screen');
+  assert.equal(await page.evaluate(()=>scriptProjectionFrame().room),false);
+  assert.equal(await page.evaluate(()=>scriptProjectionFrame().blackout),0);
   assert.equal(await page.locator('#actOneBgm').getAttribute('src'),null);
   assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.paused),true);
   assert.equal(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused)),true,'No sound before room reveal');
@@ -163,7 +170,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   // Subsequent media still run naturally; AI subtitles are manual, never elapsed-time driven.
   const votingCountdown=data.entries.findIndex(e=>e.id==='p389-0');
   const fourthActStart=data.entries.findIndex(e=>e.id==='p408-0');
-  assert.equal(votingCountdown,355,'The voting clock now starts on step 355 after the requested deletions');
+  assert.equal(votingCountdown,355,'The third-act voting layout starts on step 355 without a clock');
   assert.equal(fourthActStart,367,'The fourth act begins at step 366 after the requested deletions');
   for(let i=clock+1;i<data.entries.length;i++){
    const from=data.entries[i-1],to=data.entries[i];
@@ -263,12 +270,12 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
        timerX:t.x/w,timerY:t.y/h};
     });
     assert.ok(stagePose.corner>.98,'AI must remain in corner through step 380');
-    assert.ok(stagePose.ai>.98&&stagePose.clock>.98,'AI and timer coexist');
+    assert.ok(stagePose.ai>.98&&stagePose.clock<.02,'Third-act AI remains but the timer is absent');
     assert.ok(Math.abs(stagePose.x-.82)<.02&&Math.abs(stagePose.y-.72)<.02,
       'AI is moved to lower-right');
     assert.ok(Math.abs(stagePose.ratio-.5)<.025,'Complete AI shrinks to half size');
-    assert.ok(Math.abs(stagePose.timerX-.5)<.015&&Math.abs(stagePose.timerY-.5)<.015,
-      'Countdown is centered');
+    assert.equal(await page.evaluate(()=>transitions.clock.target),0,
+      'Neither voting narration nor operator input may reactivate the countdown');
     assert.equal(await page.locator('#visualizer').evaluate(canvas=>{
       const c=canvas.getContext('2d'),pixel=c.getImageData(8,8,1,1).data;
       return pixel[0]===0&&pixel[1]===0&&pixel[2]===0;
