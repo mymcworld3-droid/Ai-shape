@@ -130,7 +130,8 @@ test("silent step frames cover every cue and cannot mutate the playback transiti
  const expected=["bright","ai","welcome","clock","door-kick","card","card-hidden","door-open","blackout",
   "memory-light","memory-welcome","memory-room","memory-blackout",
   "past-intro","past-isolate","office-light","office-bang","past-reflection","memory-return",
-  "discussion","vote-prompt","vote-clock","vote-one","vote-two","vote-final","vote-blackout"];
+  "discussion","vote-prompt","vote-clock","vote-one","vote-two","vote-final","vote-blackout",
+  "ending-light","ending-dialogue","ending-complete","ending-question","ending-reveal","ending-blackout"];
  for(const cue of expected){const frame=previewFrame(cue);assert.ok(frame);assert.equal(Object.isFrozen(frame),true);}
  assert.equal(previewFrame("clock").clock,1);
  assert.equal(previewFrame("door-kick").clock,1);
@@ -159,6 +160,10 @@ test("silent step frames cover every cue and cannot mutate the playback transiti
  assert.equal(previewFrame("memory-welcome").aiExpansion,1);
  assert.equal(previewFrame("vote-two").timer,"selection");assert.equal(previewFrame("vote-two").vote,1);
  assert.equal(previewFrame("vote-blackout").blackout,1);
+ assert.equal(previewFrame("ending-light").background,"memory");
+ assert.equal(previewFrame("ending-complete").ai,1);
+ assert.equal(previewFrame("ending-reveal").ai,1);
+ assert.equal(previewFrame("ending-blackout").blackout,1);
  assert.equal(previewFrame("unknown"),null);assert.equal(previewFrame("__proto__"),null);
 });
 test("merely creating a Start gate or checking readiness never begins playback",()=>{
