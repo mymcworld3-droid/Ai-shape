@@ -191,7 +191,7 @@ async function noControls(page) {
   assert.equal(await page.locator('button:visible,input:visible,select:visible,[role="button"]:visible,audio[controls]:visible,video[controls]:visible').count(),0);
   assert.equal(await page.getByRole('button').count(),0,"Hidden review buttons must also leave the accessibility tree");
   for(const id of ['openingAudio','roomRevealVideo','doorKickAudio','memoryWelcomeAudio','memoryLightAudio','officeBangAudio',
-    'selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio'])assert.equal(await page.locator('#'+id).isVisible(),false);
+    'selectionButtonAudio','selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio'])assert.equal(await page.locator('#'+id).isVisible(),false);
   await fixedFrame(page);
 }
 async function naturalAudioEnd(page) {
@@ -523,6 +523,9 @@ async function fastVoting(page){
     assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
     await page.waitForTimeout(1200);await cue(page,'discussion');
     await page.keyboard.press('Space');await cue(page,'vote-prompt');await page.waitForTimeout(700);
+    assert.equal(await page.locator('#selectionButtonAudio').getAttribute('src'),'assets/audio/Slam-button.m4a');
+    await page.waitForFunction(()=>['playing','finished'].includes(document.body.dataset.selectionButtonState));
+    assert.ok(await page.locator('#selectionButtonAudio').evaluate(m=>m.currentTime>0||m.ended),'actor button sound must actually play');
     await flag(page,'selectionPromptState','missing');assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
     const promptPanel=await expectedDifference(page,'assets/backgrounds/memory-room.png',[.1,.81,.9,.98],15,.2);
     assert.ok(promptPanel.width>700&&promptPanel.height>75,'Selection prompt must visibly render');
@@ -626,6 +629,7 @@ async function fastVoting(page){
       assert.equal(await review.locator('#memoryWelcomeAudio').evaluate(a=>a.currentTime),0);
       assert.equal(await review.locator('#memoryLightAudio').evaluate(a=>a.currentTime),0);
       assert.equal(await review.locator('#officeBangAudio').evaluate(a=>a.currentTime),0);
+      assert.equal(await review.locator('#selectionButtonAudio').evaluate(a=>a.currentTime),0);
       for(const id of ['selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio']){
         assert.equal(await review.locator('#'+id).evaluate(a=>a.currentTime),0);
       }
@@ -1171,6 +1175,27 @@ async function fastVoting(page){
     await doorJump.keyboard.press('ArrowRight');await cue(doorJump,'blackout');
     assert.equal(await doorJump.locator('#doorKickAudio').evaluate(a=>a.paused&&a.currentTime===0),true);
     await doorJump.close();
+
+    const buttonJump=await browser.newPage();
+    await buttonJump.addInitScript(()=>{
+      const nativePlay=HTMLMediaElement.prototype.play;
+      window.selectionButtonPlayCount=0;
+      HTMLMediaElement.prototype.play=function(){
+        if(this.id==='selectionButtonAudio')window.selectionButtonPlayCount++;
+        return nativePlay.call(this);
+      };
+    });
+    await ready(buttonJump,url);await buttonJump.locator('#stepsViewButton').click();
+    await buttonJump.locator('[data-preview="vote-prompt"]').click();
+    assert.equal(await buttonJump.locator('#startLabel').textContent(),'從第 21 步開始');
+    assert.equal(await buttonJump.evaluate(()=>window.selectionButtonPlayCount),0,'preview cannot trigger button audio');
+    assert.equal(await buttonJump.locator('#selectionButtonAudio').evaluate(a=>a.paused&&a.currentTime===0),true);
+    await buttonJump.locator('#startButton').click();await cue(buttonJump,'vote-prompt');
+    await buttonJump.waitForFunction(()=>['playing','finished'].includes(document.body.dataset.selectionButtonState));
+    assert.equal(await buttonJump.evaluate(()=>window.selectionButtonPlayCount),1,'button audio starts once with the chosen live cue');
+    assert.equal(await buttonJump.locator('#selectionButtonAudio').getAttribute('src'),'assets/audio/Slam-button.m4a');
+    assert.equal(await buttonJump.evaluate(()=>stage.voting.deadline),null,'click cannot start the vote timer');
+    await buttonJump.close();
 
     const jump=await browser.newPage();
     await ready(jump,url);await jump.locator('#stepsViewButton').click();
