@@ -40,6 +40,31 @@ const {createServer}=require("../server.cjs");
    assert.equal(await stage.locator("#remotePairButton").isVisible(),false);
   }
 
+  // Without any pairing, one started projector is remotely controllable by
+  // multiple browser tabs. These pages never open the projection itself.
+  const guestA=await browser.newPage({viewport:{width:390,height:844}});
+  const guestB=await browser.newPage({viewport:{width:390,height:844}});
+  for(const page of [guestA,guestB])page.on("pageerror",error=>errors.push(String(error)));
+  await stage.goto(origin+"/?mode=cues");
+  assert.equal(await stage.locator("#remoteControlPageButton").isVisible(),true);
+  await guestA.goto(origin+"/remote.html");
+  await guestB.goto(origin+"/remote.html");
+  assert.equal(await guestA.locator('[data-action="next"]').isDisabled(),true);
+  assert.equal(await guestB.locator('[data-action="next"]').isDisabled(),true);
+  await stage.locator("#startButton").click();
+  await guestA.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
+  await guestB.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
+  await guestA.locator('[data-action="effectDown"]').click();
+  await guestA.waitForFunction(()=>document.getElementById("remoteEffect").textContent==="95%");
+  await guestB.waitForFunction(()=>document.getElementById("remoteEffect").textContent==="95%");
+  await guestA.locator('[data-action="next"]').click();
+  await guestB.waitForFunction(()=>document.getElementById("remoteStep").textContent.includes("第 1 步"));
+  await stage.reload();
+  await guestA.waitForFunction(()=>document.querySelector('[data-action="next"]').disabled);
+  await guestB.waitForFunction(()=>document.querySelector('[data-action="next"]').disabled);
+  await guestA.close();
+  await guestB.close();
+
   await start("/",'[data-script="75"]',75);
   await next.tap();
   await stage.waitForFunction(()=>document.body.dataset.scriptIndex==="76"&&

@@ -10,6 +10,7 @@
  const createButton=document.getElementById("remoteCreateButton");
  const endButton=document.getElementById("remoteEndButton");
  let connection=null,room=null,lastState="",audioPrepared=false;
+ let liveConnection=null,liveLastState="";
 
  // Play silent PCM on each existing element during the local pairing gesture.
  // This prepares the same elements for later cues, including both music players.
@@ -76,11 +77,32 @@
  }
  function publish(){
   if(dialog.open&&startGate.started)dialog.close();
-  if(!connection)return;
+  if(!connection&&!liveConnection)return;
   const state=stageState(),serialized=JSON.stringify(state);
-  if(serialized!==lastState&&connection.send({type:"state",state}))lastState=serialized;
+  if(connection&&serialized!==lastState&&connection.send({type:"state",state}))lastState=serialized;
+  if(liveConnection&&serialized!==liveLastState&&liveConnection.send({type:"state",state}))
+   liveLastState=serialized;
  }
- const observer=new MutationObserver(publish);
+ function startLive(){
+  if(liveConnection||!startGate.started)return;
+  liveConnection=StageRemoteLink.connect({
+   hello:()=>({type:"host"}),
+   onStatus(value){
+    if(value==="connected"){liveLastState="";publish();}
+   },
+   onMessage(message){
+    if(message.type==="ready"){liveLastState="";publish();}
+    else if(message.type==="command"&&StageRemoteLink.actions.includes(message.action)){
+     stageActions[message.action](false);
+     publish();
+    }
+   }
+  });
+ }
+ const observer=new MutationObserver(()=>{
+  if(startGate.started)startLive();
+  publish();
+ });
  observer.observe(document.body,{attributes:true,attributeFilter:["data-cue","data-started","data-preview-cue","data-script-index"]});
  observer.observe(volumeDisplay,{childList:true,attributes:true,attributeFilter:["hidden"]});
  observer.observe(startLabel,{childList:true});
@@ -128,6 +150,9 @@
    }
   });
  }
+ document.getElementById("remoteControlPageButton").addEventListener("click",()=>{
+  window.open(new URL("remote.html",location.href).href,"_blank","noopener");
+ });
  pairButton.addEventListener("click",()=>{dialog.showModal();if(!connection)pair();});
  createButton.addEventListener("click",pair);
  endButton.addEventListener("click",()=>{
@@ -138,6 +163,7 @@
   try{await navigator.clipboard.writeText(link.value);copy.textContent="已複製";}
   catch{link.select();copy.textContent="連結已選取";}
  });
+ if(startGate.started)startLive();
  fetch(new URL("remote/health",location.href),{cache:"no-store"}).then(response=>{
   if(response.headers.get("X-Ai-Shape-Remote")==="1")pairButton.hidden=false;
  }).catch(()=>{});

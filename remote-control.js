@@ -19,7 +19,7 @@
    expired:"配對已結束，請從投影端取得新連結。",
    replaced:"另一台操控裝置已接手。",
    invalid:"請開啟投影端提供的配對連結。",
-   connected:!peer?"等待投影端連線":state?.started?"投影端已連線":"請先在投影端按「開始」"
+   connected:!peer?"等待播放裝置按「開始」":state?.started?"正在操控播放裝置":"正在同步演出狀態…"
   }[connectionState];
   step.textContent=state?`${state.mode==="cues"?"場景模式":"逐句字幕"} · 第 ${state.step} 步 · 共 ${state.total} 步`:"等待投影端";
   cue.textContent=state?.label??"—";
@@ -37,21 +37,26 @@
   connection=null;
   peer=false;
   state=null;
+  const openControl=!location.hash||location.hash==="#";
   const [id,key,...extra]=location.hash.slice(1).split(".");
-  if(extra.length||!StageRemoteLink.validRoom(id,key)||!["http:","https:"].includes(location.protocol)){
+  if(!["http:","https:"].includes(location.protocol)||
+     (!openControl&&(extra.length||!StageRemoteLink.validRoom(id,key)))){
    connectionState="invalid";
    render();
    return;
   }
   connection=StageRemoteLink.connect({
-   hello:()=>({type:"join",id,key}),
+   hello:()=>openControl?{type:"watch"}:{type:"join",id,key},
    onStatus(value){
     connectionState=value;
-    if(value!=="connected")peer=false;
+    if(value!=="connected"){peer=false;state=null;}
     render();
    },
    onMessage(message){
-    if(message.type==="peer")peer=message.connected;
+    if(message.type==="peer"){
+     peer=message.connected;
+     if(!peer)state=null;
+    }
     if(message.type==="state")state=message.state;
     render();
    }

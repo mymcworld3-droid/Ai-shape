@@ -49,7 +49,18 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
  });
 
  const rooms=new Map();
+ // Exactly one active projection is the shared show. Any number of other browsers
+ // can observe and control it; only the projection owns media and show state.
+ let liveStage=null,liveState=null;
+ const liveControls=new Set();
  const wss=new WebSocketServer({noServer:true,maxPayload:8192});
+ function notifyLive(){
+  for(const control of liveControls)send(control,{type:"peer",connected:isOpen(liveStage)});
+ }
+ function publishLive(state){
+  liveState=state;
+  for(const control of liveControls)send(control,{type:"state",state});
+ }
  function notifyPeers(room){
   send(room.stage,{type:"peer",connected:isOpen(room.control)});
   send(room.control,{type:"peer",connected:isOpen(room.stage)});
@@ -70,6 +81,28 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
   if(role==="control"&&room.state)send(socket,{type:"state",state:room.state});
  }
  function authenticate(socket,message){
+  if(message.type==="host"){
+   // The first started projection wins. A second one retries until the first
+   // disconnects, rather than stealing its show.
+   if(isOpen(liveStage)){socket.close(4003,"Projection already active");return;}
+   clearTimeout(socket.authTimer);
+   socket.role="live-stage";
+   liveStage=socket;
+   liveState=null;
+   send(socket,{type:"ready"});
+   notifyLive();
+   return;
+  }
+  if(message.type==="watch"){
+   if(liveControls.size>=128){socket.close(4003,"Too many controllers");return;}
+   clearTimeout(socket.authTimer);
+   socket.role="live-control";
+   liveControls.add(socket);
+   send(socket,{type:"ready"});
+   send(socket,{type:"peer",connected:isOpen(liveStage)});
+   if(liveState)send(socket,{type:"state",state:liveState});
+   return;
+  }
   if(message.type==="create"&&rooms.size<64){
    const room={id:token(12),stageKey:token(24),controlKey:token(24),created:Date.now()};
    rooms.set(room.id,room);
@@ -95,6 +128,25 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
    let message;
    try{message=JSON.parse(data.toString());}catch{return;}
    if(!message||typeof message.type!=="string")return;
+   if(socket.role==="live-stage"){
+    if(socket!==liveStage)return;
+    if(message.type==="state"){
+     const state=stageState(message.state);
+     if(state?.started)publishLive(state);
+    }
+    return;
+   }
+   if(socket.role==="live-control"){
+    if(!liveControls.has(socket))return;
+    if(message.type==="command"&&actions.includes(message.action)&&
+       isOpen(liveStage)&&liveState?.started){
+     const now=Date.now();
+     if(now-(socket.lastCommand??0)<80)return;
+     socket.lastCommand=now;
+     send(liveStage,{type:"command",action:message.action});
+    }
+    return;
+   }
    const {room,role}=socket;
    if(!room){authenticate(socket,message);return;}
    if(rooms.get(room.id)!==room||room[role]!==socket)return;
@@ -112,6 +164,15 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
   });
   socket.on("close",()=>{
    clearTimeout(socket.authTimer);
+   if(socket.role==="live-stage"){
+    if(liveStage===socket){
+     liveStage=null;
+     liveState=null;
+     notifyLive();
+    }
+    return;
+   }
+   if(socket.role==="live-control"){liveControls.delete(socket);return;}
    const {room,role}=socket;
    if(!room||room[role]!==socket)return;
    room[role]=null;

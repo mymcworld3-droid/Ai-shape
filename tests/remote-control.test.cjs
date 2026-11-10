@@ -93,3 +93,49 @@ test("the public server supports media ranges and rejects foreign origins and fi
  const foreign=connect("https://other.example");
  assert.match((await once(foreign,"error"))[0].message,/403/);
 });
+
+
+test("shared live show allows multiple independent controllers without pairing", {timeout:7000}, async t=>{
+ const {client}=await startRelay(t);
+ const first=await client(),second=await client();
+ first.send({type:"watch"});
+ second.send({type:"watch"});
+ assert.deepEqual(await first.next("ready"),{type:"ready"});
+ assert.deepEqual(await second.next("ready"),{type:"ready"});
+ assert.equal((await first.next("peer")).connected,false);
+ assert.equal((await second.next("peer")).connected,false);
+
+ const projection=await client();
+ projection.send({type:"host"});
+ assert.deepEqual(await projection.next("ready"),{type:"ready"});
+ assert.equal((await first.next("peer")).connected,true);
+ assert.equal((await second.next("peer")).connected,true);
+ const state={started:true,mode:"script",step:5,total:380,label:"Subtitle 5",
+  volumes:{voice:100,effect:90,music:85},volumeVisible:false};
+ projection.send({type:"state",state});
+ assert.deepEqual((await first.next("state")).state,state);
+ assert.deepEqual((await second.next("state")).state,state);
+ first.send({type:"command",action:"next"});
+ assert.deepEqual(await projection.next("command"),{type:"command",action:"next"});
+ second.send({type:"command",action:"effectDown"});
+ assert.deepEqual(await projection.next("command"),{type:"command",action:"effectDown"});
+
+ const competing=await client(),busy=once(competing.socket,"close");
+ competing.send({type:"host"});
+ assert.equal((await busy)[0],4003);
+ projection.socket.close();
+ assert.equal((await first.next("peer")).connected,false);
+ assert.equal((await second.next("peer")).connected,false);
+
+ const replacement=await client();
+ replacement.send({type:"host"});
+ assert.deepEqual(await replacement.next("ready"),{type:"ready"});
+ assert.equal((await first.next("peer")).connected,true);
+ assert.equal((await second.next("peer")).connected,true);
+ const restored={...state,step:0,label:"New show"};
+ replacement.send({type:"state",state:restored});
+ assert.deepEqual((await first.next("state")).state,restored);
+ assert.deepEqual((await second.next("state")).state,restored);
+ first.send({type:"command",action:"previous"});
+ assert.deepEqual(await replacement.next("command"),{type:"command",action:"previous"});
+});
