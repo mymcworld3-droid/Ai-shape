@@ -141,6 +141,7 @@
    label=stepButtons[step].children[1].firstChild.textContent.trim();
   }
   return {started,step,total,label,mode:scriptMode?"script":"cues",
+   audioReady:!remoteAudioPreparing,
    voiceStatus:voiceStatus(),
    nextPreview:scriptMode?null:nextScenePrompt(step),
    volumes:{voice:voiceVolume,effect:effectVolume,music:otherVolume},
@@ -190,6 +191,7 @@
  observer.observe(document.body,{attributes:true,attributeFilter:["data-cue","data-started","data-preview-cue","data-script-index"]});
  observer.observe(volumeDisplay,{childList:true,attributes:true,attributeFilter:["hidden"]});
  observer.observe(startLabel,{childList:true});
+ window.addEventListener("stageassetschange",publish);
 
  function resetPairing(message){
   connection?.stop();
