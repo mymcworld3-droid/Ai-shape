@@ -24,10 +24,12 @@
   // A pure visual cue may have its first speech in the following paragraph.
   const upcoming=inStep.length?inStep:entries.filter(entry=>entry.paragraph>paragraph&&
    entry.paragraph<=paragraph+2);
-  const before=entries.filter(entry=>entry.paragraph<paragraph).at(-1);
+  // Keep the two most recent spoken lines in original script order. Both are
+  // cues heard BEFORE the upcoming scene; do not include its opening lines.
+  const before=entries.filter(entry=>entry.paragraph<paragraph).slice(-2);
   const format=entry=>({speaker:entry.speaker||"舞台",text:entry.text});
   return {step:step+1,label:button.children[1].firstChild.textContent.trim(),
-   leadIn:before?format(before):null,lines:upcoming.slice(0,3).map(format)};
+   leadIns:before.map(format),lines:upcoming.slice(0,3).map(format)};
  }
  function applyRemoteCommand(message){
   if(!StageRemoteLink.actions.includes(message.action))return;
