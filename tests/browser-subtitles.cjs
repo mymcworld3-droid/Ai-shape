@@ -158,7 +158,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     assert.equal(await page.locator('#actOneBgm').evaluate(a=>a.paused),true);
    }
    if(data.entries[i].action==='reveal'){
-    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current?.src),'assets/audio/background/act-1/1-14.mp3');
+    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current?.src),'assets/audio/background/act-1/1-92.mp3');
     await page.waitForFunction(()=>document.querySelector('#roomRevealVideo').ended);
    }
   }
@@ -186,14 +186,15 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
    if(from.group!==to.group&&from.group){await page.waitForFunction(()=>!['starting','playing'].includes(scriptShow.active?.state),null,{timeout:60000});}
    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i,'entry '+i);
    const soundtrackByParagraph={
-    30:'assets/audio/background/act-1/15-91.mp3',
-    99:'assets/audio/background/act-1/91-92(轉場).mp3',
-    104:'assets/audio/background/act-1/92-174.mp3',
+    30:'assets/audio/background/act-1/1-92.mp3',
+    99:'assets/audio/background/act-1/92-93(轉場).mp3',
+    104:'assets/audio/background/act-1/94-174.mp3',
     179:'assets/audio/background/act-1/174-175(轉場).mp3',
-    186:'assets/audio/background/act-2/175-180.mp3',
-    290:'assets/audio/background/act-3/Act3.mp3',
+    186:'assets/audio/background/act-2/176-181.mp3',
+    284:'assets/audio/background/act-3/after-chris-transition.mp3',
+    290:'assets/audio/background/act-3/after-chris-transition.mp3',
     403:null,
-    407:'assets/audio/background/act-4/Act4.m4a',
+    407:'assets/audio/background/act-4/Ending.m4a',
     416:null
    };
    if(Object.prototype.hasOwnProperty.call(soundtrackByParagraph,to.paragraph)){
@@ -214,7 +215,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     }
    }
    const expectedEffects={
-    doorOpen:['scriptEffect-doorOpen','assets/audio/effects/heavy-auto-door.mp3'],
+    doorOpen:['scriptEffect-doorOpen','assets/audio/effects/door-open.mp3'],
     timerClick:['scriptEffect-timerClick','assets/audio/effects/timer-click.wav'],
     memoryClick:['scriptEffect-memoryClick','assets/audio/effects/light-click.wav'],
     officeBang:['scriptEffect-officeBang','assets/audio/door-kick.wav'],

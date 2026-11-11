@@ -44,7 +44,7 @@ test("all 32 scene cues cover Act IV as well as the existing soundtrack",()=>{
  assert.equal(cueSteps.dark,20);
  assert.equal(trackForStep(cueSteps.dark,config.actOneMusic),null);
  assert.equal(trackForStep(cueSteps['room-reveal'],config.actOneMusic).src,
-  'assets/audio/background/act-1/1-14.mp3');
+  'assets/audio/background/act-1/1-92.mp3');
  for(const cue of STAGE_START_CUES){
   assert.equal(Number.isInteger(cueSteps[cue]),true,'missing paragraph for '+cue);
   const track=trackForStep(cueSteps[cue],config.actOneMusic);
@@ -52,27 +52,27 @@ test("all 32 scene cues cover Act IV as well as the existing soundtrack",()=>{
   else assert.ok(track,'no music for '+cue);
  }
  assert.equal(trackForStep(cueSteps.card,config.actOneMusic).src,
-  'assets/audio/background/act-1/15-91.mp3');
+  'assets/audio/background/act-1/1-92.mp3');
  assert.equal(trackForStep(cueSteps['door-open'],config.actOneMusic).src,
-  'assets/audio/background/act-1/15-91.mp3');
+  'assets/audio/background/act-1/1-92.mp3');
  assert.equal(trackForStep(cueSteps.blackout,config.actOneMusic).src,
-  'assets/audio/background/act-1/91-92(轉場).mp3');
+  'assets/audio/background/act-1/92-93(轉場).mp3');
  assert.equal(trackForStep(cueSteps['memory-light'],config.actOneMusic).src,
-  'assets/audio/background/act-1/92-174.mp3');
+  'assets/audio/background/act-1/94-174.mp3');
  assert.equal(trackForStep(cueSteps['memory-blackout'],config.actOneMusic).src,
   'assets/audio/background/act-1/174-175(轉場).mp3');
  assert.equal(trackForStep(cueSteps['past-intro'],config.actOneMusic).src,
-  'assets/audio/background/act-2/175-180.mp3');
+  'assets/audio/background/act-2/176-181.mp3');
  assert.equal(trackForStep(cueSteps['office-light'],config.actOneMusic).src,
-  'assets/audio/background/act-2/181-263.mp3');
+  'assets/audio/background/act-2/182-264.mp3');
  assert.equal(trackForStep(cueSteps['past-reflection'],config.actOneMusic).src,
-  'assets/audio/background/act-2/264-277.mp3');
+  'assets/audio/background/act-2/265-278.mp3');
  assert.equal(trackForStep(cueSteps['discussion'],config.actOneMusic).src,
-  'assets/audio/background/act-3/Act3.mp3');
+  'assets/audio/background/act-3/after-chris-transition.mp3');
  assert.equal(trackForStep(cueSteps['ending-light'],config.actOneMusic).src,
-  'assets/audio/background/act-4/Act4.m4a');
+  'assets/audio/background/act-4/Ending.m4a');
  assert.equal(trackForStep(cueSteps['ending-reveal'],config.actOneMusic).src,
-  'assets/audio/background/act-4/Act4.m4a');
+  'assets/audio/background/act-4/Ending.m4a');
 });
  
 test("opening first three steps are pure silence; cue 4 fades the first track in",async()=>{
