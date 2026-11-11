@@ -42,3 +42,7 @@ button:disabled,input:disabled{opacity:.4;cursor:default}
 .level-row output{min-width:74px;text-align:right;color:#9ab0c9;font-size:.78rem;font-variant-numeric:tabular-nums}
 .mixer>button{width:100%;margin-top:8px;font-size:.9rem}
 .mixer>button[aria-pressed=true]{border-color:#8bbdf0;color:#cce7ff}
+
+.voice-status{margin:11px 0 0;padding:11px 12px;border:1px solid #536e88;
+ border-radius:9px;background:#1b3042;color:#cfe6ff;font-size:.83rem;line-height:1.55}
+.voice-status[hidden]{display:none!important}
