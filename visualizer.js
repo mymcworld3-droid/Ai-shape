@@ -3,6 +3,8 @@ const config=window.OPENING_CONFIG;
 const scriptMode=new URLSearchParams(location.search).get("mode")!=="cues";
 let transcript=null,scriptVideoPlaying=false;
 let remoteAudioPreparing=false;
+let audioRecovery=null;
+const autoVoiceRetryDelays=[450,1200];
 const audioElement=document.getElementById("openingAudio");
 const effectElement=document.getElementById("doorKickAudio");
 const memoryDoorOpenAudio=document.getElementById("memoryDoorOpenAudio");
@@ -171,6 +173,8 @@ const stage=new StageOpening.StageCueController({
    selectionPrompt:"selectionPromptState",selectionOne:"selectionOneState",
    selectionTwo:"selectionTwoState",selectionFinal:"selectionFinalState"}[kind];
   document.body.dataset[key]=state;
+  if((state==="playing"||kind==="narration"&&state==="narration")&&audioRecovery?.kind===kind)
+   completeAudioRecovery(kind);
   if(kind==="narration"&&state==="ready")animate("scene",0,config.settleDurationMs);
   if(kind==="memoryVoice"){
    if(state==="playing")animate("aiExpansion",1,config.memory.voiceExpandMs);
@@ -215,7 +219,7 @@ const stage=new StageOpening.StageCueController({
    selectionPrompt:"selectionPromptError",selectionOne:"selectionOneError",
    selectionTwo:"selectionTwoError",selectionFinal:"selectionFinalError"}[kind]]="true";
   notifyAssetsChange();
-  showAudioPermissionPrompt(error);
+  scheduleAudioRecovery(kind,error);
   console.error("[Opening]",error);
  }
 });
@@ -470,10 +474,88 @@ function primeRemoteNarrations(){
   catch{finish();}
  }
 }
-function showAudioPermissionPrompt(error){
- if(error?.name!=="NotAllowedError")return;
+// A WebSocket event has no trusted user activation. Retry transient audio
+// failures automatically; a persistent NotAllowedError can only be resolved
+// by one direct interaction on the projector under browser autoplay policies.
+// Never advance the cue here: replay the exact rejected narration instead.
+function retryableVoice(kind){
+ if(!startGate.started)return null;
+ if(scriptMode){
+  if(transcript?.entry?.group===kind&&transcript.active?.group===kind&&
+     transcript.active.state==="error")
+   return ()=>transcript.play(kind);
+  return null;
+ }
+ const cue=stage.state;
+ if(kind==="narration"&&cue==="welcome"&&opening.state==="ready")
+  return ()=>opening.advance();
+ if(kind==="memoryVoice"&&cue==="memory-welcome"&&stage.memory?.mediaStates.memoryVoice==="error")
+  return ()=>stage.memory.play("memoryVoice");
+ const cues={
+  selectionPrompt:"vote-prompt",selectionOne:"vote-one",
+  selectionTwo:"vote-two",selectionFinal:"vote-final",
+  endingComplete:"ending-complete",endingReveal:"ending-reveal"
+ };
+ const expectedCue=cues[kind];
+ if(!expectedCue||cue!==expectedCue)return null;
+ const owner=kind.startsWith("selection")?stage.voting:stage.ending;
+ if(owner?.mediaStates[kind]!=="error")return null;
+ return ()=>owner.play(kind);
+}
+function updateAudioRecoveryUI(){
  const dock=document.getElementById("audioUnlockDock");
- if(dock)dock.hidden=false;
+ if(dock)dock.hidden=!audioRecovery?.needsGesture;
+ document.body.dataset.audioRecovery=audioRecovery?
+  audioRecovery.needsGesture?"needs-gesture":"retrying":"ready";
+ notifyAssetsChange();
+}
+function completeAudioRecovery(kind){
+ if(!audioRecovery||audioRecovery.kind!==kind)return;
+ clearTimeout(audioRecovery.timer);
+ audioRecovery=null;
+ updateAudioRecoveryUI();
+}
+window.stageAudioRecoveryStatus=()=>audioRecovery?{
+ state:audioRecovery.needsGesture?"needs-gesture":"retrying",
+ attempt:audioRecovery.attempt
+}:null;
+function scheduleAudioRecovery(kind,error){
+ if(error?.name!=="NotAllowedError")return;
+ // Only recover recordings; a rejected effect or video must not skip a step.
+ if(!retryableVoice(kind))return;
+ if(!audioRecovery||audioRecovery.kind!==kind){
+  if(audioRecovery)clearTimeout(audioRecovery.timer);
+  audioRecovery={kind,attempt:0,timer:null,needsGesture:false};
+ }
+ const recovery=audioRecovery;
+ clearTimeout(recovery.timer);
+ if(recovery.attempt>=autoVoiceRetryDelays.length){
+  recovery.needsGesture=true;
+  updateAudioRecoveryUI();
+  return;
+ }
+ const wait=autoVoiceRetryDelays[recovery.attempt++];
+ recovery.needsGesture=false;
+ updateAudioRecoveryUI();
+ recovery.timer=setTimeout(()=>{
+  if(audioRecovery!==recovery)return;
+  const retry=retryableVoice(kind);
+  if(!retry){completeAudioRecovery(kind);return;}
+  if(audioCtx?.state==="suspended")audioCtx.resume().catch(()=>{});
+  try{Promise.resolve(retry()).catch(err=>scheduleAudioRecovery(kind,err));}
+  catch(err){scheduleAudioRecovery(kind,err);}
+ },wait);
+}
+function retryVoiceOnProjector(){
+ if(!audioRecovery)return;
+ const kind=audioRecovery.kind,retry=retryableVoice(kind);
+ if(!retry){completeAudioRecovery(kind);return;}
+ clearTimeout(audioRecovery.timer);
+ audioRecovery.needsGesture=false;
+ updateAudioRecoveryUI();
+ if(audioCtx?.state==="suspended")audioCtx.resume().catch(()=>{});
+ try{Promise.resolve(retry()).catch(err=>scheduleAudioRecovery(kind,err));}
+ catch(err){scheduleAudioRecovery(kind,err);}
 }
 // Audio RMS measured after the media elements' volume settings.
 // -60 dBFS is the display's silence floor, 0 dBFS is digital full scale.
@@ -499,21 +581,7 @@ function requestStageFullscreen(){
   }catch(_){}
  }
 }
-document.getElementById("audioUnlockButton").addEventListener("click",()=>{
- const dock=document.getElementById("audioUnlockDock");
- dock.hidden=true;
- if(audioCtx?.state==="suspended")audioCtx.resume().catch(()=>{});
- if(scriptMode&&transcript?.active?.state==="error"){
-  transcript.play(transcript.active.group);
- }else{
-  // Permission recovery must replay the failed voice inside this click
-  // gesture, even if its prior scene-transition animation still has a lock.
-  stage.busyUntil=0;
-  for(const controller of [stage.memory,stage.voting,stage.ending])
-   if(controller)controller.busyUntil=0;
-  advanceStage(false);
- }
-});
+document.getElementById("audioUnlockButton").addEventListener("click",retryVoiceOnProjector);
 function advanceStage(fullscreen=true){
  if(!startGate.started)return;
  if(scriptMode){transcript.next();if(fullscreen)requestStageFullscreen();return;}
