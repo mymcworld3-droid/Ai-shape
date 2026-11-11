@@ -57,6 +57,34 @@ const {createServer}=require("../server.cjs");
   assert.equal(await guestA.locator("#nextScenePrompt").isVisible(),true);
   assert.match(await guestA.locator("#nextPromptStep").textContent(),/第 1 步/);
   assert.match(await guestA.locator("#nextPromptLines").textContent(),/What is going on/);
+  // The whole scene remote must fit without scrolling, even in iPad Safari
+  // Split View and short mobile landscapes. Retain all three preview lines,
+  // three sliders, three live meters, cue navigation and visibility toggle.
+  for(const viewport of [
+   {width:640,height:900},{width:390,height:844},
+   {width:390,height:667},{width:320,height:568},{width:600,height:500}
+  ]){
+   await guestA.setViewportSize(viewport);
+   await guestA.waitForFunction(({width,height})=>{
+    const main=document.querySelector("main"),rect=main.getBoundingClientRect();
+    const parts=["header",".cue",".navigation","#nextScenePrompt",".mixer",
+     '[data-action="previous"]','[data-action="next"]',
+     "#sliderVoice","#sliderEffect","#sliderMusic",
+     "#meterVoice","#meterEffect","#meterMusic",
+     '[data-action="toggleVolumeDisplay"]'];
+    return Math.abs(window.innerWidth-width)<=1&&Math.abs(window.innerHeight-height)<=1&&
+     rect.left>=-1&&rect.right<=width+1&&rect.top>=-1&&rect.bottom<=height+1&&
+     parts.every(selector=>{
+      const el=document.querySelector(selector),r=el?.getBoundingClientRect();
+      return r&&r.width>0&&r.height>0&&r.left>=-1&&
+       r.right<=width+1&&r.top>=-1&&r.bottom<=height+1;
+     });
+   },viewport,{timeout:5000});
+   assert.equal(await guestA.locator("#nextPromptLines li").count(),3,
+    "No prompt dialogue is discarded at "+viewport.width+"x"+viewport.height);
+   assert.equal(await guestA.evaluate(()=>getComputedStyle(document.body).overflowY),"hidden");
+  }
+  await guestA.setViewportSize({width:390,height:844});
   await guestA.locator("#sliderEffect").evaluate(slider=>{
    slider.value="95";
    slider.dispatchEvent(new Event("input",{bubbles:true}));
