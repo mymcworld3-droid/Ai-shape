@@ -444,9 +444,17 @@ function primeRemoteNarrations(){
   document.getElementById("completeAudio"),document.getElementById("revealTruthAudio")])]
   .filter(media=>media?.getAttribute("src")&&!media.error);
  if(!entries.length)return;
+ remoteAudioPreparing=true;
+ notifyAssetsChange();
  gain.gain.value=0;
  let unfinished=entries.length;
- function release(){if(--unfinished===0)gain.gain.value=1;}
+ function release(){
+  if(--unfinished===0){
+   gain.gain.value=1;
+   remoteAudioPreparing=false;
+   notifyAssetsChange();
+  }
+ }
  for(const media of entries){
   let finished=false;
   const finish=()=>{
