@@ -37,13 +37,13 @@ function stageState(state){
   if(lines.every(Boolean)&&(next.leadIn==null||leadIn))
    nextPreview={step:next.step,label:next.label.slice(0,120),leadIn,lines};
  }
- const voice=state.voiceStatus;
+ const incomingVoiceStatus=state.voiceStatus;
  let voiceStatus=null;
- if(voice&&typeof voice==="object"&&
-  ["starting","playing","paused","finished","error","missing","ready","countdown"].includes(voice.state)&&
-  typeof voice.holdNext==="boolean"&&
-  (voice.remaining===null||Number.isInteger(voice.remaining)&&voice.remaining>=0&&voice.remaining<=3600))
-  voiceStatus={state:voice.state,remaining:voice.remaining,holdNext:voice.holdNext};
+ if(incomingVoiceStatus&&typeof incomingVoiceStatus==="object"&&
+  ["starting","playing","paused","finished","error","missing","ready","countdown"].includes(incomingVoiceStatus.state)&&
+  typeof incomingVoiceStatus.holdNext==="boolean"&&
+  (incomingVoiceStatus.remaining===null||Number.isInteger(incomingVoiceStatus.remaining)&&incomingVoiceStatus.remaining>=0&&incomingVoiceStatus.remaining<=3600))
+  voiceStatus={state:incomingVoiceStatus.state,remaining:incomingVoiceStatus.remaining,holdNext:incomingVoiceStatus.holdNext};
  return {started:state.started,mode:state.mode,step:state.step,total:state.total,
   label:state.label.slice(0,500),...(nextPreview?{nextPreview}:{}),
   ...(typeof state.audioReady==="boolean"?{audioReady:state.audioReady}:{}),
