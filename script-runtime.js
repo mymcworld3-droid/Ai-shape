@@ -124,3 +124,17 @@ if(scriptMode){
   if(previewEntry)applyEntry(previewEntry,0);
   else subtitleRenderer.render(null);};
 }
+
+// Scene-mode narration shows the exact AI VOICE lines from the same script.
+// Captions advance along the recording; operator-controlled script captions do not change.
+if(!scriptMode){
+ const renderer=new SubtitleMotion.Renderer({element:document.getElementById("subtitles")});
+ window.sceneVoiceSubtitles=SceneAiSubtitles.mount({
+  entries:SHOW_SCRIPT.entries,
+  media:{opening:audioElement,memory:memoryAudio,
+   prompt:selectionAudio.prompt,one:selectionAudio.one,
+   two:selectionAudio.two,final:selectionAudio.final,
+   complete:endingCompleteAudio,revealTruth:endingRevealAudio},
+  renderer,isStarted:()=>startGate.started
+ });
+}
