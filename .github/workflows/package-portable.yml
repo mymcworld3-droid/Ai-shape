@@ -1,0 +1,60 @@
+name: Build Power Play portable (no bonus)
+on:
+  push:
+    branches: [portable-no-bonus-20261112]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test original show
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test
+      - name: Build and smoke-test clean offline app
+        run: |
+          npm prune --omit=dev --ignore-scripts --no-audit --no-fund
+          python3 tools/build-portable.py
+          for f in .portable-build/app/*.js .portable-build/app/*.cjs; do node --check "$f"; done
+          node tools/check-portable.cjs .portable-build/app
+      - name: Bundle offline Windows and Mac launchers
+        run: bash tools/package-portable.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PowerPlay-Portable-Downloads
+          path: .portable-build/releases/*.zip
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish downloadable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="powerplay-portable-2026-11-12-v1"
+          cat > .portable-build/release-notes.md <<'DOC'
+          # Power Play 免安裝版（無幕後花絮）
+          
+          下載 ZIP，解壓縮後直接雙擊啟動，不用安裝 Node.js。
+          - Mac：PowerPlay-Portable-Mac-Universal.zip（Apple 晶片與 Intel 通用）。雙擊「啟動演出.command」。
+          - Windows 64 位元：PowerPlay-Portable-Windows-x64.zip。雙擊「啟動演出.bat」。
+          
+          保留四幕背景音樂、音效、AI Voice 字幕、遙控、音量與步驟控制。
+          刪除幕後花絮：第四幕最終全暗就是最後一步。
+          支援無網際網路離線播放；手機遙控需與播放電腦處於同一可信任區域網路。
+          Mac 第一次可能需在系統設定的隱私權與安全性允許開啟。
+          安裝包已排除開發文件、測試、預覽截圖以及未使用的舊音檔。
+          DOC
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" .portable-build/releases/*.zip --clobber
+          else
+            gh release create "$TAG" .portable-build/releases/*.zip \
+              --target "$GITHUB_SHA" --title "Power Play 免安裝版（無幕後花絮）" \
+              --notes-file .portable-build/release-notes.md
+          fi
