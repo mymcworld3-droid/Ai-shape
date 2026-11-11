@@ -38,6 +38,12 @@ function stageState(state){
    nextPreview={step:next.step,label:next.label.slice(0,120),leadIn,lines};
  }
  const incomingVoiceStatus=state.voiceStatus;
+ let audioRecovery=null;
+ if(state.audioRecovery&&
+    ["retrying","needs-gesture"].includes(state.audioRecovery.state)&&
+    Number.isInteger(state.audioRecovery.attempt)&&
+    state.audioRecovery.attempt>=0&&state.audioRecovery.attempt<=3)
+  audioRecovery={state:state.audioRecovery.state,attempt:state.audioRecovery.attempt};
  let voiceStatus=null;
  if(incomingVoiceStatus&&typeof incomingVoiceStatus==="object"&&
   ["starting","playing","paused","finished","error","missing","ready","countdown"].includes(incomingVoiceStatus.state)&&
@@ -47,6 +53,7 @@ function stageState(state){
  return {started:state.started,mode:state.mode,step:state.step,total:state.total,
   label:state.label.slice(0,500),...(nextPreview?{nextPreview}:{}),
   ...(typeof state.audioReady==="boolean"?{audioReady:state.audioReady}:{}),
+  ...(audioRecovery?{audioRecovery}:{}),
   ...(voiceStatus?{voiceStatus}:{}),
   volumes:{voice,effect,music},volumeVisible:state.volumeVisible};
 }
