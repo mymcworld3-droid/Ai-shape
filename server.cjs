@@ -187,12 +187,9 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
     if(message.type==="command"&&isOpen(liveStage)&&liveState?.started){
      const command=validateCommand(message);
      if(!command)return;
-     const now=Date.now(),identifier=command.action==="setVolume"?
-      "setVolume:"+command.channel:command.action;
-     if(command.action!=="setVolume"&&socket.lastAction===identifier&&
-        now-(socket.lastCommand??0)<80)return;
-     socket.lastAction=identifier;
-     socket.lastCommand=now;
+     // Each WebSocket command comes from a distinct click/tap. Do not
+     // discard consecutive "next" presses: one press = one subtitle,
+     // including several quick lines inside a single AI narration.
      send(liveStage,command);
     }
     return;
@@ -213,11 +210,6 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
    }else if(message.type==="command"&&isOpen(room.stage)){
     const command=validateCommand(message);
     if(!command)return;
-    const now=Date.now();
-    if(command.action!=="setVolume"&&socket.lastAction===command.action&&
-       now-(socket.lastCommand??0)<80)return;
-    socket.lastAction=command.action;
-    socket.lastCommand=now;
     send(room.stage,command);
    }
   });
