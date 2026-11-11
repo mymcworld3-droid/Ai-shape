@@ -102,11 +102,12 @@ if(scriptMode){
    if(entry.action==='selection-button'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
   },
   onVoice(group,state){document.body.dataset.scriptVoice=group+':'+state;
+   if(state==='playing')completeAudioRecovery(group);
    if(state==='starting'&&voices[group])prepareAudio(voices[group]);
    if(transcript?.entry?.group===group)applyEntry(transcript.entry);},
   onVideo(playing){scriptVideoPlaying=playing;},
   onError(kind,error){document.body.dataset.scriptMediaError=kind;
-   showAudioPermissionPrompt(error);console.error('[Script]',kind,error);}
+   scheduleAudioRecovery(kind,error);console.error('[Script]',kind,error);}
  });
  window.scriptShow=transcript;
  window.scriptProjectionFrame=()=>{
