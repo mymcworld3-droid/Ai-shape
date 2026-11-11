@@ -20,6 +20,34 @@
  const meterLabels={voice:document.getElementById("levelVoice"),
   effect:document.getElementById("levelEffect"),music:document.getElementById("levelMusic")};
  const editing=new Set(),lastSent=Object.create(null),pending=Object.create(null);
+ const layout=document.querySelector("main");
+ let fitFrame=0;
+ // Keep every cue and all three mixer channels visible in the available
+ // Safari Split View height. Scale only when the compact layout still needs it.
+ function scheduleLayoutFit(){
+  if(fitFrame)return;
+  fitFrame=requestAnimationFrame(()=>{
+   fitFrame=0;
+   const viewport=window.visualViewport;
+   const width=viewport?.width||window.innerWidth;
+   const height=viewport?.height||window.innerHeight;
+   const availableWidth=Math.max(160,width-12);
+   const availableHeight=Math.max(120,height-6);
+   const sizeAt=scale=>{
+    layout.style.width=Math.min(660,availableWidth/scale)+"px";
+    layout.style.setProperty("--remote-fit",String(scale));
+    return layout.scrollHeight*scale;
+   };
+   if(sizeAt(1)<=availableHeight)return;
+   let lo=.3,hi=1;
+   for(let i=0;i<13;i++){
+    const mid=(lo+hi)/2;
+    if(sizeAt(mid)<=availableHeight)lo=mid;
+    else hi=mid;
+   }
+   sizeAt(lo);
+  });
+ }
  let connection,connectionState,peer=false,state=null,levels=null;
  function active(){return connectionState==="connected"&&peer&&Boolean(state?.started)&&state.audioReady!==false;}
  function renderMeters(){
@@ -52,6 +80,8 @@
   }
  }
  function render(){
+  document.body.classList.toggle("is-connected",
+   connectionState==="connected"&&peer&&Boolean(state?.started));
   status.textContent={
    connecting:"正在連線…",retrying:"連線中斷，正在重連…",
    expired:"配對已結束，請重新開啟操控連結。",
@@ -94,6 +124,7 @@
   }
   renderPrompt();
   renderMeters();
+  scheduleLayoutFit();
  }
  function sendVolume(channel,final=false){
   if(!active())return;
@@ -157,5 +188,9 @@
   if(!button.disabled)connection?.send({type:"command",action:button.dataset.action});
  });
  window.addEventListener("hashchange",join);
+ window.addEventListener("resize",scheduleLayoutFit);
+ window.visualViewport?.addEventListener("resize",scheduleLayoutFit);
+ window.addEventListener("orientationchange",scheduleLayoutFit);
+ document.fonts?.ready?.then(scheduleLayoutFit);
  join();
 })();
