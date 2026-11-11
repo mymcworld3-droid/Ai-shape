@@ -1,0 +1,55 @@
+name: Verify portable bundles on real operating systems
+on:
+  push:
+    branches: [portable-no-bonus-20261112]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download released Mac bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .verify
+          gh release download powerplay-portable-2026-11-12-v1 \
+            --pattern "PowerPlay-Portable-Mac-Universal.zip" --dir .verify
+          unzip -q .verify/PowerPlay-Portable-Mac-Universal.zip -d .verify
+      - name: Run bundled Mac runtime and offline smoke checks
+        run: |
+          set -eu
+          case "$(uname -m)" in
+            arm64) NODE=".verify/PowerPlay-Mac/runtime/node-arm64" ;;
+            *) NODE=".verify/PowerPlay-Mac/runtime/node-x64" ;;
+          esac
+          chmod +x "$NODE"
+          "$NODE" --version
+          "$NODE" tools/check-portable.cjs .verify/PowerPlay-Mac/app
+          test -x ".verify/PowerPlay-Mac/啟動演出.command"
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download released Windows bundle
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force -Path .verify | Out-Null
+          gh release download powerplay-portable-2026-11-12-v1 --pattern "PowerPlay-Portable-Windows-x64.zip" --dir .verify
+          Expand-Archive -Path .verify/PowerPlay-Portable-Windows-x64.zip -DestinationPath .verify -Force
+      - name: Run bundled Windows runtime and offline smoke checks
+        shell: pwsh
+        run: |
+          $node = ".verify/PowerPlay-Windows/runtime/node.exe"
+          & $node --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $node tools/check-portable.cjs .verify/PowerPlay-Windows/app
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path ".verify/PowerPlay-Windows/啟動演出.bat")) { exit 1 }
