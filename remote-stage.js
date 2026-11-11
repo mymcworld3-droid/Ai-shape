@@ -143,6 +143,7 @@
   }
   return {started,step,total,label,mode:scriptMode?"script":"cues",
    audioReady:!remoteAudioPreparing,
+   audioRecovery:window.stageAudioRecoveryStatus?.()??null,
    voiceStatus:voiceStatus(),
    nextPreview:scriptMode?null:nextScenePrompt(step),
    volumes:{voice:voiceVolume,effect:effectVolume,music:otherVolume},
