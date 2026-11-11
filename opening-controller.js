@@ -209,6 +209,13 @@
 
     enter() {
       if (this.destroyed || this.state !== "waiting" || !this.isReady()) return false;
+      // Memory narration belongs to the following cue, never the light reveal.
+      // Reset a stale/preloaded media position before entering the new room.
+      const voice = this.media.memoryVoice;
+      if (voice) {
+        voice.pause();
+        if (voice.currentTime !== 0) voice.currentTime = 0;
+      }
       this.lock(this.fadeMs);
       this.setCue("memory-light");
       return this.play("memoryClick");
