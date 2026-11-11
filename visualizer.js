@@ -33,6 +33,7 @@ let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Arr
 const audioSources=new Map();
 const meterChannels=["voice","effect","music"];
 const meterAnalysers=Object.create(null),meterBuffers=Object.create(null);
+const outputGains=Object.create(null);
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1,graphicGlowScale=1;
 let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0;
 let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
@@ -214,6 +215,7 @@ const stage=new StageOpening.StageCueController({
    selectionPrompt:"selectionPromptError",selectionOne:"selectionOneError",
    selectionTwo:"selectionTwoError",selectionFinal:"selectionFinalError"}[kind]]="true";
   notifyAssetsChange();
+  showAudioPermissionPrompt(error);
   console.error("[Opening]",error);
  }
 });
@@ -222,8 +224,10 @@ const startGate=new StageOpening.StartGate({
  isReady:showAssetsReady,
  onStart(){
   previewCue=null;previewAiStartedAt=null;
-  // Register the stage's actual audio output while the user starts playback.
+  // Register and authorize the voice elements while the trusted Start
+  // gesture is still active. Remote commands arrive without that gesture.
   for(const media of document.querySelectorAll("audio"))prepareAudio(media);
+  primeRemoteNarrations();
   document.body.dataset.started="true";
   document.body.dataset.view="page";
   document.body.dataset.previewCue="dark";
@@ -398,11 +402,13 @@ function prepareAudio(media=audioElement){
    analyser.fftSize=1024;analyser.minDecibels=-90;analyser.maxDecibels=-10;
    analyser.smoothingTimeConstant=.22;
    for(const channel of meterChannels){
-    const node=audioCtx.createAnalyser();
+    const node=audioCtx.createAnalyser(),gain=audioCtx.createGain();
     node.fftSize=2048;
-    node.connect(audioCtx.destination);
+    node.connect(gain);
+    gain.connect(audioCtx.destination);
     meterAnalysers[channel]=node;
     meterBuffers[channel]=new Float32Array(node.fftSize);
+    outputGains[channel]=gain;
    }
    // Narration continues to drive the existing AI visualizer.
    analyser.connect(meterAnalysers.voice);
@@ -416,6 +422,50 @@ function prepareAudio(media=audioElement){
   }
   if(audioCtx.state==="suspended")audioCtx.resume().catch(error=>console.warn("[Opening] Audio analysis:",error));
  }catch(error){console.warn("[Opening] Audio analysis unavailable:",error);}
+}
+// A projector's Start click is the only guaranteed local user gesture.
+// Warm up narration elements once with their existing audio files, routed
+// through a temporarily silent WebAudio gain. Safari otherwise may block
+// a later play() invoked by a WebSocket command. Do not touch the voice
+// scheduled to play immediately when rehearsing from a speech cue.
+function primeRemoteNarrations(){
+ const selected=scriptMode?SHOW_SCRIPT.entries[window.selectedScriptStartIndex??0]:
+  null;
+ const directCue=scriptMode?selected?.group:window.selectedSceneStartCue;
+ const immediate=new Set(["opening","memory","prompt","one","two","final",
+  "complete","revealTruth","welcome","memory-welcome","vote-prompt",
+  "vote-one","vote-two","vote-final","ending-complete","ending-reveal"]);
+ // At a direct speech rehearsal start the target's own play is already
+ // invoked in the trusted gesture. Never mute that real first sentence.
+ if(immediate.has(directCue))return;
+ const gain=outputGains.voice;
+ if(!gain)return;
+ const entries=[...new Set([...narrationMedia,
+  document.getElementById("completeAudio"),document.getElementById("revealTruthAudio")])]
+  .filter(media=>media?.getAttribute("src")&&!media.error);
+ if(!entries.length)return;
+ gain.gain.value=0;
+ let unfinished=entries.length;
+ function release(){if(--unfinished===0)gain.gain.value=1;}
+ for(const media of entries){
+  let finished=false;
+  const finish=()=>{
+   if(finished)return;
+   finished=true;
+   media.pause();
+   try{media.currentTime=0;}catch{}
+   release();
+  };
+  // A deadline prevents an unloaded/missing file from muting real voices.
+  setTimeout(finish,280);
+  try{Promise.resolve(media.play()).then(finish,finish);}
+  catch{finish();}
+ }
+}
+function showAudioPermissionPrompt(error){
+ if(error?.name!=="NotAllowedError")return;
+ const dock=document.getElementById("audioUnlockDock");
+ if(dock)dock.hidden=false;
 }
 // Audio RMS measured after the media elements' volume settings.
 // -60 dBFS is the display's silence floor, 0 dBFS is digital full scale.
@@ -441,6 +491,14 @@ function requestStageFullscreen(){
   }catch(_){}
  }
 }
+document.getElementById("audioUnlockButton").addEventListener("click",()=>{
+ const dock=document.getElementById("audioUnlockDock");
+ dock.hidden=true;
+ if(audioCtx?.state==="suspended")audioCtx.resume().catch(()=>{});
+ if(scriptMode&&transcript?.active?.state==="error"){
+  transcript.play(transcript.active.group);
+ }else advanceStage(false);
+});
 function advanceStage(fullscreen=true){
  if(!startGate.started)return;
  if(scriptMode){transcript.next();if(fullscreen)requestStageFullscreen();return;}
