@@ -124,6 +124,27 @@ const {createServer}=require("../server.cjs");
   assert.equal(await stage.locator("#audioUnlockDock").isVisible(),false);
   assert.equal(await stage.locator("body").getAttribute("data-audio-recovery"),"ready");
 
+  // Script-mode narration receives the same hands-free recovery. A
+  // successful retry must not advance or repeat subtitle sentences.
+  await start("/",'[data-script="6"]',6);
+  await stage.evaluate(()=>{
+   const nativePlay=HTMLMediaElement.prototype.play;
+   let rejected=false;
+   HTMLMediaElement.prototype.play=function(){
+    if(this.id==="openingAudio"&&!rejected){
+     rejected=true;
+     return Promise.reject(new DOMException("Temporary script voice block","NotAllowedError"));
+    }
+    return nativePlay.call(this);
+   };
+  });
+  await next.tap();
+  await waitForStep(7);
+  await stage.waitForFunction(()=>document.body.dataset.scriptVoice==="opening:playing"&&
+   !document.getElementById("openingAudio").paused);
+  assert.equal(await stage.evaluate(()=>scriptShow.index),7);
+  assert.equal(await stage.locator("#audioUnlockDock").isVisible(),false);
+
   // Persistently blocked browser playback cannot be bypassed by timers.
   // Only then display the one local permission-recovery button.
   await start("/?mode=cues",'[data-preview="ai"]',2);
