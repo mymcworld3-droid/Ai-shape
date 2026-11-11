@@ -924,16 +924,20 @@ async function fastVoting(page){
     results.push("blocked video returns to full black; retry and double-click cannot spill into AI or speech");
 
     const audioRetry=await browser.newPage();
-    await audioRetry.addInitScript(()=>{
+    await ready(audioRetry,url); await fastReveal(audioRetry); await prepareWelcome(audioRetry);
+    // Install the rejection after the projector's Start gesture: initial
+    // warm-up may itself call play(), but this test targets the actual cue.
+    await audioRetry.evaluate(()=>{
       const play=HTMLMediaElement.prototype.play;let blocked=true;
       HTMLMediaElement.prototype.play=function(){if(this.id==="openingAudio"&&blocked){blocked=false;return Promise.reject(new DOMException("Blocked","NotAllowedError"));}return play.call(this);};
     });
-    await ready(audioRetry,url); await fastReveal(audioRetry); await prepareWelcome(audioRetry);
     await audioRetry.keyboard.press("Space"); await flag(audioRetry,"audioError","true"); await cue(audioRetry,"welcome");
     assert.equal(await audioRetry.evaluate(()=>opening.deadline),null);
-    await audioRetry.keyboard.press("Space"); await state(audioRetry,"narration");
+    // Automatic recovery, not a second operator cue, resumes the same voice.
+    await state(audioRetry,"narration");
+    assert.equal(await audioRetry.evaluate(()=>opening.deadline),null);
     await naturalAudioEnd(audioRetry); await audioRetry.close();
-    results.push("blocked welcome voice retries without replaying the room or starting a false countdown");
+    results.push("blocked welcome voice automatically retries without replaying the room, changing steps or starting a false countdown");
 
     const effectPage=await browser.newPage();
     await effectPage.route('**/opening-config.js',route=>route.fulfill({contentType:'text/javascript',body:
