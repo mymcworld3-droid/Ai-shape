@@ -9,6 +9,8 @@ button:focus-visible{outline:2px solid #dbeafe;outline-offset:4px}
 #visualizerWrap{position:relative;flex:none;aspect-ratio:16/9;overflow:hidden;background:#000;outline:none}
 #visualizer{position:absolute;inset:0;width:100%;height:100%;display:block}
 audio,video{display:none}
+/* Show the optional post-show video only after the operator advances past blackout. */
+#behindScenesVideo:not([hidden]){position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;background:#000;z-index:4;pointer-events:none}
 #reviewControls{position:fixed;z-index:3;top:max(22px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:5px;border:1px solid #ffffff24;border-radius:999px;background:#11151bcc;backdrop-filter:blur(16px)}
 #reviewControls button{border:0;border-radius:999px;padding:10px 19px;background:transparent;color:#aeb8c4;font-size:14px;white-space:nowrap;cursor:pointer}
 #reviewControls button[aria-pressed=true]{background:#f1f4f8;color:#11161d}

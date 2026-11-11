@@ -669,13 +669,13 @@ async function fastVoting(page){
     await markDoor.click();
     await review.locator('[data-preview="bright"]').click();
     await review.waitForTimeout(100);await fixedFrame(review);
-    assert.equal(await review.locator('#stepList [data-preview]').count(),32);
+    assert.equal(await review.locator('#stepList [data-preview]').count(),33);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
     for(const preview of ['dark','welcome','clock','door-kick','card','card-hidden','door-open','blackout','ai','bright',
       'memory-light','memory-welcome','memory-room','memory-blackout',
       'past-intro','past-isolate','office-light','office-bang','past-reflection','memory-return',
       'discussion','vote-prompt','vote-one','vote-two','vote-final','vote-blackout',
-      'ending-light','ending-dialogue','ending-complete','ending-question','ending-reveal','ending-blackout']){
+      'ending-light','ending-dialogue','ending-complete','ending-question','ending-reveal','ending-blackout','behind-the-scenes']){
       await review.locator(`[data-preview="${preview}"]`).click();await flag(review,'previewCue',preview);
       await review.waitForTimeout(60);
       assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);

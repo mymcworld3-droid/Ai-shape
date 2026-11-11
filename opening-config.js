@@ -4,6 +4,8 @@ window.OPENING_CONFIG = Object.freeze({
   background: "assets/backgrounds/IMG_0165.png",
   darkBackground: "assets/backgrounds/Start_dark.PNG",
   roomReveal: "assets/videos/Start_animation.mp4",
+  // Optional: upload this after the rest of the show has been deployed.
+  behindScenes: "assets/videos/behind-the-scenes.mp4",
   revealFadeMs: 240,
   // Updated from 2026-11-11 user-supplied music ZIP; cues remain anchored to Word paragraph IDs.
   // Keep the historic actOneMusic key so existing mixer and controls continue
@@ -34,7 +36,8 @@ window.OPENING_CONFIG = Object.freeze({
     "vote-one": 390, "vote-two": 395,
     "vote-final": 402, "vote-blackout": 403,
     "ending-light": 407, "ending-dialogue": 408, "ending-complete": 409,
-    "ending-question": 410, "ending-reveal": 414, "ending-blackout": 416
+    "ending-question": 410, "ending-reveal": 414, "ending-blackout": 416,
+    "behind-the-scenes": 417
   }),
   narration: "assets/audio/ai-opening.m4a",
   // Original user-supplied WAV, stored locally for offline playback.

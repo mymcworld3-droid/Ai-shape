@@ -47,7 +47,8 @@ const timelineSteps=[];
 function sceneStepAudio(cue){
  const paragraph=config.sceneMusicSteps[cue];
  return stepAudioFiles({paragraph,voice:sceneVoices[cue],
-  effect:sceneEffects[cue],video:cue==="bright"?config.roomReveal:null});
+  effect:sceneEffects[cue],video:cue==="bright"?config.roomReveal:
+   cue==="behind-the-scenes"?config.behindScenes:null});
 }
 if(scriptMode){
  stepList.replaceChildren();
@@ -60,7 +61,8 @@ if(scriptMode){
   text.append(small);button.append(number,text);
   timelineSteps.push({label:index,media:stepAudioFiles({paragraph:e.paragraph,
    voice:stepVoiceFiles[e.group],effect:stepEffectFiles[e.action],
-   video:e.action==="reveal"?config.roomReveal:null})});
+   video:e.action==="reveal"?config.roomReveal:
+    e.action==="behind-the-scenes"?config.behindScenes:null})});
   li.append(button);stepList.append(li);
  });
 }
