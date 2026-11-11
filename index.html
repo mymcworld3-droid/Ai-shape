@@ -89,6 +89,10 @@
       <section id="audioTimeline" aria-label="直式媒體軌"></section>
     </div>
   </aside>
+  <div id="audioUnlockDock" hidden>
+  <button type="button" id="audioUnlockButton">啟用語音並重試</button>
+  <p>此瀏覽器阻止了遠端播放音訊，請在投影裝置點此一次。</p>
+</div>
 </main>
 <nav id="reviewControls" aria-label="檢視模式">
   <button type="button" id="pageViewButton" aria-pressed="true">全頁</button>
@@ -111,10 +115,6 @@
     <form method="dialog"><button type="submit">關閉</button></form>
   </div>
 </dialog>
-<div id="audioUnlockDock" hidden>
-  <button type="button" id="audioUnlockButton">啟用語音並重試</button>
-  <p>此瀏覽器阻止了遠端播放音訊，請在投影裝置點此一次。</p>
-</div>
 <div id="startDock">
   <button type="button" id="startButton" aria-keyshortcuts="F" disabled><span class="play-mark" aria-hidden="true"></span><span id="startLabel">載入中…</span></button>
   <button type="button" id="resetStartStep" hidden>取消指定步驟，改從開頭開始</button>
