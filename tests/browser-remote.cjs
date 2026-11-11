@@ -103,8 +103,7 @@ const {createServer}=require("../server.cjs");
    if(Number.isFinite(media.duration))media.currentTime=Math.max(0,media.duration-.15);
   });
   await remote.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
-  // Simulate browsers that require a second local gesture for audio.
-  // The projector should expose a one-click recovery without skipping cues.
+  // A transient NotAllowedError recovers without anyone tapping the projector.
   await start("/?mode=cues",'[data-preview="ai"]',2);
   await stage.evaluate(()=>{
    const nativePlay=HTMLMediaElement.prototype.play;
@@ -112,15 +111,38 @@ const {createServer}=require("../server.cjs");
    HTMLMediaElement.prototype.play=function(){
     if(this.id==="openingAudio"&&!blocked){
      blocked=true;
-     return Promise.reject(new DOMException("Gesture required","NotAllowedError"));
+     return Promise.reject(new DOMException("Temporary block","NotAllowedError"));
     }
     return nativePlay.call(this);
    };
   });
   await next.tap();
   await waitForStep(3);
-  await stage.locator("#audioUnlockButton").waitFor({state:"visible"});
-  await remote.waitForFunction(()=>document.getElementById("remoteVoiceStatus").textContent.includes("語音播放失敗"));
+  await stage.waitForFunction(()=>document.body.dataset.audioRecovery==="retrying");
+  await stage.waitForFunction(()=>document.body.dataset.openingState==="narration" &&
+   !document.getElementById("openingAudio").paused);
+  assert.equal(await stage.locator("#audioUnlockDock").isVisible(),false);
+  assert.equal(await stage.locator("body").getAttribute("data-audio-recovery"),"ready");
+
+  // Persistently blocked browser playback cannot be bypassed by timers.
+  // Only then display the one local permission-recovery button.
+  await start("/?mode=cues",'[data-preview="ai"]',2);
+  await stage.evaluate(()=>{
+   const nativePlay=HTMLMediaElement.prototype.play;
+   let permission=false;
+   const unlock=document.getElementById("audioUnlockButton");
+   unlock.addEventListener("pointerdown",()=>{permission=true;},{once:true});
+   HTMLMediaElement.prototype.play=function(){
+    if(this.id==="openingAudio"&&!permission)
+     return Promise.reject(new DOMException("Gesture required","NotAllowedError"));
+    return nativePlay.call(this);
+   };
+  });
+  await next.tap();
+  await waitForStep(3);
+  await stage.locator("#audioUnlockButton").waitFor({state:"visible",timeout:10000});
+  await remote.waitForFunction(()=>
+   document.getElementById("remoteVoiceStatus").textContent.includes("自動重試仍遭瀏覽器阻擋"));
   await stage.locator("#audioUnlockButton").click();
   await stage.waitForFunction(()=>document.body.dataset.openingState==="narration" &&
    !document.getElementById("openingAudio").paused);
