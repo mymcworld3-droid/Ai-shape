@@ -21,7 +21,7 @@
   effect:document.getElementById("levelEffect"),music:document.getElementById("levelMusic")};
  const editing=new Set(),lastSent=Object.create(null),pending=Object.create(null);
  let connection,connectionState,peer=false,state=null,levels=null;
- function active(){return connectionState==="connected"&&peer&&Boolean(state?.started);}
+ function active(){return connectionState==="connected"&&peer&&Boolean(state?.started)&&state.audioReady!==false;}
  function renderMeters(){
   for(const channel of channels){
    const db=active()&&levels?levels[channel]:-60;
@@ -57,7 +57,9 @@
    expired:"配對已結束，請重新開啟操控連結。",
    replaced:"另一台操控裝置已接手。",
    invalid:"請開啟投影端提供的正確連結。",
-   connected:!peer?"等待播放裝置按「開始」":state?.started?"正在操控播放裝置":"正在同步演出狀態…"
+   connected:!peer?"等待播放裝置按「開始」":
+    state?.audioReady===false?"正在啟用播放端音訊…":
+    state?.started?"正在操控播放裝置":"正在同步演出狀態…"
   }[connectionState]||"連線中";
   step.textContent=state?`${state.mode==="cues"?"場景模式":"逐句字幕"} · 第 ${state.step} 步 · 共 ${state.total} 步`:"等待投影端";
   cue.textContent=state?.label??"—";
