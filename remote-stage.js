@@ -80,6 +80,52 @@
   });
  }
 
+ // A voice cue can receive commands while its next scene is intentionally
+ // gated by the recording's actual ended event. Tell all controllers why.
+ function voiceStatus(){
+  if(!startGate.started)return null;
+  let media=null,status=null,holdNext=false;
+  if(scriptMode){
+   const entry=transcript?.entry,active=transcript?.active;
+   if(entry?.group&&active?.group===entry.group){
+    media=active.media;
+    status=active.state;
+    const next=SHOW_SCRIPT.entries[transcript.index+1];
+    holdNext=Boolean(next&&next.group!==entry.group&&
+     ["starting","playing"].includes(status));
+   }
+  }else{
+   const cue=stage.state;
+   if(cue==="welcome"||cue==="clock"){
+    media=audioElement;status=opening.state==="narration"?"playing":opening.state;
+    holdNext=cue==="clock"&&["starting","playing","narration"].includes(opening.state);
+   }else if(cue==="memory-welcome"){
+    media=memoryAudio;status=stage.memory?.mediaStates.memoryVoice;
+    holdNext=["starting","playing"].includes(status);
+   }else{
+    const mapping={
+     "vote-prompt":["selectionPrompt",selectionAudio.prompt],
+     "vote-one":["selectionOne",selectionAudio.one],
+     "vote-two":["selectionTwo",selectionAudio.two],
+     "vote-final":["selectionFinal",selectionAudio.final],
+     "ending-complete":["endingComplete",endingCompleteAudio],
+     "ending-reveal":["endingReveal",endingRevealAudio]
+    };
+    const pair=mapping[cue];
+    if(pair){
+     media=pair[1];
+     const owner=cue.startsWith("vote-")?stage.voting:stage.ending;
+     status=owner?.mediaStates[pair[0]];
+     holdNext=["starting","playing"].includes(status);
+    }
+   }
+  }
+  if(!status)return null;
+  const remaining=media&&Number.isFinite(media.duration)&&media.duration>0?
+   Math.max(0,Math.ceil(media.duration-media.currentTime)):null;
+  return {state:status==="narration"?"playing":status,
+   remaining,holdNext};
+ }
  function stageState(){
   const started=startGate.started;
   let step,total,label;
@@ -95,6 +141,7 @@
    label=stepButtons[step].children[1].firstChild.textContent.trim();
   }
   return {started,step,total,label,mode:scriptMode?"script":"cues",
+   voiceStatus:voiceStatus(),
    nextPreview:scriptMode?null:nextScenePrompt(step),
    volumes:{voice:voiceVolume,effect:effectVolume,music:otherVolume},
    volumeVisible:!volumeDisplay.hidden};
@@ -117,6 +164,9 @@
   connection?.send(message);
  }
  setInterval(publishMeters,125);
+ // Media currentTime changes without DOM mutations. Publish only if the
+ // voice status/remaining whole seconds has changed.
+ setInterval(publish,350);
  function startLive(){
   if(liveConnection||!startGate.started)return;
   liveConnection=StageRemoteLink.connect({
