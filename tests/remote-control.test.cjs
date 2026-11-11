@@ -154,7 +154,10 @@ test("remote sliders accept exact levels and forward real meters to all devices"
  }
  const state={started:true,mode:"cues",step:7,total:32,label:"隱藏卡片",
   nextPreview:{step:8,label:"記憶室開門音效",
-   leadIn:{speaker:"MEGAN",text:"What does that mean?"},
+   leadIns:[
+    {speaker:"ETHAN",text:"Do you understand?"},
+    {speaker:"MEGAN",text:"What does that mean?"}
+   ],
    lines:[{speaker:"RACHEL",text:"Holy—"}]},
   volumes:{voice:100,effect:100,music:100},volumeVisible:false};
  projection.send({type:"state",state});

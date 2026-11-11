@@ -6,7 +6,7 @@
  const voiceStatusElement=document.getElementById("remoteVoiceStatus");
  const prompt=document.getElementById("nextScenePrompt");
  const promptStep=document.getElementById("nextPromptStep");
- const promptLead=document.getElementById("nextPromptLead");
+ const promptLeads=document.getElementById("nextPromptLeads");
  const promptLines=document.getElementById("nextPromptLines");
  const buttons=Array.from(document.querySelectorAll("[data-action]"));
  const volumeToggle=buttons.find(button=>button.dataset.action==="toggleVolumeDisplay");
@@ -63,8 +63,20 @@
   prompt.hidden=!next;
   if(!next)return;
   promptStep.textContent=`第 ${next.step} 步 · ${next.label}`;
-  promptLead.textContent=next.leadIn?
-   `${next.leadIn.speaker}：${next.leadIn.text}`:"（無上一句台詞）";
+  promptLeads.replaceChildren();
+  const preceding=next.leadIns||[];
+  for(const line of preceding){
+   const li=document.createElement("li"),speaker=document.createElement("strong");
+   speaker.textContent=line.speaker+"：";
+   li.append(speaker,document.createTextNode(" "+line.text));
+   promptLeads.append(li);
+  }
+  if(!preceding.length){
+   const li=document.createElement("li");
+   li.className="no-dialogue";
+   li.textContent="（尚無前面的台詞）";
+   promptLeads.append(li);
+  }
   promptLines.replaceChildren();
   for(const line of next.lines){
    const li=document.createElement("li"),speaker=document.createElement("strong");

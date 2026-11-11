@@ -57,10 +57,18 @@ const {createServer}=require("../server.cjs");
   assert.equal(await guestA.locator("#nextScenePrompt").isVisible(),true);
   assert.match(await guestA.locator("#nextPromptStep").textContent(),/第 1 步/);
   assert.match(await guestA.locator("#nextPromptLines").textContent(),/What is going on/);
+  // Scene preview now keeps both preceding spoken lines, in original order.
+  assert.equal(await guestA.locator("#nextPromptLeads li").count(),2);
+  assert.deepEqual((await guestA.locator("#nextPromptLeads li").allTextContents())
+   .map(text=>text.trim()),[
+    "RACHEL： What the hell..?",
+    "MEGAN： Wait, where am I?"
+   ]);
   // The whole scene remote must fit without scrolling, even in iPad Safari
   // Split View and short mobile landscapes. Retain every actual preview line,
   // all three sliders and meters, cue navigation and volume visibility toggle.
   const previewLineCount=await guestA.locator("#nextPromptLines li").count();
+  const leadLineCount=await guestA.locator("#nextPromptLeads li").count();
   assert.ok(previewLineCount>0);
   for(const viewport of [
    {width:640,height:900},{width:390,height:844},
@@ -84,6 +92,8 @@ const {createServer}=require("../server.cjs");
    },viewport,{timeout:5000});
    assert.equal(await guestA.locator("#nextPromptLines li").count(),previewLineCount,
     "No prompt dialogue is discarded at "+viewport.width+"x"+viewport.height);
+   assert.equal(await guestA.locator("#nextPromptLeads li").count(),leadLineCount,
+    "No preceding dialogue is discarded at "+viewport.width+"x"+viewport.height);
    assert.equal(await guestA.evaluate(()=>getComputedStyle(document.body).overflowY),"hidden");
   }
   await guestA.setViewportSize({width:390,height:844});

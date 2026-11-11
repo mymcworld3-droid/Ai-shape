@@ -33,9 +33,14 @@ function stageState(state){
   const parseLine=line=>line&&typeof line.speaker==="string"&&
    typeof line.text==="string"&&line.speaker.length<=60&&line.text.length<=500?
     {speaker:line.speaker,text:line.text}:null;
-  const lines=next.lines.map(parseLine),leadIn=next.leadIn==null?null:parseLine(next.leadIn);
-  if(lines.every(Boolean)&&(next.leadIn==null||leadIn))
-   nextPreview={step:next.step,label:next.label.slice(0,120),leadIn,lines};
+  // Validate each of the two prior lines before relaying to remote viewers.
+  // Accept the historic single-line format from already-open projector tabs.
+  const lines=next.lines.map(parseLine);
+  const rawLeadIns=Array.isArray(next.leadIns)?next.leadIns:
+   next.leadIn==null?[]:[next.leadIn];
+  const leadIns=rawLeadIns.length<=2?rawLeadIns.map(parseLine):null;
+  if(lines.every(Boolean)&&leadIns!==null&&leadIns.every(Boolean))
+   nextPreview={step:next.step,label:next.label.slice(0,120),leadIns,lines};
  }
  const incomingVoiceStatus=state.voiceStatus;
  let audioRecovery=null;
