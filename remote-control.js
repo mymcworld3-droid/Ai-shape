@@ -66,7 +66,12 @@
   const speech=state?.voiceStatus,seconds=speech?.remaining;
   const remaining=Number.isInteger(seconds)?"（約剩 "+seconds+" 秒）":"";
   let voiceNotice="";
-  if(speech?.state==="error")voiceNotice="語音播放失敗；可點「下一步」重試。若瀏覽器阻擋聲音，請在播放裝置點「啟用聲音」。";
+  if(state?.audioRecovery?.state==="retrying")
+   voiceNotice="AI 語音啟動遭瀏覽器阻擋，系統正在自動重試（第 "+
+    state.audioRecovery.attempt+" 次），不會跳過演出步驟。";
+  else if(state?.audioRecovery?.state==="needs-gesture")
+   voiceNotice="自動重試仍遭瀏覽器阻擋。請在播放裝置按一次「啟用語音並重試」；遠端裝置無法代替本機授權。";
+  else if(speech?.state==="error")voiceNotice="語音播放失敗，可點「下一步」重試。";
   else if(speech?.holdNext)voiceNotice="AI 語音正在播放"+remaining+"，結束後即可切換下一場。";
   else if(["starting","playing"].includes(speech?.state))voiceNotice="AI 語音播放中"+remaining+"，可繼續切換台詞或允許的場景。";
   voiceStatusElement.hidden=!voiceNotice;
