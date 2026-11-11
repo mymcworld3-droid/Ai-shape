@@ -505,7 +505,14 @@ document.getElementById("audioUnlockButton").addEventListener("click",()=>{
  if(audioCtx?.state==="suspended")audioCtx.resume().catch(()=>{});
  if(scriptMode&&transcript?.active?.state==="error"){
   transcript.play(transcript.active.group);
- }else advanceStage(false);
+ }else{
+  // Permission recovery must replay the failed voice inside this click
+  // gesture, even if its prior scene-transition animation still has a lock.
+  stage.busyUntil=0;
+  for(const controller of [stage.memory,stage.voting,stage.ending])
+   if(controller)controller.busyUntil=0;
+  advanceStage(false);
+ }
 });
 function advanceStage(fullscreen=true){
  if(!startGate.started)return;
