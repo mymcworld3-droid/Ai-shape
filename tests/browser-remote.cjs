@@ -103,6 +103,28 @@ const {createServer}=require("../server.cjs");
    if(Number.isFinite(media.duration))media.currentTime=Math.max(0,media.duration-.15);
   });
   await remote.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
+  // Simulate browsers that require a second local gesture for audio.
+  // The projector should expose a one-click recovery without skipping cues.
+  await start("/?mode=cues",'[data-preview="ai"]',2);
+  await stage.evaluate(()=>{
+   const nativePlay=HTMLMediaElement.prototype.play;
+   let blocked=false;
+   HTMLMediaElement.prototype.play=function(){
+    if(this.id==="openingAudio"&&!blocked){
+     blocked=true;
+     return Promise.reject(new DOMException("Gesture required","NotAllowedError"));
+    }
+    return nativePlay.call(this);
+   };
+  });
+  await next.tap();
+  await waitForStep(3);
+  await stage.locator("#audioUnlockButton").waitFor({state:"visible"});
+  await remote.waitForFunction(()=>document.getElementById("remoteVoiceStatus").textContent.includes("語音播放失敗"));
+  await stage.locator("#audioUnlockButton").click();
+  await stage.waitForFunction(()=>document.body.dataset.openingState==="narration" &&
+   !document.getElementById("openingAudio").paused);
+  assert.equal(await stage.locator("#audioUnlockDock").isVisible(),false);
   await start("/",'[data-script="75"]',75);
   await next.tap();
   await stage.waitForFunction(()=>document.body.dataset.scriptIndex==="76"&&
