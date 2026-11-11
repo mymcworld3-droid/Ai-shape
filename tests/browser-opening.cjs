@@ -277,8 +277,6 @@ async function checkVoiceCoreForeground(page,voting=false,opening=false,{centere
 async function fastMemory(page){
  await fastReveal(page);await prepareWelcome(page);
  await page.keyboard.press('Space');await state(page,'narration');await naturalAudioEnd(page);
-  await page.waitForFunction(()=>document.querySelector('#subtitleText').textContent.includes('Welcome to HUMAN VERIFICATION'));
-  assert.equal(await page.locator('#subtitleSpeaker').textContent(),'AI VOICE','Scene mode shows the recording speech as captions');
  await page.keyboard.press('Space');await cue(page,'clock');await page.waitForTimeout(1300);
  await page.keyboard.press('Space');await cue(page,'door-kick');await flag(page,'effectState','finished');
  await page.keyboard.press('Space');await cue(page,'card');await page.waitForTimeout(450);
@@ -357,6 +355,8 @@ async function fastVoting(page){
     await settleLiveAi(page); await page.screenshot({path:path.join(output,"03-ai.png")});
     await checkAiScreen(page,{centered:true,large:true});
     await page.keyboard.press('Space');await state(page,'narration');
+  await page.waitForFunction(()=>document.querySelector('#subtitleText').textContent.includes('Welcome to HUMAN VERIFICATION'));
+  assert.equal(await page.locator('#subtitleSpeaker').textContent(),'AI VOICE','Scene mode shows the recording speech as captions');
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Welcome precedes any door sound');
     await page.waitForTimeout(2200);
     const playing=await page.locator('#openingAudio').evaluate(a=>({time:a.currentTime,paused:a.paused}));
