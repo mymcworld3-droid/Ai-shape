@@ -74,6 +74,35 @@ const {createServer}=require("../server.cjs");
   await guestA.close();
   await guestB.close();
 
+  // A remote command must start real AI narration without another
+  // interaction on the projector. The same media continues across sentences.
+  await start("/",'[data-script="6"]',6);
+  await next.tap();
+  await waitForStep(7);
+  await stage.waitForFunction(()=>!document.getElementById("openingAudio").paused &&
+   scriptShow.active?.state==="playing");
+  await remote.waitForFunction(()=>document.getElementById("remoteVoiceStatus").textContent.includes("語音播放中"));
+  assert.equal(await next.isDisabled(),false,"During an AI paragraph, the next subtitle remains controllable");
+  await next.tap();
+  await waitForStep(8);
+  assert.equal(await stage.locator("#openingAudio").evaluate(media=>media.paused),false);
+
+  // Scene mode permits the clock cue during narration, then gates the next
+  // scene until the actual recording finishes. The remote must explain it.
+  await start("/?mode=cues",'[data-preview="ai"]',2);
+  await next.tap();
+  await waitForStep(3);
+  await stage.waitForFunction(()=>document.body.dataset.openingState==="narration" &&
+   !document.getElementById("openingAudio").paused);
+  await stage.waitForTimeout(1700);
+  await next.tap();
+  await waitForStep(4);
+  await remote.waitForFunction(()=>document.querySelector('[data-action="next"]').disabled &&
+   document.getElementById("remoteVoiceStatus").textContent.includes("結束後即可切換"));
+  await stage.locator("#openingAudio").evaluate(media=>{
+   if(Number.isFinite(media.duration))media.currentTime=Math.max(0,media.duration-.15);
+  });
+  await remote.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
   await start("/",'[data-script="75"]',75);
   await next.tap();
   await stage.waitForFunction(()=>document.body.dataset.scriptIndex==="76"&&
