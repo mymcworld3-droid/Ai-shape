@@ -37,8 +37,16 @@ function stageState(state){
   if(lines.every(Boolean)&&(next.leadIn==null||leadIn))
    nextPreview={step:next.step,label:next.label.slice(0,120),leadIn,lines};
  }
+ const voice=state.voiceStatus;
+ let voiceStatus=null;
+ if(voice&&typeof voice==="object"&&
+  ["starting","playing","paused","finished","error","missing","ready","countdown"].includes(voice.state)&&
+  typeof voice.holdNext==="boolean"&&
+  (voice.remaining===null||Number.isInteger(voice.remaining)&&voice.remaining>=0&&voice.remaining<=3600))
+  voiceStatus={state:voice.state,remaining:voice.remaining,holdNext:voice.holdNext};
  return {started:state.started,mode:state.mode,step:state.step,total:state.total,
   label:state.label.slice(0,500),...(nextPreview?{nextPreview}:{}),
+  ...(voiceStatus?{voiceStatus}:{}),
   volumes:{voice,effect,music},volumeVisible:state.volumeVisible};
 }
 
