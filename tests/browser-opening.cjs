@@ -277,6 +277,8 @@ async function checkVoiceCoreForeground(page,voting=false,opening=false,{centere
 async function fastMemory(page){
  await fastReveal(page);await prepareWelcome(page);
  await page.keyboard.press('Space');await state(page,'narration');await naturalAudioEnd(page);
+  await page.waitForFunction(()=>document.querySelector('#subtitleText').textContent.includes('Welcome to HUMAN VERIFICATION'));
+  assert.equal(await page.locator('#subtitleSpeaker').textContent(),'AI VOICE','Scene mode shows the recording speech as captions');
  await page.keyboard.press('Space');await cue(page,'clock');await page.waitForTimeout(1300);
  await page.keyboard.press('Space');await cue(page,'door-kick');await flag(page,'effectState','finished');
  await page.keyboard.press('Space');await cue(page,'card');await page.waitForTimeout(450);
@@ -569,7 +571,7 @@ async function fastVoting(page){
     }),true);
     await page.keyboard.press('Space');await cue(page,'ending-light');await noControls(page);
     await page.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
-    assert.match(await page.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Act4\.m4a$/);
+    assert.match(await page.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Ending\.m4a$/);
     await page.waitForTimeout(1150);
     await matchesStill(page,'assets/backgrounds/memory-room.png');
     await page.keyboard.press('Space');await cue(page,'ending-dialogue');
@@ -1261,7 +1263,7 @@ async function fastVoting(page){
     assert.equal(await endingJump.locator('#endingCompleteAudio').evaluate(m=>m.paused&&m.currentTime===0),true);
     assert.equal(await endingJump.evaluate(()=>stage.ending.mediaStates.endingComplete),'finished');
     await endingJump.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
-    assert.match(await endingJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Act4\.m4a$/);
+    assert.match(await endingJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Ending\.m4a$/);
     await endingJump.locator('#endingRevealAudio').evaluate(a=>{a.currentTime=a.duration-.12;});
     await flag(endingJump,'endingRevealState','finished');
     await endingJump.waitForFunction(()=>performance.now()>=stage.busyUntil);
@@ -1297,7 +1299,7 @@ async function fastVoting(page){
     await resetJump.locator('#startButton').click();await cue(resetJump,'dark');
     await resetJump.keyboard.press('ArrowRight');await roomState(resetJump,'playing');
     await resetJump.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
-    assert.match(await resetJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-1\/1-14\.mp3$/);
+    assert.match(await resetJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-1\/1-92\.mp3$/);
     await resetJump.close();
     results.push('Scene mode previews stay silent; direct jumps and normal opening start matching act soundtrack, 3/E controls BGM gain, and skipped media remain paused');
 
