@@ -58,8 +58,10 @@ const {createServer}=require("../server.cjs");
   assert.match(await guestA.locator("#nextPromptStep").textContent(),/第 1 步/);
   assert.match(await guestA.locator("#nextPromptLines").textContent(),/What is going on/);
   // The whole scene remote must fit without scrolling, even in iPad Safari
-  // Split View and short mobile landscapes. Retain all three preview lines,
-  // three sliders, three live meters, cue navigation and visibility toggle.
+  // Split View and short mobile landscapes. Retain every actual preview line,
+  // all three sliders and meters, cue navigation and volume visibility toggle.
+  const previewLineCount=await guestA.locator("#nextPromptLines li").count();
+  assert.ok(previewLineCount>0);
   for(const viewport of [
    {width:640,height:900},{width:390,height:844},
    {width:390,height:667},{width:320,height:568},{width:600,height:500}
@@ -80,7 +82,7 @@ const {createServer}=require("../server.cjs");
        r.right<=width+1&&r.top>=-1&&r.bottom<=height+1;
      });
    },viewport,{timeout:5000});
-   assert.equal(await guestA.locator("#nextPromptLines li").count(),3,
+   assert.equal(await guestA.locator("#nextPromptLines li").count(),previewLineCount,
     "No prompt dialogue is discarded at "+viewport.width+"x"+viewport.height);
    assert.equal(await guestA.evaluate(()=>getComputedStyle(document.body).overflowY),"hidden");
   }
