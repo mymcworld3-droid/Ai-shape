@@ -58,12 +58,6 @@ const {createServer}=require("../server.cjs");
   assert.match(await guestA.locator("#nextPromptStep").textContent(),/第 1 步/);
   assert.match(await guestA.locator("#nextPromptLines").textContent(),/What is going on/);
   // Scene preview now keeps both preceding spoken lines, in original order.
-  console.log("REMOTE PREVIEW DIAGNOSTIC",JSON.stringify({
-   step:await guestA.locator("#nextPromptStep").textContent(),
-   leadHtml:await guestA.locator("#nextPromptLeads").innerHTML(),
-   leadLabel:await guestA.locator(".next-prompt").textContent(),
-   stage:await stage.evaluate(()=>({mode:scriptMode,stepButtons:stepButtons.slice(0,3).map(b=>b.dataset.preview),entryPre:SHOW_SCRIPT.entries.filter(e=>e.kind==="dialogue"&&e.paragraph<23).slice(-3).map(e=>e.text)}))
-  }));
   assert.equal(await guestA.locator("#nextPromptLeads li").count(),2);
   assert.deepEqual((await guestA.locator("#nextPromptLeads li").allTextContents())
    .map(text=>text.trim()),[
