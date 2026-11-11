@@ -189,3 +189,24 @@ test("remote sliders accept exact levels and forward real meters to all devices"
  pairedStage.send({type:"meter",levels});
  assert.deepEqual((await remote.next("meter")).levels,levels);
 });
+
+
+test("rapid consecutive next taps each advance exactly one subtitle", {timeout:5000},async t=>{
+ const {client}=await startRelay(t);
+ const projection=await client();
+ projection.send({type:"host"});
+ await projection.next("ready");
+ const remote=await client();
+ remote.send({type:"watch"});
+ await remote.next("ready");
+ await remote.next("peer");
+ const state={started:true,mode:"script",step:7,total:380,label:"AI voice",
+  volumes:{voice:100,effect:100,music:100},volumeVisible:false};
+ projection.send({type:"state",state});
+ await remote.next("state");
+ // Server must preserve both in order even when sent within one event loop.
+ remote.send({type:"command",action:"next"});
+ remote.send({type:"command",action:"next"});
+ assert.deepEqual(await projection.next("command"),{type:"command",action:"next"});
+ assert.deepEqual(await projection.next("command"),{type:"command",action:"next"});
+});
