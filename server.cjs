@@ -46,6 +46,7 @@ function stageState(state){
   voiceStatus={state:voice.state,remaining:voice.remaining,holdNext:voice.holdNext};
  return {started:state.started,mode:state.mode,step:state.step,total:state.total,
   label:state.label.slice(0,500),...(nextPreview?{nextPreview}:{}),
+  ...(typeof state.audioReady==="boolean"?{audioReady:state.audioReady}:{}),
   ...(voiceStatus?{voiceStatus}:{}),
   volumes:{voice,effect,music},volumeVisible:state.volumeVisible};
 }
