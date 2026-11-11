@@ -5,23 +5,22 @@ window.OPENING_CONFIG = Object.freeze({
   darkBackground: "assets/backgrounds/Start_dark.PNG",
   roomReveal: "assets/videos/Start_animation.mp4",
   revealFadeMs: 240,
-  // Cue-count-independent: soundtrack cues are anchored to Word paragraph IDs.
+  // Updated from 2026-11-11 user-supplied music ZIP; cues remain anchored to Word paragraph IDs.
   // Keep the historic actOneMusic key so existing mixer and controls continue
   // working; later acts can use the same fade/crossfade music player.
   actOneMusic: Object.freeze([
-    Object.freeze({ from: 23, to: 29, src: "assets/audio/background/act-1/1-14.mp3" }),
-    Object.freeze({ from: 30, to: 98, src: "assets/audio/background/act-1/15-91.mp3" }),
-    Object.freeze({ from: 99, to: 103, src: "assets/audio/background/act-1/91-92(轉場).mp3", loop: false }),
-    Object.freeze({ from: 104, to: 178, src: "assets/audio/background/act-1/92-174.mp3" }),
+    Object.freeze({ from: 23, to: 98, src: "assets/audio/background/act-1/1-92.mp3" }),
+    Object.freeze({ from: 99, to: 103, src: "assets/audio/background/act-1/92-93(轉場).mp3", loop: false }),
+    Object.freeze({ from: 104, to: 178, src: "assets/audio/background/act-1/94-174.mp3" }),
     Object.freeze({ from: 179, to: 184, src: "assets/audio/background/act-1/174-175(轉場).mp3", loop: false }),
     // Act II: recollection introduction, office scene, then Christopher's reflection.
-    Object.freeze({ from: 185, to: 194, src: "assets/audio/background/act-2/175-180.mp3" }),
-    Object.freeze({ from: 195, to: 268, src: "assets/audio/background/act-2/181-263.mp3" }),
-    Object.freeze({ from: 269, to: 283, src: "assets/audio/background/act-2/264-277.mp3" }),
-    Object.freeze({ from: 290, to: 402, src: "assets/audio/background/act-3/Act3.mp3" }),
-    Object.freeze({ from: 407, to: 415, src: "assets/audio/background/act-4/Act4.m4a" })
+    Object.freeze({ from: 185, to: 194, src: "assets/audio/background/act-2/176-181.mp3" }),
+    Object.freeze({ from: 195, to: 268, src: "assets/audio/background/act-2/182-264.mp3" }),
+    Object.freeze({ from: 269, to: 283, src: "assets/audio/background/act-2/265-278.mp3" }),
+    Object.freeze({ from: 284, to: 402, src: "assets/audio/background/act-3/after-chris-transition.mp3" }),
+    Object.freeze({ from: 407, to: 415, src: "assets/audio/background/act-4/Ending.m4a" })
   ]),
-  // The scene mode follows the same soundtrack timeline, including Act IV.
+  // The scene mode follows the same revised soundtrack timeline, including Act IV.
   // Each cue points to a representative Word paragraph, not its UI step number.
   // The two modes therefore share the exact same audio files and crossfade rules.
   sceneMusicSteps: Object.freeze({
@@ -73,7 +72,7 @@ window.OPENING_CONFIG = Object.freeze({
     complete: "assets/audio/404-406ai.m4a",
     revealTruth: "assets/audio/411-415ai.m4a"
   }),
-  scriptEffects: Object.freeze({doorOpen: "assets/audio/effects/heavy-auto-door.mp3", timerClick: "assets/audio/effects/timer-click.wav", selectionButton: "assets/audio/Slam-button.m4a"}),
+  scriptEffects: Object.freeze({doorOpen: "assets/audio/effects/door-open.mp3", timerClick: "assets/audio/effects/timer-click.wav", selectionButton: "assets/audio/Slam-button.m4a"}),
   countdownMs: 15 * 60 * 1000,
   // Black display interior in IMG_0165.png's source pixels; excludes its bezel.
   roomScreen: Object.freeze({ x: 552, y: 310, width: 430, height: 195, inset: 2 }),

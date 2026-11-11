@@ -355,6 +355,8 @@ async function fastVoting(page){
     await settleLiveAi(page); await page.screenshot({path:path.join(output,"03-ai.png")});
     await checkAiScreen(page,{centered:true,large:true});
     await page.keyboard.press('Space');await state(page,'narration');
+  await page.waitForFunction(()=>document.querySelector('#subtitleText').textContent.includes('Welcome to HUMAN VERIFICATION'));
+  assert.equal(await page.locator('#subtitleSpeaker').textContent(),'AI VOICE','Scene mode shows the recording speech as captions');
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Welcome precedes any door sound');
     await page.waitForTimeout(2200);
     const playing=await page.locator('#openingAudio').evaluate(a=>({time:a.currentTime,paused:a.paused}));
@@ -421,7 +423,7 @@ async function fastVoting(page){
     await matchesStill(page,"assets/backgrounds/IMG_0165.png",[0,.55,1,1]);
     await page.screenshot({path:path.join(output,"08-card-hidden.png")});
     await page.keyboard.press("Space"); await cue(page,"door-open");
-    assert.equal(await page.locator('#memoryDoorOpenAudio').getAttribute('src'),'assets/audio/effects/heavy-auto-door.mp3');
+    assert.equal(await page.locator('#memoryDoorOpenAudio').getAttribute('src'),'assets/audio/effects/door-open.mp3');
     await flag(page,'doorOpenState','playing');
     assert.equal(await page.locator('#memoryDoorOpenAudio').evaluate(m=>m.paused),false);
     await page.keyboard.press("Space");await cue(page,"door-open");
@@ -569,7 +571,7 @@ async function fastVoting(page){
     }),true);
     await page.keyboard.press('Space');await cue(page,'ending-light');await noControls(page);
     await page.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
-    assert.match(await page.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Act4\.m4a$/);
+    assert.match(await page.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Ending\.m4a$/);
     await page.waitForTimeout(1150);
     await matchesStill(page,'assets/backgrounds/memory-room.png');
     await page.keyboard.press('Space');await cue(page,'ending-dialogue');
@@ -643,7 +645,7 @@ async function fastVoting(page){
     const trackSelect=review.locator('#timelineTrack');
     const track=review.locator('#audioTimeline');
     assert.equal(await trackSelect.inputValue(),'音效');
-    const doorClip=track.getByRole('button',{name:'音效 heavy-auto-door.mp3，第 08 步'});
+    const doorClip=track.getByRole('button',{name:'音效 door-open.mp3，第 08 步'});
     const doorRow=review.locator('[data-preview="door-open"]').locator('..');
     const [rail,clip,row]=await Promise.all([track.boundingBox(),doorClip.boundingBox(),doorRow.boundingBox()]);
     assert.ok(rail.width<=112&&rail.x>=row.x+row.width,'The narrow media track sits to the right of the steps');
@@ -1099,7 +1101,7 @@ async function fastVoting(page){
     const touch=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
     await ready(touch,url); await fixedFrame(touch);
     await touch.locator('#stepsViewButton').click();await touch.waitForTimeout(100);await fixedFrame(touch);
-    await touch.getByRole('button',{name:'音效 heavy-auto-door.mp3，第 08 步'}).tap();await flag(touch,'previewCue','door-open');
+    await touch.getByRole('button',{name:'音效 door-open.mp3，第 08 步'}).tap();await flag(touch,'previewCue','door-open');
     assert.equal(await touch.locator('[data-preview="door-open"]').getAttribute('aria-pressed'),'true');
     assert.ok((await touch.locator('#audioTimeline').boundingBox()).width<=88,'The phone media track remains narrow');
     const timelineScrollBox=await touch.locator('#stepReviewScroll').boundingBox();
@@ -1261,7 +1263,7 @@ async function fastVoting(page){
     assert.equal(await endingJump.locator('#endingCompleteAudio').evaluate(m=>m.paused&&m.currentTime===0),true);
     assert.equal(await endingJump.evaluate(()=>stage.ending.mediaStates.endingComplete),'finished');
     await endingJump.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
-    assert.match(await endingJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Act4\.m4a$/);
+    assert.match(await endingJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Ending\.m4a$/);
     await endingJump.locator('#endingRevealAudio').evaluate(a=>{a.currentTime=a.duration-.12;});
     await flag(endingJump,'endingRevealState','finished');
     await endingJump.waitForFunction(()=>performance.now()>=stage.busyUntil);
@@ -1297,7 +1299,7 @@ async function fastVoting(page){
     await resetJump.locator('#startButton').click();await cue(resetJump,'dark');
     await resetJump.keyboard.press('ArrowRight');await roomState(resetJump,'playing');
     await resetJump.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
-    assert.match(await resetJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-1\/1-14\.mp3$/);
+    assert.match(await resetJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-1\/1-92\.mp3$/);
     await resetJump.close();
     results.push('Scene mode previews stay silent; direct jumps and normal opening start matching act soundtrack, 3/E controls BGM gain, and skipped media remain paused');
 
