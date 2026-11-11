@@ -99,6 +99,7 @@ if(scriptMode){
    document.body.dataset.musicError='false';
    actOneMusic.setStep(entry.paragraph);
    applyEntry(entry,starting&&index>0?0:direction);
+   syncBehindScenes(entry.action==='behind-the-scenes');
    if(entry.action==='selection-button'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
   },
   onVoice(group,state){document.body.dataset.scriptVoice=group+':'+state;

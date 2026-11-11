@@ -511,7 +511,7 @@
     "memory-return", "discussion", "vote-prompt", "vote-one",
     "vote-two", "vote-final", "vote-blackout",
     "ending-light", "ending-dialogue", "ending-complete", "ending-question",
-    "ending-reveal", "ending-blackout"
+    "ending-reveal", "ending-blackout", "behind-the-scenes"
   ]);
 
   // Operator cues and media completion are separate. The clock may replace the
@@ -860,8 +860,10 @@
         case "ending-dialogue":
         case "ending-complete":
         case "ending-question":
-        case "ending-reveal":
-        case "ending-blackout": return this.ending ? this.ending.advance() : false;
+        case "ending-reveal": return this.ending ? this.ending.advance() : false;
+        // An additional operator input is required after final blackout.
+        case "ending-blackout": this.setCue("behind-the-scenes"); return true;
+        case "behind-the-scenes": return false;
         default: return false;
       }
     }

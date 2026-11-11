@@ -122,9 +122,9 @@ test('all third-act scene cues rewind and replay without starting any voting dea
  for(const m of [c.audio,c.doorOpen,c.memoryVoice,c.bang,c.prompt,c.button])assert.equal(m.calls,2);
 });
 
-test('every one of the 32 scene cues can be selected as the first live cue',async()=>{
+test('every one of the 33 scene cues can be selected as the first live cue',async()=>{
  const {STAGE_START_CUES}=require('../opening-controller.js');
- assert.equal(STAGE_START_CUES.length,32);
+ assert.equal(STAGE_START_CUES.length,33);
  const mediaFor={"bright":"video","welcome":"audio","door-kick":"effect","door-open":"doorOpen",
   "memory-welcome":"memoryVoice","office-bang":"bang","vote-prompt":"prompt",
   "ending-complete":"complete","ending-reveal":"reveal"};
@@ -281,9 +281,13 @@ test('Act IV continues after third-act blackout, plays both original AI recordin
  await c.next();assert.equal(c.stage.state,'ending-reveal','Cannot skip truth reveal');
  c.reveal.end();
  await c.next();assert.equal(c.stage.state,'ending-blackout');
- await c.next();assert.equal(c.stage.state,'ending-blackout','final blackout is terminal');
+ await c.next();assert.equal(c.stage.state,'behind-the-scenes',
+  'post-show video is a separate operator-controlled step');
+ await c.next();assert.equal(c.stage.state,'behind-the-scenes','bonus cue is terminal');
  assert.equal(c.stage.opening.deadline,openingDeadline);
  assert.equal(c.stage.voting.deadline,selectionDeadline);
+ assert.equal(c.stage.previous(),true);
+ assert.equal(c.stage.state,'ending-blackout');
  assert.equal(c.stage.previous(),true);
  assert.equal(c.stage.state,'ending-reveal');
  assert.equal(c.stage.previous(),true);

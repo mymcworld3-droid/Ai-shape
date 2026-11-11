@@ -97,7 +97,8 @@
     "ending-complete": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
     "ending-question": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     "ending-reveal": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
-    "ending-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 }
+    "ending-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
+    "behind-the-scenes": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 }
   });
   for (const frame of Object.values(previews)) Object.freeze(frame);
   function previewFrame(cue) {

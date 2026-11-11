@@ -18,6 +18,7 @@
       <canvas id="visualizer" aria-label="16:9 劇場投影；開始後空白鍵、右鍵或點一下換下一句，左鍵上一句"></canvas>
       <div id="subtitles" aria-live="off" hidden><div id="subtitleSpeaker"></div><div id="subtitleText"></div></div>
       <video id="roomRevealVideo" preload="auto" muted playsinline disablepictureinpicture aria-hidden="true" tabindex="-1"></video>
+      <video id="behindScenesVideo" preload="none" playsinline disablepictureinpicture aria-hidden="true" tabindex="-1" hidden></video>
       <audio id="openingAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
       <audio id="actOneBgm" preload="none" aria-hidden="true" tabindex="-1"></audio>
       <audio id="actOneBgmAlt" preload="none" aria-hidden="true" tabindex="-1"></audio>
@@ -39,7 +40,7 @@
 音效 100%
 背景音樂 100%</output>
   <aside id="stepsPanel" aria-label="演出步驟檢視" hidden>
-    <header><h1>演出步驟<span>32</span></h1><p>點選步驟靜音預覽，按開始／F 從該步播放</p>
+    <header><h1>演出步驟<span>33</span></h1><p>點選步驟靜音預覽，按開始／F 從該步播放</p>
     </header>
     <div class="timeline-controls">
       <label for="timelineTrack">媒體軌</label>
@@ -84,7 +85,8 @@
         <li><button type="button" data-preview="ending-complete" aria-pressed="false"><span class="step-number">28</span><span>AI 宣布測試完成<small>原稿 p409</small></span></button></li>
         <li><button type="button" data-preview="ending-question" aria-pressed="false"><span class="step-number">29</span><span>眾人追問真相<small>What...? · Then who is the robot?</small></span></button></li>
         <li><button type="button" data-preview="ending-reveal" aria-pressed="false"><span class="step-number">30</span><span>AI 揭露真相<small>原稿 p414</small></span></button></li>
-        <li><button type="button" data-preview="ending-blackout" aria-pressed="false"><span class="step-number">31</span><span>最終全暗<small>You may leave. · 音樂淡出</small></span></button></li>
+        <li><button type="button" data-preview="ending-blackout" aria-pressed="false"><span class="step-number">31</span><span>最終全暗<small>You may leave. · 音樂淡出（等待操作）</small></span></button></li>
+        <li><button type="button" data-preview="behind-the-scenes" aria-pressed="false"><span class="step-number">32</span><span>播放幕後花絮<small>手動下一步才播放 · 影片待上傳</small></span></button></li>
       </ol>
       <section id="audioTimeline" aria-label="直式媒體軌"></section>
     </div>

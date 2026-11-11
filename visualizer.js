@@ -22,6 +22,42 @@ const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
 const visualizerWrap=document.getElementById("visualizerWrap");
+const behindScenesVideo=document.getElementById("behindScenesVideo");
+let behindScenesRun=0;
+// Never load or play this optional file until the separate post-show step.
+function syncBehindScenes(isBonus){
+ const run=++behindScenesRun;
+ behindScenesVideo.pause();
+ behindScenesVideo.hidden=true;
+ if(!isBonus){document.body.dataset.behindScenesState="idle";return;}
+ if(!config.behindScenes){document.body.dataset.behindScenesState="missing";return;}
+ document.body.dataset.behindScenesState="loading";
+ if(behindScenesVideo.getAttribute("src")!==config.behindScenes)
+  behindScenesVideo.src=config.behindScenes;
+ behindScenesVideo.load();
+ try{behindScenesVideo.currentTime=0;}catch(_){}
+ try{
+  Promise.resolve(behindScenesVideo.play()).then(()=>{
+   if(run!==behindScenesRun)return;
+   behindScenesVideo.hidden=false;
+   document.body.dataset.behindScenesState="playing";
+  },error=>{
+   if(run!==behindScenesRun)return;
+   behindScenesVideo.hidden=true;
+   document.body.dataset.behindScenesState="unavailable";
+   console.info("[Post-show] Optional video not yet available.",error);
+  });
+ }catch(error){
+  if(run!==behindScenesRun)return;
+  document.body.dataset.behindScenesState="unavailable";
+ }
+}
+behindScenesVideo.addEventListener("ended",()=>{
+ if(!behindScenesVideo.hidden)document.body.dataset.behindScenesState="ended";
+});
+behindScenesVideo.addEventListener("error",()=>{
+ behindScenesVideo.hidden=true;document.body.dataset.behindScenesState="unavailable";
+});
 const projectionViewport=document.getElementById("projectionViewport");
 const fullscreenRoot=document.getElementById("showShell");
 const backgroundImage=new Image();
@@ -100,6 +136,7 @@ const stage=new StageOpening.StageCueController({
  },
  onCue(cue){
   document.body.dataset.cue=cue;
+  syncBehindScenes(cue==="behind-the-scenes");
   // All live scene transitions (including rewind and a direct rehearsal jump)
   // update BGM. Stage previews never emit onCue and remain fully silent.
   if(!scriptMode&&startGate.started){

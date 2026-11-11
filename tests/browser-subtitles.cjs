@@ -45,7 +45,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
   assert.match(await page.locator('#startLabel').textContent(),/從第 .* 步開始/);
-  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('380 quiet previews show media filenames; step zero uses the blue room, remains silent and does not autoplay');
+  await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('381 quiet previews show media filenames; step zero uses the blue room, remains silent and does not autoplay');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
@@ -82,7 +82,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await after366.goto(url);
   await after366.waitForFunction(()=>!document.getElementById('startButton').disabled);
   await after366.locator('#stepsViewButton').click();
-  assert.equal(data.entries.length,380);
+  assert.equal(data.entries.length,381);
   for(let i=366;i<=379;i++)
    assert.equal(await after366.locator(`#stepList [data-script="${i}"]`).count(),1,'missing visual step '+i);
   await after366.locator('[data-script="366"]').click();
@@ -105,7 +105,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   }
   assert.equal(await after366.evaluate(()=>scriptShow.entry.action),'end-blackout');
   await after366.close();
-  checks.push('step review displays the Act IV soundtrack and manual playback reaches steps 366-379 without voting timer');
+  checks.push('step review retains the original Act IV steps 366-379, followed by the optional post-show cue');
 
   // Clearing the selection explicitly restores starting at the first cue.
   await page.locator('#resetStartStep').click();
@@ -181,7 +181,9 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   const fourthActStart=data.entries.findIndex(e=>e.id==='p408-0');
   assert.equal(votingCountdown,355,'The third-act voting layout starts on step 355 without a clock');
   assert.equal(fourthActStart,367,'The fourth act begins at step 366 after the requested deletions');
-  for(let i=clock+1;i<data.entries.length;i++){
+  // Verify the original screenplay through blackout; the bonus clip follows
+  // only after an additional manual Right/Space operator action.
+  for(let i=clock+1;i<data.entries.length-1;i++){
    const from=data.entries[i-1],to=data.entries[i];
    if(from.group!==to.group&&from.group){await page.waitForFunction(()=>!['starting','playing'].includes(scriptShow.active?.state),null,{timeout:60000});}
    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i,'entry '+i);
@@ -353,11 +355,18 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   }
   assert.equal(await page.locator('body').getAttribute('data-script-action'),'end-blackout');await page.waitForTimeout(1300);
   assert.ok(await page.locator('#visualizer').evaluate(c=>{const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.every((v,i)=>i%4===3||v===0);}));
-  const last=data.entries.length-1;await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),last);
+  assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true,
+    'The final blackout must not automatically start the bonus film');
+  const last=data.entries.length-1;
+  assert.equal(data.entries[last].action,'behind-the-scenes');
+  await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),last);
+  assert.equal(await page.locator('body').getAttribute('data-script-action'),'behind-the-scenes');
+  assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden),true,
+    'Missing optional MP4 leaves the stage black');
   const deadlines=await page.evaluate(()=>({...scriptShow.deadlines}));
   for(let i=last-1;i>=0;i--){await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>scriptShow.index),i);assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);}
   assert.deepEqual(await page.evaluate(()=>({...scriptShow.deadlines})),deadlines);assert.equal(await page.locator('button:visible').count(),0);
-  checks.push('all 380 forward and reverse inputs preserve the 359 current text-bearing steps, two-vote order, four acts, boundaries and deadlines; missing audio never blocks; terminal blackout is truly black');
+  checks.push('all 381 forward and reverse inputs preserve existing subtitles and show boundaries; blackout is separate from the optional behind-the-scenes cue');
   // Check every subtitle at all ratios, including review pane. No text leaves the fixed projection frame.
   await page.reload();await page.waitForFunction(()=>!document.querySelector('#startButton').disabled);await page.locator('#stepsViewButton').click();
   for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
