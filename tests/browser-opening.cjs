@@ -597,6 +597,24 @@ async function fastVoting(page){
     }),true,'Final Act IV blackout must be solid black');
     assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current),null);
     await page.screenshot({path:path.join(output,'27-ending-blackout.png')});
+    // The blackout itself must never request or start the optional extra video.
+    assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>
+      v.hidden&&v.paused&&!v.hasAttribute('src')),true);
+    await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(()=>stage.state),'ending-blackout');
+    // Simulate the future uploaded MP4 without committing it to this branch.
+    await page.route('**/assets/videos/behind-the-scenes.mp4',route=>
+      route.fulfill({path:path.join(__dirname,'../assets/videos/Start_animation.mp4'),
+        contentType:'video/mp4'}));
+    await page.keyboard.press('Space');await cue(page,'behind-the-scenes');
+    await page.waitForFunction(()=>document.body.dataset.behindScenesState==='playing');
+    assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>!v.hidden&&!v.paused),true);
+    await page.keyboard.press('ArrowLeft');await cue(page,'ending-blackout');
+    assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true);
+    await page.keyboard.press('Space');await cue(page,'behind-the-scenes');
+    await page.waitForFunction(()=>document.body.dataset.behindScenesState==='playing');
+    assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.currentTime<1),true,
+      'Re-entering the bonus cue restarts the film');
     assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
     assert.equal(await page.evaluate(()=>opening.deadline),deadline);
     assert.equal(errors.length,0,errors.join("\n"));
