@@ -33,14 +33,14 @@ function setup(){
 const flush=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
 const close=(a,b)=>assert.ok(Math.abs(a-b)<.01,`${a} != ${b}`);
 
-test("all 32 scene cues cover Act IV as well as the existing soundtrack",()=>{
+test("all 33 scene cues cover Act IV and optional post-show film",()=>{
  const fs=require('node:fs'),vm=require('node:vm');
  const source=fs.readFileSync(require.resolve('../opening-config.js'),'utf8');
  const context={window:{}};vm.runInNewContext(source,context);
  const config=context.window.OPENING_CONFIG;
  const {STAGE_START_CUES}=require('../opening-controller.js');
  const cueSteps=config.sceneMusicSteps;
- assert.equal(Object.keys(cueSteps).length,33);
+ assert.equal(Object.keys(cueSteps).length,34);
  assert.equal(cueSteps.dark,20);
  assert.equal(trackForStep(cueSteps.dark,config.actOneMusic),null);
  assert.equal(trackForStep(cueSteps['room-reveal'],config.actOneMusic).src,
@@ -48,7 +48,7 @@ test("all 32 scene cues cover Act IV as well as the existing soundtrack",()=>{
  for(const cue of STAGE_START_CUES){
   assert.equal(Number.isInteger(cueSteps[cue]),true,'missing paragraph for '+cue);
   const track=trackForStep(cueSteps[cue],config.actOneMusic);
-  if(['dark','vote-blackout','ending-blackout'].includes(cue))assert.equal(track,null,'pre-show and blackouts remain silent');
+  if(['dark','vote-blackout','ending-blackout','behind-the-scenes'].includes(cue))assert.equal(track,null,'pre-show, blackout and bonus film do not trigger background music');
   else assert.ok(track,'no music for '+cue);
  }
  assert.equal(trackForStep(cueSteps.card,config.actOneMusic).src,
