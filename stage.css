@@ -100,3 +100,12 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
 .timeline-clip-voice{background:#344f86;color:#eef4ff;border-color:#617fc2}
 .timeline-clip-effect{background:#6b4a25;color:#ffe5b8;border-color:#a57a3c}
 .timeline-clip-video{background:#59466e;color:#f4e8ff;border-color:#8368a3}
+
+/* Visible only when the playback browser rejects a remotely triggered voice. */
+#audioUnlockDock[hidden]{display:none!important}
+#audioUnlockDock{position:fixed;z-index:10;bottom:24px;left:50%;transform:translateX(-50%);
+ width:min(420px,calc(100% - 32px));padding:14px 17px;border:1px solid #f0c57c;
+ border-radius:14px;background:#192332f2;color:#f5f7fb;box-shadow:0 12px 50px #000a;text-align:center}
+#audioUnlockButton{width:100%;min-height:44px;border:0;border-radius:9px;
+ background:#f0c57c;color:#192332;font-weight:700;font-size:15px;cursor:pointer}
+#audioUnlockDock p{font-size:12px;line-height:1.5;color:#e0e6ee;margin:9px 0 0}
