@@ -3,6 +3,7 @@
  const status=document.getElementById("remoteStatus");
  const step=document.getElementById("remoteStep");
  const cue=document.getElementById("remoteCue");
+ const voiceStatusElement=document.getElementById("remoteVoiceStatus");
  const prompt=document.getElementById("nextScenePrompt");
  const promptStep=document.getElementById("nextPromptStep");
  const promptLead=document.getElementById("nextPromptLead");
@@ -60,6 +61,14 @@
   }[connectionState]||"連線中";
   step.textContent=state?`${state.mode==="cues"?"場景模式":"逐句字幕"} · 第 ${state.step} 步 · 共 ${state.total} 步`:"等待投影端";
   cue.textContent=state?.label??"—";
+  const speech=state?.voiceStatus,seconds=speech?.remaining;
+  const remaining=Number.isInteger(seconds)?"（約剩 "+seconds+" 秒）":"";
+  let voiceNotice="";
+  if(speech?.state==="error")voiceNotice="語音播放失敗；可點「下一步」重試。若瀏覽器阻擋聲音，請在播放裝置點「啟用聲音」。";
+  else if(speech?.holdNext)voiceNotice="AI 語音正在播放"+remaining+"，結束後即可切換下一場。";
+  else if(["starting","playing"].includes(speech?.state))voiceNotice="AI 語音播放中"+remaining+"，可繼續切換台詞或允許的場景。";
+  voiceStatusElement.hidden=!voiceNotice;
+  voiceStatusElement.textContent=voiceNotice;
   for(const channel of channels){
    sliders[channel].disabled=!active();
    if(!editing.has(channel)){
@@ -74,7 +83,7 @@
   for(const button of buttons){
    const {action}=button.dataset;
    button.disabled=!active()||(action==="previous"&&state.step===0)||
-    (action==="next"&&state.step>=state.total-1);
+    (action==="next"&&(state.step>=state.total-1||Boolean(speech?.holdNext)));
   }
   renderPrompt();
   renderMeters();
