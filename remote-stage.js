@@ -98,6 +98,7 @@
    const cue=stage.state;
    if(cue==="welcome"||cue==="clock"){
     media=audioElement;status=opening.state==="narration"?"playing":opening.state;
+    if(status==="ready"&&document.body.dataset.audioError==="true")status="error";
     holdNext=cue==="clock"&&["starting","playing","narration"].includes(opening.state);
    }else if(cue==="memory-welcome"){
     media=memoryAudio;status=stage.memory?.mediaStates.memoryVoice;
