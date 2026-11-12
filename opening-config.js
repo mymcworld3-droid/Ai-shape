@@ -28,7 +28,7 @@ window.OPENING_CONFIG = Object.freeze({
     src: "assets/audio/background/Ending.mp3",
     startDelayMs: 1000,
     sceneStartCue: "ending-blackout",
-    subtitleStartStep: 263,
+    subtitleStartStep: 264, // p376-0: original Ending.mp3 cue after subtitle re-grouping
     subtitleEndParagraph: 425
   }),
   // The scene mode follows the same revised soundtrack timeline, including Act IV.

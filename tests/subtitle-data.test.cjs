@@ -57,7 +57,7 @@ test("uninterrupted same-speaker words are grouped, but stage/photo/voice bounda
  const merged=entries.filter(e=>e.parts?.length>1);
  assert.ok(merged.length>20,"same speaker lines should actually be joined");
  assert.ok(merged.some(e=>e.parts.some(p=>p.paragraph===325)));
- assert.ok(merged.some(e=>e.parts.some(p=>p.paragraph===414)&&e.parts.length===5));
+ assert.ok(merged.some(e=>e.id==="p414-3"&&e.parts.length===2));
  for(const e of entries){
   if(e.kind!=="dialogue")continue;
   assert.ok(e.text.trim());
@@ -88,6 +88,21 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p72-0","Let me think. What are some human things? Reflexes... Heads up!"],
   ["p75-0","Wait, what is that?"],
   ["p83-1","“Access to one's memory.”"],
+  ["p304-0","Nor a dystopia."],
+  ["p304-1","I am well aware that sometimes sacrifices are necessary,"],
+  ["p304-2","but we need to aim for the solution with minimal damage."],
+  ["p350-0","Turning literature all of the sudden, I thought our setting is comedy,"],
+  ["p350-1","judging by how we all look like dumbass clowning around."],
+  ["p388-0","Please make your selection."],
+  ["p388-1","One by one, state the name of the person you believe to be the robot."],
+  ["p388-2","1 minute remaining."],
+  ["p409-0","HUMAN VERIFICATION TEST NUMBER #67 complete."],
+  ["p409-1","Please proceed to the exit."],
+  ["p409-2","The next test will begin in 5 minutes."],
+  ["p414-0","There is no robot among the four of you."],
+  ["p414-1","This test does not measure artificial intelligence."],
+  ["p414-2","It measures how quickly human beings choose to sacrifice one another under pressure."],
+  ["p414-3","Test completed. You may leave."],
   ["p137-0","There's also some writing on the back."],
   ["p139-0","“To remember, to forgive, to forget. —Chris”"],
   ["p207-0","They were the one stealing!"],
@@ -128,6 +143,11 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p28-0","p28-1","p28-3","p28-4","p28-5","p28-6"],
   ["p32-0","p32-3"],
   ["p43-0","p43-2"],
+  ["p304-0","p304-1","p304-2"],
+  ["p350-0","p350-1"],
+  ["p388-0","p388-1","p388-2"],
+  ["p409-0","p409-1","p409-2"],
+  ["p414-0","p414-1","p414-2","p414-3"],
   ["p62-0","p62-1"],["p72-0","p75-0"],["p137-0","p139-0"],
   ["p207-0","p207-1","p207-2","p207-3"],
   ["p209-0","p209-2","p209-3"],
@@ -160,6 +180,17 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.deepEqual(card?.parts.map(part=>part.id),["p83-1"]);
  assert.equal(entries.filter(e=>e.paragraph===83).length,1,
   "flip-card cue and reading are one navigable step");
- assert.equal(entries.length,295,
-  "splitting Christopher’s minimal-damage conclusion adds one operator-controlled step");
+ assert.equal(entries.length,301,"two simultaneous exchanges and all requested speech breaks");
+ for(const [id,partIds,names] of [
+  ["p89-0",["p89-0","p90-0","p91-0"],["RACHEL","ETHAN","CHRISTOPHER"]],
+  ["p378-0",["p378-0","p379-0","p380-0"],["RACHEL","CHRISTOPHER","ETHAN"]]
+ ]){
+  const e=entries.find(e=>e.id===id);
+  assert.deepEqual(e.lines.map(line=>line.speaker),names);
+  assert.deepEqual(e.parts.map(part=>part.id),partIds);
+  assert.equal(e.text,e.lines.map(line=>line.speaker+": "+line.text).join("\n"));
+ }
+ assert.equal(entries.find(e=>e.id==="p388-0").action,"selection-button");
+ assert.equal(entries[264].id,"p376-0",
+  "Ending.mp3 opening cue must stay with its original dialogue");
 });

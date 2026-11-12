@@ -84,6 +84,24 @@
  // Show the requested gloss for the rhetorical term; leave source parts intact.
  const parallelismLine=entries.find(e=>e.id==="p341-0");
  if(parallelismLine)parallelismLine.text="It would’ve been nice if you continue with it, parallelism（排比）, you know.";
+ // Split only the requested long actor speeches, preserving the source part
+ // in the first cue for manuscript checks and stable bookmarks.
+ function splitSpeech(id,first,second,nextId){
+  const entry=entries.find(e=>e.id===id);
+  if(!entry||entry.text!==first+" "+second||entries.some(e=>e.id===nextId))
+   throw Error("Subtitle split unavailable: "+id);
+  entry.text=first;
+  entries.splice(entries.indexOf(entry)+1,0,{
+   ...entry,id:nextId,text:second,action:null,look:{...entry.look},
+   parts:[{id:nextId,paragraph:entry.paragraph,text:second}]
+  });
+ }
+ splitSpeech("p304-1",
+  "I am well aware that sometimes sacrifices are necessary,",
+  "but we need to aim for the solution with minimal damage.","p304-2");
+ splitSpeech("p350-0",
+  "Turning literature all of the sudden, I thought our setting is comedy,",
+  "judging by how we all look like dumbass clowning around.","p350-1");
  // Pure nonlexical sounds have no readable subtitle. Keep meaningful
  // interjections and lines that contain other spoken words.
  const soundOnly=/^(?:(?:huh|ugh|ah|aah|haha+|ha(?:[\s-]*ha)+|hehe+|he(?:[\s-]*he)+|hm+|hmm+|uh+|um+|ohh+|gasp|groan|chuckle)[\s.!?…]*)+$/i;
@@ -105,12 +123,17 @@
   "p209-2","p209-3", // Liam's denial and accusation: three screens
   "p222-2","p222-3","p222-4", // CEO's four separate subtitle screens
   "p272-0","p274-0","p277-0","p281-0", // Christopher's five separate confession screens
+  "p304-1","p304-2", // Ethan's dystopia/sacrifices/minimal-damage lines
   "p341-1", // Rachel's parallelism quip in two operator-controlled screens
+  "p350-1", // Megan's comedy setup and clowning-around punchline
   "p353-0", // Ethan's two separate observations about Chris and Rachel
   "p358-2", // Split Megan's coin-flip suggestion from her preceding question
   "p363-1", // Rachel's consistency retort is a separate step
   "p375-2", // Ethan's unnecessary-actions line is a separate step
-  "p383-1" // Separate Christopher's minimal-damage conclusion
+  "p383-1", // Separate Christopher's minimal-damage conclusion
+  "p388-1","p388-2", // AI selection prompt: each of three sentences
+  "p409-1","p409-2", // AI completion announcement: three sentences
+  "p414-1","p414-2","p414-3" // AI truth reveal: four screens
  ]);
  const result=[];
  function sameLook(a,b){
@@ -131,6 +154,25 @@
     previous.parts.push(...e.parts);
   }else result.push(e);
  }
+ // The operator advances each overlapping three-person exchange once.
+ // Individual names remain visible, and all original IDs remain in parts.
+ function groupSimultaneous(ids){
+  const start=result.findIndex(e=>e.id===ids[0]);
+  const group=ids.map((id,i)=>result[start+i]);
+  if(start<0||group.some((e,i)=>!e||e.id!==ids[i]))
+   throw Error("Simultaneous subtitle cues unavailable: "+ids.join(", "));
+  const first=group[0];
+  if(group.some(e=>e.kind!=="dialogue"||e.action||e.group||
+   e.act!==first.act||e.scene!==first.scene||!sameLook(e,first)))
+   throw Error("Simultaneous cue has incompatible stage effects: "+ids.join(", "));
+  first.lines=group.map(e=>({speaker:e.speaker,text:e.text}));
+  first.parts=group.flatMap(e=>e.parts||[]);
+  first.speaker="";
+  first.text=first.lines.map(line=>line.speaker+": "+line.text).join("\n");
+  result.splice(start,group.length,first);
+ }
+ groupSimultaneous(["p89-0","p90-0","p91-0"]);
+ groupSimultaneous(["p378-0","p379-0","p380-0"]);
  // Preserve the final post-show media action and the inserted blackout hold.
  return {source:{...source.source,subtitleDocument:"Power playyyy (Google Docs)"},
   entries:credits.appendToSubtitle(result)};

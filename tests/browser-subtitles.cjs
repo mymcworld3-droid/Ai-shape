@@ -42,6 +42,13 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(await page.locator('#subtitles').count(),1);
   assert.equal(await page.locator('#subtitleStack, #subtitlePrevious, #subtitleNext').count(),0);
   assert.equal(await page.locator('#subtitleText').textContent(),'“Access to one\'s memory.”');
+  for(const id of ["p89-0","p378-0"]){
+   const entry=data.entries.find(e=>e.id===id);
+   await page.locator('[data-script="'+data.entries.indexOf(entry)+'"]').click();
+   assert.equal(await page.locator('#subtitleText').textContent(),entry.text);
+   assert.equal(await page.locator('#subtitleText').evaluate(e=>getComputedStyle(e).whiteSpace),'pre-line');
+   assert.equal(entry.lines.length,3);
+  }
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
   assert.match(await page.locator('#startLabel').textContent(),/從第 .* 步開始/);
@@ -73,22 +80,24 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.ok(await scriptFade.evaluate(()=>scriptProjectionFrame().ai)>.99,'Direct script fade completes');
   await scriptFade.close();
   checks.push('AI reveal visibly fades during script preview and when rehearsing from the selected reveal cue');
-  // Scene cue 35 and subtitle cue 263 are intentionally separate indexes.
-  // Step 263 unlocks the uploaded Ending.mp3 immediately but fades it in
+  // Scene cue 35 and subtitle cue p376-0 are intentionally separate.
+  // The p376-0 cue unlocks the uploaded Ending.mp3 immediately but fades it in
   // only after one second, carrying the soundtrack into subsequent lines.
+  const musicCueIndex=data.entries.findIndex(e=>e.id==="p376-0");
+  assert.ok(musicCueIndex>0);
   const timedMusic=await browser.newPage({viewport:{width:1280,height:720}});
   await timedMusic.goto(url);
   await timedMusic.waitForFunction(()=>!document.getElementById('startButton').disabled);
   await timedMusic.locator('#stepsViewButton').click();
   await timedMusic.locator('#timelineTrack').selectOption('配樂');
   assert.ok(await timedMusic.getByRole('button',{name:/配樂 Ending\.mp3/}).count()>0,
-    'The music-editing timeline must include the new step-263 clip');
-  await timedMusic.locator('[data-script="263"]').click();
-  assert.equal(await timedMusic.locator('#startLabel').textContent(),'從第 263 步開始');
+    'The music-editing timeline must include the original p376-0 clip');
+  await timedMusic.locator('[data-script="'+musicCueIndex+'"]').click();
+  assert.equal(await timedMusic.locator('#startLabel').textContent(),'從第 '+musicCueIndex+' 步開始');
   assert.ok(await timedMusic.locator('audio,video').evaluateAll(media=>
     media.every(element=>element.paused)), 'Preview remains silent');
   await timedMusic.locator('#startButton').click();
-  assert.equal(await timedMusic.evaluate(()=>scriptShow.index),263);
+  assert.equal(await timedMusic.evaluate(()=>scriptShow.index),musicCueIndex);
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current?.src),
     'assets/audio/background/Ending.mp3');
   await timedMusic.waitForFunction(()=>actOneBackgroundMusic.activeAudio?.paused===false);
@@ -96,20 +105,20 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
     'The one-second pre-roll must be silent');
   await timedMusic.waitForTimeout(350);
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.volume),0,
-    'Subtitle cue 263 must not play its song before one second');
+    'Music start cue must not play its song before one second');
   await timedMusic.waitForFunction(()=>actOneBackgroundMusic.activeAudio?.volume>.03,
     null,{timeout:3500});
   const playerBefore=await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.id);
   await timedMusic.keyboard.press('ArrowRight');
-  assert.equal(await timedMusic.evaluate(()=>scriptShow.index),264);
+  assert.equal(await timedMusic.evaluate(()=>scriptShow.index),musicCueIndex+1);
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.id),playerBefore,
-    'Moving to subtitle 264 must not restart the delayed song');
+    'Moving to the following subtitle must not restart the delayed song');
   const blackoutIndex=data.entries.findIndex(entry=>entry.paragraph>=403);
   await timedMusic.evaluate(index=>scriptShow.jumpTo(index),blackoutIndex);
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current),null,
     'Existing later blackout must stop the override track');
   await timedMusic.close();
-  checks.push('Step 263 plays Ending.mp3 after one second, carries through subsequent subtitles and stops at blackout');
+  checks.push('Original p376-0 cue plays Ending.mp3 after one second, carries through subsequent subtitles and stops at blackout');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
@@ -440,7 +449,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   const creditIds=require('../end-credits').cards.map(card=>card.id);
   assert.equal(creditIds.length,6);
   // Without the bonus step, the 1.6-second audio lead auto-advances
-  // directly from blackout index 263 to the first credit.
+  // directly from the final blackout cue to the first credit.
   await page.waitForFunction(({index,id})=>scriptShow.index===index&&
    endCredits.activeId===id,
    {index:endBlackoutIndex+1,id:creditIds[0]},{timeout:6000});
