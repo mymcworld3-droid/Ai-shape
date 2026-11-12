@@ -513,7 +513,7 @@
     "ending-light", "ending-dialogue", "ending-complete", "ending-question",
     "ending-reveal", "ending-blackout", "behind-the-scenes",
     "credit-directed", "credit-conversation", "credit-produced",
-    "credit-executive", "credit-backgrounds", "credit-pause", "credit-title"
+    "credit-executive", "credit-backgrounds", "credit-title"
   ]);
 
   // Operator cues and media completion are separate. The clock may replace the
@@ -905,8 +905,7 @@
         case "credit-conversation": this.setCue("credit-produced"); return true;
         case "credit-produced": this.setCue("credit-executive"); return true;
         case "credit-executive": this.setCue("credit-backgrounds"); return true;
-        case "credit-backgrounds": this.setCue("credit-pause"); return true;
-        case "credit-pause": this.setCue("credit-title"); return true;
+        case "credit-backgrounds": this.setCue("credit-title"); return true;
         case "credit-title": return false;
         default: return false;
       }
