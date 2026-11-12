@@ -58,16 +58,16 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   await guestA.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
   await guestB.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
   assert.equal(await guestA.locator("#nextScenePrompt").isVisible(),true);
-  assert.match(await guestA.locator("#nextPromptStep").textContent(),/第 0 步/);
-  assert.equal(await guestA.locator("#stepContextList li").count(),3,
-    "First cue has current, next and next-two, but no negative cues");
+  assert.match(await guestA.locator("#nextPromptStep").textContent(),/第 1 步/);
+  assert.equal(await guestA.locator("#stepContextList li").count(),4,
+    "Next cue 1 has current cue 0, focus 1 and the following two cues");
   assert.deepEqual(await guestA.locator("#stepContextList li").evaluateAll(items=>
-   items.map(row=>Number(row.dataset.step))),[0,1,2]);
+   items.map(row=>Number(row.dataset.step))),[0,1,2,3]);
   assert.equal(await guestA.locator("#stepContextList [aria-current=step]").count(),1);
   assert.match(await guestA.locator("#stepContextList").textContent(),/What is going on/);
   // The five-step context, sliders and meters must fit mobile landscapes.
   const previewLineCount=await guestA.locator("#stepContextList li").count();
-  assert.equal(previewLineCount,3);
+  assert.equal(previewLineCount,4);
   for(const viewport of [
    {width:640,height:900},{width:390,height:844},
    {width:390,height:667},{width:320,height:568},{width:600,height:500}
@@ -102,9 +102,9 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   await guestB.waitForFunction(()=>document.getElementById("remoteEffect").textContent==="95%");
   await guestA.locator('[data-action="next"]').click();
   await guestB.waitForFunction(()=>document.getElementById("remoteStep").textContent.includes("第 1 步"));
-  assert.match(await guestB.locator("#nextPromptStep").textContent(),/第 1 步/);
+  assert.match(await guestB.locator("#nextPromptStep").textContent(),/第 2 步/);
   assert.deepEqual(await guestB.locator("#stepContextList li").evaluateAll(items=>
-   items.map(row=>Number(row.dataset.step))),[0,1,2,3]);
+   items.map(row=>Number(row.dataset.step))),[0,1,2,3,4]);
   assert.equal(await guestB.locator("#meterEffect").getAttribute("min"),"-60");
   // The controller can browse the entire scene catalog and jump across acts
   // without expanding the compact mixer or playing intermediate effects.
@@ -141,7 +141,7 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   await start("/",`[data-script="${openingIndex-1}"]`,openingIndex-1);
   await remote.waitForFunction(index=>
    document.querySelector("#nextPromptStep")?.textContent.includes("第 "+index+" 步"),
-   openingIndex-1);
+   openingIndex);
   assert.equal(await remote.locator("#nextScenePrompt").isVisible(),true,
    "Subtitle mode must show the next operator cue before advancing");
   assert.ok((await remote.locator("#stepContextList").textContent())
@@ -159,7 +159,7 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   await waitForStep(openingIndex+1);
   await remote.waitForFunction(index=>
    document.getElementById("nextPromptStep").textContent.includes("第 "+index+" 步"),
-   openingIndex+1);
+   openingIndex+2);
   assert.equal(await stage.locator("#openingAudio").evaluate(media=>media.paused),false);
   // All remote controls, including the quick navigation button, stay usable
   // while the scripted subtitle hint is visible on small mobile screens.
@@ -183,10 +183,10 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   assert.equal(await stage.evaluate(()=>scriptShow.entry.action),"doorOpen");
   assert.deepEqual(await remote.locator("#stepContextList li").evaluateAll(items=>
    items.map(row=>Number(row.dataset.step))),
-   [doorIndex-2,doorIndex-1,doorIndex,doorIndex+1,doorIndex+2]);
+   [doorIndex-1,doorIndex,doorIndex+1,doorIndex+2,doorIndex+3]);
   assert.equal(await remote.locator("#nextScenePrompt").isVisible(),true);
   assert.match(await remote.locator("#nextPromptStep").textContent(),
-   new RegExp("第 "+doorIndex+" 步"));
+   new RegExp("第 "+(doorIndex+1)+" 步"));
 
   // Scene mode permits the clock cue during narration, then gates the next
   // scene until the actual recording finishes. The remote must explain it.
@@ -301,7 +301,7 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   assert.equal(await remote.locator("#nextScenePrompt").isVisible(),true,
    "Subtitle next-step prompt must survive reconnect/reload");
   assert.match(await remote.locator("#nextPromptStep").textContent(),
-   new RegExp("第 "+doorIndex+" 步"));
+   new RegExp("第 "+(doorIndex+1)+" 步"));
   await remote.locator("#sliderEffect").evaluate(slider=>{
    slider.value="95";
    slider.dispatchEvent(new Event("input",{bubbles:true}));
@@ -309,15 +309,16 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   });
   await remote.waitForFunction(()=>document.getElementById("remoteEffect").textContent==="95%");
   assert.equal(await stage.locator("#scriptEffect-doorOpen").evaluate(audio=>audio.volume),.95);
-  // User's concrete example: a step-31 prompt must show actual operator
-  // steps 29–33, including a non-spoken visual step when present.
+  // User's concrete example: when step 30 is playing, next step 31
+  // is centered between steps 29–30 and 32–33.
   await remote.locator("#openStepList").click();
-  await remote.locator("#stepSearch").fill("31");
-  await remote.locator('#remoteStepList [data-jump="31"]').click();
-  await waitForStep(31);
+  await remote.locator("#stepSearch").fill("30");
+  await remote.locator('#remoteStepList [data-jump="30"]').click();
+  await waitForStep(30);
   assert.deepEqual(await remote.locator("#stepContextList li").evaluateAll(rows=>
    rows.map(row=>Number(row.dataset.step))),[29,30,31,32,33]);
-  assert.equal(await remote.locator("#stepContextList [aria-current=step]").getAttribute("data-step"),"31");
+  assert.equal(await remote.locator("#stepContextList [aria-current=step]").getAttribute("data-step"),"30");
+  assert.equal(await remote.locator("#stepContextList li.is-next").getAttribute("data-step"),"31");
   assert.match(await remote.locator('#stepContextList [data-step="30"]').textContent(),/MEGAN.*Ugh Fair/);
   assert.match(await remote.locator('#stepContextList [data-step="31"]').textContent(),
    /RACHEL.*Didn’t we already do that\? Can we just press the button\?/);
@@ -325,7 +326,7 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   assert.match(await remote.locator('#stepContextList [data-step="33"]').textContent(),
    /ETHAN.*We don't know just who the bot is/);
   await remote.reload();
-  await waitForStep(31);
+  await waitForStep(30);
   assert.deepEqual(await remote.locator("#stepContextList li").evaluateAll(rows=>
    rows.map(row=>Number(row.dataset.step))),[29,30,31,32,33],
    "The five-step context survives remote reconnect");
