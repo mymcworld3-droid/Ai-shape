@@ -742,7 +742,7 @@ const stageActions={
    if(at>0)jumpStageTo(at-1);
   }
  }},
- jump:jumpStageTo,
+ jump:index=>jumpStageTo(index),
  voiceUp:()=>changeVoiceVolume(5),voiceDown:()=>changeVoiceVolume(-5),
  effectUp:()=>changeEffectVolume(5),effectDown:()=>changeEffectVolume(-5),
  otherUp:()=>changeOtherVolume(5),otherDown:()=>changeOtherVolume(-5),
