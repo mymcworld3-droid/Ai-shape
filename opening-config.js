@@ -39,7 +39,10 @@ window.OPENING_CONFIG = Object.freeze({
     "vote-final": 402, "vote-blackout": 403,
     "ending-light": 407, "ending-dialogue": 408, "ending-complete": 409,
     "ending-question": 410, "ending-reveal": 414, "ending-blackout": 416,
-    "behind-the-scenes": 417
+    "behind-the-scenes": 417,
+    "credit-directed": 418, "credit-conversation": 419,
+    "credit-produced": 420, "credit-executive": 421,
+    "credit-backgrounds": 422, "credit-pause": 423, "credit-title": 424
   }),
   narration: "assets/audio/ai-opening.m4a",
   // Original user-supplied WAV, stored locally for offline playback.
