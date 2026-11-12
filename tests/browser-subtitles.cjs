@@ -408,11 +408,11 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
    const active=await page.evaluate(()=>endCredits.activeId);
    assert.equal(active,creditIds[i-bonus-1]);
    if(data.entries[i].action==='credit-pause')
-    assert.equal(await page.locator('#endCreditsLayer .end-credit-pause').count(),1);
+    assert.equal(await page.locator('#endCreditsLayer [data-credit="credit-pause"]').count(),1);
   }
   assert.equal(await page.locator('#endCreditsLayer .end-credit-film-title').count(),1);
   await page.waitForTimeout(4800);
-  const titleScale=await page.locator('#endCreditsLayer .end-credit-title').evaluate(element=>
+  const titleScale=await page.locator('#endCreditsLayer [data-credit="credit-title"]').evaluate(element=>
    new DOMMatrixReadOnly(getComputedStyle(element).transform).a);
   assert.ok(titleScale>.98&&titleScale<1.02,'The Button zoom finishes at exact stage size');
   await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),last,
