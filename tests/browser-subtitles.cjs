@@ -125,7 +125,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     const c=document.getElementById('visualizer'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
     return d.some((v,i)=>i%4!==3&&v>15);
   });
-  assert.equal(await canvasIsBlack(),false,'Step zero must show the blue room, not a black screen');
+  assert.equal(await canvasIsBlack(),true,'Step zero must be dim enough for stagehands (all pixels <=15)');
   assert.equal(await page.evaluate(()=>scriptProjectionFrame().room),false);
   assert.equal(await page.evaluate(()=>scriptProjectionFrame().blackout),0);
   assert.equal(await page.locator('#actOneBgm').getAttribute('src'),null);

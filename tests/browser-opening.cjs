@@ -178,6 +178,17 @@ async function matchesStill(page, sourcePath, region=null) {
   const comparison=await expectedDifference(page,sourcePath,region);
   assert.ok(comparison.mean<1,`Projection must match ${sourcePath}; mean pixel error ${comparison.mean}`);
 }
+async function matchesDimmedCueZero(page) {
+  const comparison=await expectedDifference(page,"assets/backgrounds/Start_dark.PNG",null,15,OPENING_DARK_DIM);
+  assert.ok(comparison.mean<1.5,"Step 0 must retain its blue room at 5% brightness; mean error "+comparison.mean);
+  const max=await page.locator("#visualizer").evaluate(canvas=>{
+   const p=canvas.getContext("2d").getImageData(0,0,canvas.width,canvas.height).data;
+   let maximum=0;for(let i=0;i<p.length;i+=4)maximum=Math.max(maximum,p[i],p[i+1],p[i+2]);
+   return maximum;
+  });
+  assert.ok(max<=15,"Stage-safe cue 0 must not cast bright light; brightest pixel "+max);
+}
+const OPENING_DARK_DIM=.95;
 async function fixedFrame(page) {
   const box=await page.locator('#visualizer').boundingBox();
   const available=await page.locator('#projectionViewport').boundingBox();
@@ -324,7 +335,7 @@ async function fastVoting(page){
     assert.equal(await page.locator('#startButton').isVisible(),true);
     assert.equal(await page.locator('#stepsPanel').isVisible(),false);
     assert.equal(await page.locator('#startDock').evaluate(e=>getComputedStyle(e).position),"fixed");
-    await matchesStill(page,"assets/backgrounds/Start_dark.PNG");
+    await matchesDimmedCueZero(page);
     assert.equal(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused)),true,'Blue room step zero must be silent');
     assert.equal(await page.locator('body').getAttribute('data-cue'),"dark");
     await page.screenshot({path:path.join(output,"00-dark.png")});
@@ -336,7 +347,7 @@ async function fastVoting(page){
     assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await page.locator('#startButton').click(); await cue(page,"dark");
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-    await matchesStill(page,"assets/backgrounds/Start_dark.PNG");
+    await matchesDimmedCueZero(page);
     assert.equal(await page.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
     await page.keyboard.press('ArrowRight');await roomState(page,"playing");
     await noControls(page);
@@ -356,7 +367,7 @@ async function fastVoting(page){
     await checkAiScreen(page,{centered:true,large:true});
     await page.keyboard.press('Space');await state(page,'narration');
   await page.waitForFunction(()=>document.querySelector('#subtitleText').textContent.includes('Welcome to HUMAN VERIFICATION'));
-  assert.equal(await page.locator('#subtitleSpeaker').textContent(),'AI VOICE','Scene mode shows the recording speech as captions');
+  assert.equal(await page.locator('#subtitleSpeaker').textContent(),'AI VOICE','Scene mode shows the first recording caption automatically');
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Welcome precedes any door sound');
     await page.waitForTimeout(2200);
     const playing=await page.locator('#openingAudio').evaluate(a=>({time:a.currentTime,paused:a.paused}));
@@ -367,6 +378,17 @@ async function fastVoting(page){
     await page.screenshot({path:path.join(output,"04-welcome.png")});
     for(let frame=0;frame<4;frame++){
       await checkAiScreen(page,{front:true});await page.waitForTimeout(80);
+    }
+    // Subsequent AI voice lines advance only when the operator presses.
+    const captionCount=await page.evaluate(()=>SceneAiSubtitles.groupedAiLines(SHOW_SCRIPT.entries).opening.length);
+    assert.equal(captionCount,7);
+    const firstCaption=await page.locator('#subtitleText').textContent();
+    await page.waitForTimeout(350);
+    assert.equal(await page.locator('#subtitleText').textContent(),firstCaption,'AI subtitle must not follow audio time');
+    for(let line=1;line<captionCount;line++){
+      await page.keyboard.press('Space');
+      assert.equal(await page.evaluate(()=>stage.state),'welcome','Caption inputs must not skip the cue');
+      assert.equal(await page.evaluate(()=>sceneVoiceSubtitles.index),line);
     }
     await page.keyboard.down("Space"); await cue(page,"clock");
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Speech blocks the door cue');
