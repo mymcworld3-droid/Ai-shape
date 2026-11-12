@@ -100,16 +100,16 @@ test('rewind restores the departing frame and replay never resets a running open
 });
 test('all third-act scene cues rewind and replay without starting any voting deadline',async()=>{
  const c=setup(),visited=[];
- for(let i=0;i<25;i++){
+ for(let i=0;i<28;i++){
   await c.next();if(c.stage.state==='room-reveal')c.video.end();visited.push(c.stage.state);
   if(c.stage.state==='welcome')c.audio.end();if(c.stage.state==='door-kick')c.effect.end();
   if(c.stage.state==='door-open')c.doorOpen.end();
   if(c.stage.state==='memory-welcome')c.memoryVoice.end();if(c.stage.state==='office-bang')c.bang.end();
   if(c.stage.state==='vote-prompt')c.prompt.end();
  }
- assert.equal(visited.length,25);assert.equal(c.stage.state,'vote-blackout');
+ assert.equal(visited.length,28);assert.equal(c.stage.state,'vote-blackout');
  const opening=c.stage.opening.deadline,selection=c.stage.voting.deadline;
- for(let i=23;i>=-1;i--){assert.equal(c.stage.previous(),true);assert.equal(c.stage.state,i<0?'dark':visited[i]);}
+ for(let i=26;i>=-1;i--){assert.equal(c.stage.previous(),true);assert.equal(c.stage.state,i<0?'dark':visited[i]);}
  assert.equal(c.stage.previous(),false);assert.equal(c.stage.opening.deadline,opening);assert.equal(c.stage.voting.deadline,selection);
  for(let i=0;i<25;i++){
   await c.next();if(c.stage.state==='room-reveal')c.video.end();assert.equal(c.stage.state,visited[i]);
@@ -122,9 +122,9 @@ test('all third-act scene cues rewind and replay without starting any voting dea
  for(const m of [c.audio,c.doorOpen,c.memoryVoice,c.bang,c.prompt,c.button])assert.equal(m.calls,2);
 });
 
-test('every one of the 33 scene cues can be selected as the first live cue',async()=>{
+test('every one of the 36 scene cues can be selected as the first live cue',async()=>{
  const {STAGE_START_CUES}=require('../opening-controller.js');
- assert.equal(STAGE_START_CUES.length,33);
+ assert.equal(STAGE_START_CUES.length,36);
  const mediaFor={"bright":"video","welcome":"audio","door-kick":"effect","door-open":"doorOpen",
   "memory-welcome":"memoryVoice","office-bang":"bang","vote-prompt":"prompt",
   "ending-complete":"complete","ending-reveal":"reveal"};
@@ -138,10 +138,10 @@ test('every one of the 33 scene cues can be selected as the first live cue',asyn
   }
   assert.equal(c.stage.opening.deadline,index>=4?900000:null,cue+': opening deadline');
   assert.equal(c.stage.voting.deadline,null,cue+': voting has no timer');
-  if(index>=10)assert.equal(c.stage.memory.state,index<=13?cue:'memory-blackout');
-  if(index>=14)assert.equal(c.stage.office.state,index<=19?cue:'memory-return');
-  if(index>=20)assert.equal(c.stage.voting.state,index>=26?'vote-blackout':cue);
-  if(index>=26)assert.equal(c.stage.ending.state,cue);
+  if(index>=10)assert.equal(c.stage.memory.state,index<=12?cue:index<=15?'memory-room':'memory-blackout');
+  if(index>=17)assert.equal(c.stage.office.state,index<=22?cue:'memory-return');
+  if(index>=23)assert.equal(c.stage.voting.state,index>=29?'vote-blackout':cue);
+  if(index>=29)assert.equal(c.stage.ending.state,cue);
   assert.equal(c.stage.startAt('clock'),false,'cannot restart an already started scene');
   c.stage.destroy();
  }
