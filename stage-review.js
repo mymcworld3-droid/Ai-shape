@@ -33,10 +33,10 @@ const sceneEffects={
  "memory-light":config.memory.lightClick,"office-bang":config.office.bang,
  "vote-prompt":config.scriptEffects.selectionButton
 };
-function stepAudioFiles({paragraph,voice=null,effect=null,video=null}){
+function stepAudioFiles({paragraph,voice=null,effect=null,video=null,musicTrack=null,musicDelayMs=0}){
  const media=[];
- const track=ActOneMusic.trackForStep(paragraph,config.actOneMusic);
- if(track?.src)media.push({kind:"配樂",src:track.src});
+ const track=musicTrack||ActOneMusic.trackForStep(paragraph,config.actOneMusic);
+ if(track?.src)media.push({kind:"配樂",src:track.src,delayMs:musicDelayMs});
  if(voice)media.push({kind:"語音",src:voice});
  if(effect)media.push({kind:"音效",src:effect});
  if(video)media.push({kind:"影片",src:video});
@@ -48,7 +48,8 @@ function sceneStepAudio(cue){
  const paragraph=config.sceneMusicSteps[cue];
  return stepAudioFiles({paragraph,voice:sceneVoices[cue],
   effect:sceneEffects[cue],video:cue==="bright"?config.roomReveal:
-   cue==="behind-the-scenes"?config.behindScenes:null});
+   cue==="behind-the-scenes"?config.behindScenes:null,
+  musicDelayMs:cue===config.closingTheme.sceneStartCue?config.closingTheme.startDelayMs:0});
 }
 if(scriptMode){
  stepList.replaceChildren();
@@ -59,10 +60,14 @@ if(scriptMode){
   button.type='button';button.dataset.script=index;button.setAttribute('aria-pressed','false');number.className='step-number';number.textContent=index;
   text.textContent=e.text||e.note||e.action;small.textContent=`ACT ${e.act} · SCENE ${e.scene}${e.speaker?' · '+e.speaker:''}`;
   text.append(small);button.append(number,text);
+  const themeActive=index>=config.closingTheme.subtitleStartStep&&
+   e.paragraph<config.closingTheme.subtitleEndParagraph;
   timelineSteps.push({label:index,media:stepAudioFiles({paragraph:e.paragraph,
    voice:stepVoiceFiles[e.group],effect:stepEffectFiles[e.action],
    video:e.action==="reveal"?config.roomReveal:
-    e.action==="behind-the-scenes"?config.behindScenes:null})});
+    e.action==="behind-the-scenes"?config.behindScenes:null,
+   musicTrack:themeActive?config.actOneMusic.at(-1):null,
+   musicDelayMs:index===config.closingTheme.subtitleStartStep?config.closingTheme.startDelayMs:0})});
   li.append(button);stepList.append(li);
  });
 }
