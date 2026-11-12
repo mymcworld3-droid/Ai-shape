@@ -81,7 +81,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   await timedMusic.waitForFunction(()=>!document.getElementById('startButton').disabled);
   await timedMusic.locator('#stepsViewButton').click();
   await timedMusic.locator('#timelineTrack').selectOption('配樂');
-  assert.ok(await timedMusic.getByRole('button',{name:/配樂 Ending\\.mp3/}).count()>0,
+  assert.ok(await timedMusic.getByRole('button',{name:/配樂 Ending\.mp3/}).count()>0,
     'The music-editing timeline must include the new step-263 clip');
   await timedMusic.locator('[data-script="263"]').click();
   assert.equal(await timedMusic.locator('#startLabel').textContent(),'從第 263 步開始');
