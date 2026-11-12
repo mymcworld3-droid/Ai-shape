@@ -28,7 +28,7 @@
       active.end=index;
      }else{
       if(active){result.push(active);active=null;}
-      active={kind:lane.kind,src:media.src,start:index,end:index};
+      active={kind:lane.kind,src:media.src,start:index,end:index,delayMs:media.delayMs||0};
      }
      if(lane.kind==="音效"||lane.kind==="影片"){result.push(active);active=null;}
     }
@@ -55,10 +55,11 @@
     `第 ${steps[clip.start].label}–${steps[clip.end].label} 步`;
    button.type="button";
    button.className="timeline-clip timeline-clip-"+lanes.find(lane=>lane.kind===clip.kind).css;
-   button.title=`${filename}\n${range}`;
-   button.setAttribute("aria-label",`${clip.kind} ${filename}，${range}`);
+   const delay=clip.delayMs?" · "+(clip.delayMs/1000).toFixed(1)+" 秒後開始":"";
+   button.title=`${filename}${delay}\n${range}`;
+   button.setAttribute("aria-label",`${clip.kind} ${filename}，${range}${delay}`);
    button.hidden=true;
-   label.textContent=filename;
+   label.textContent=filename+(clip.delayMs?" · +"+(clip.delayMs/1000).toFixed(1)+"s":"");
    button.append(label);
    host.append(button);
    const segment={...clip,button,visibleRows:[]};
