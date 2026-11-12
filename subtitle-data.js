@@ -107,7 +107,9 @@
   "p272-0","p274-0","p277-0","p281-0", // Christopher's five separate confession screens
   "p341-1", // Rachel's parallelism quip in two operator-controlled screens
   "p353-0", // Ethan's two separate observations about Chris and Rachel
-  "p358-2" // Split Megan's coin-flip suggestion from her preceding question
+  "p358-2", // Split Megan's coin-flip suggestion from her preceding question
+  "p363-1", // Rachel's consistency retort is a separate step
+  "p375-2" // Ethan's unnecessary-actions line is a separate step
  ]);
  const result=[];
  function sameLook(a,b){
