@@ -20,7 +20,7 @@ window.OPENING_CONFIG = Object.freeze({
     Object.freeze({ from: 195, to: 268, src: "assets/audio/background/act-2/182-264.mp3" }),
     Object.freeze({ from: 269, to: 283, src: "assets/audio/background/act-2/265-278.mp3" }),
     Object.freeze({ from: 284, to: 402, src: "assets/audio/background/act-3/after-chris-transition.mp3" }),
-    Object.freeze({ from: 407, to: 415, src: "assets/audio/background/act-4/Ending.m4a" }),
+    Object.freeze({ from: 407, to: 415, src: "assets/audio/background/act-4/Act4.m4a" }),
     // Last blackout now starts this song, leading into all six end cards.
     Object.freeze({ from: 416, to: 424, src: "assets/audio/background/Ending.mp3", loop: false })
   ]),
