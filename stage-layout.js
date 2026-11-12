@@ -101,7 +101,6 @@
     "ending-question": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 0 },
     "ending-reveal": { background: "memory", room: true, ai: 1, aiExpansion: 1, scene: 0, clock: 0, card: 0, blackout: 0 },
     "ending-blackout": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
-    "behind-the-scenes": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     "credit-directed": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     "credit-conversation": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     "credit-produced": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
