@@ -147,6 +147,6 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
 .end-credit-the{font-family:Georgia,serif;font-size:3.0cqh;font-weight:500;
  line-height:1;letter-spacing:.13em;font-variant:small-caps;color:#e4e3e3;
  transform:translateX(.06em);margin-bottom:.1cqh}
-.end-credit-button{font-family:Impact,Haettenschweiler,'Arial Narrow',sans-serif;
- font-size:18.2cqh;font-weight:700;font-stretch:condensed;line-height:.95;
+.end-credit-button{font-family:'Arial Narrow','Helvetica Neue',Arial,sans-serif;
+ font-size:18.2cqh;font-weight:600;font-stretch:condensed;line-height:.95;
  letter-spacing:-.035em;transform:scaleX(.56);color:#a21d20}
