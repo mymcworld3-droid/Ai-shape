@@ -6,7 +6,7 @@ const subtitle=require("../subtitle-data");
 const {STAGE_START_CUES}=require("../opening-controller");
 const StageLayout=require("../stage-layout");
 
-test("six credit cues append after the bonus cue in both modes without a black pause",()=>{
+test("six credit cues append directly after the final blackout in both modes",()=>{
  const ids=EndCredits.cards.map(card=>card.id);
  assert.deepEqual(ids,[
   "credit-directed","credit-conversation","credit-produced",
@@ -14,8 +14,10 @@ test("six credit cues append after the bonus cue in both modes without a black p
  ]);
  assert.deepEqual(STAGE_START_CUES.slice(-6),ids);
  assert.deepEqual(subtitle.entries.slice(-6).map(entry=>entry.id),ids);
- assert.equal(STAGE_START_CUES.at(-7),"behind-the-scenes");
- assert.equal(subtitle.entries.at(-7).action,"behind-the-scenes");
+ assert.equal(STAGE_START_CUES.at(-7),"ending-blackout");
+ assert.equal(subtitle.entries.at(-7).action,"end-blackout");
+ assert.equal(STAGE_START_CUES.includes("behind-the-scenes"),false);
+ assert.equal(subtitle.entries.some(entry=>entry.action==="behind-the-scenes"),false);
  assert.equal(STAGE_START_CUES.includes("credit-pause"),false);
  assert.equal(subtitle.entries.some(entry=>entry.action==="credit-pause"),false);
  for(const entry of subtitle.entries.slice(-6)){
