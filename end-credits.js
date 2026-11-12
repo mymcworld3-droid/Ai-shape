@@ -4,24 +4,26 @@
  else root.EndCredits=api;
 })(typeof globalThis!=="undefined"?globalThis:this,function(){
  "use strict";
- // Credit pages 1-5 each run for 2.5 seconds, then the title closes.
- // The reference PDF's separate black pause has been removed by request.
- const CARD_DURATION_MS=2500;
+ // The closing sequence is operator-seekable but normally auto-advances
+ // through five independently timed cards. The Button remains the final hold.
+ // Timing is measured from each displayed cue, not from its entry-animation end.
+ const CREDIT_HOLD_MS=Object.freeze([3000,2800,2800,2700,7000]);
+ const SONG_LEAD_MS=1600;
  const TITLE_ZOOM_MS=4700;
  const TITLE_DECEL_MS=500;
  const TITLE_HANDOFF_SCALE=2.3;
  const cards=Object.freeze([
   {id:"credit-directed",label:"Directed by",role:"DIRECTED BY",
-   lines:["SOPHIA CHOU","CURRY CHEN","RICKY LIU"],motion:"rise"},
+   lines:["SOPHIA CHOU","CURRY CHEN","RICKY LIU"],motion:"rise",durationMs:CREDIT_HOLD_MS[0]},
   {id:"credit-conversation",label:"Based on the conversation between",
    role:"BASED ON THE CONVERSATION BETWEEN",
-   lines:["CHAT GPT","SOPHIA CHOU"],motion:"sweep"},
+   lines:["CHAT GPT","SOPHIA CHOU"],motion:"sweep",durationMs:CREDIT_HOLD_MS[1]},
   {id:"credit-produced",label:"Produced by",role:"PRODUCED BY",
-   lines:["SOPHIA CHOU"],motion:"focus"},
+   lines:["SOPHIA CHOU"],motion:"focus",durationMs:CREDIT_HOLD_MS[2]},
   {id:"credit-executive",label:"Executive producers",role:"EXECUTIVE PRODUCERS",
-   lines:["CURRY CHEN","RICKY LIU"],motion:"turn"},
+   lines:["CURRY CHEN","RICKY LIU"],motion:"turn",durationMs:CREDIT_HOLD_MS[3]},
   {id:"credit-backgrounds",label:"Backgrounds",role:"BACKGROUNDS",
-   lines:["MUSICS — SHIU-CHEN JOU","IMAGE — RAY CHEN"],motion:"unfold"},
+   lines:["MUSICS — SHIU-CHEN JOU","IMAGE — RAY CHEN"],motion:"unfold",durationMs:CREDIT_HOLD_MS[4]},
   {id:"credit-title",label:"The Button",role:"",lines:["The Button"],motion:"infinity"}
  ].map(card=>Object.freeze({...card,lines:Object.freeze(card.lines)})));
  const byId=new Map(cards.map(card=>[card.id,card]));
@@ -152,9 +154,10 @@
      easing:card.motion==="infinity"?"linear":"cubic-bezier(.18,.58,.2,1)",
      fill:"both"});
    }
-   // The first five cards always enter and vanish WITHIN their own 2500ms
-   // interval. The operator may jump sooner; all stale timers are cancelled.
+   // Every card must enter, remain visible, and disappear during its own
+   // specified slot. An operator jump cancels all obsolete animation timers.
    if(isPreview||card.motion==="infinity")return;
+   const durationMs=card.durationMs;
    exitTimer=setTimeout(()=>{
     if(run!==generation||id!==normalized)return;
     alreadyLeaving=true;
@@ -162,14 +165,14 @@
     if(!quiet()&&typeof element.animate==="function"){
      element.animate(model.leave,{duration:model.leaveMs,easing:"ease-in",fill:"forwards"});
     }else element.style.opacity="0";
-   },CARD_DURATION_MS-model.leaveMs);
+   },durationMs-model.leaveMs);
    advanceTimer=setTimeout(()=>{
     if(run!==generation||id!==normalized)return;
     onAdvance();
-   },CARD_DURATION_MS);
+   },durationMs);
   }
   return {show,get activeId(){return id;},get preview(){return preview;},layer};
  }
- return {cards,get,displayLines,appendToSubtitle,mount,motion,CARD_DURATION_MS,
+ return {cards,get,displayLines,appendToSubtitle,mount,motion,CREDIT_HOLD_MS,SONG_LEAD_MS,
   TITLE_ZOOM_MS,TITLE_DECEL_MS,TITLE_HANDOFF_SCALE};
 });
