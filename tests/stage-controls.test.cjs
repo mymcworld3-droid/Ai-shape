@@ -150,10 +150,10 @@ test('every one of the 36 scene cues can be selected as the first live cue',asyn
 test('scene seek cancels old effects, clears cue locks and reconstructs later and earlier scenes',async()=>{
  const c=setup();
  assert.equal(c.stage.seekTo('vote-prompt'),false,'Start required');
- assert.equal(c.stage.startAt('door-open'),true);
+ assert.equal(await c.stage.startAt('door-open'),true);
  await Promise.resolve();
  assert.equal(c.doorOpen.paused,false);
- assert.equal(c.stage.seekTo('vote-prompt'),true);
+ assert.equal(await c.stage.seekTo('vote-prompt'),true);
  await Promise.resolve();
  assert.equal(c.doorOpen.paused,true,'Skipping from door must stop its sound');
  assert.equal(c.stage.state,'vote-prompt');
@@ -168,7 +168,7 @@ test('scene seek cancels old effects, clears cue locks and reconstructs later an
  assert.equal(c.stage.history.length,0);
  await c.stage.advance();
  assert.equal(c.stage.state,'memory-photo-back','Following cue still advances naturally');
- assert.equal(c.stage.seekTo('bright'),true);
+ assert.equal(await c.stage.seekTo('bright'),true);
  assert.equal(c.stage.state,'room-reveal','Room reveal video is the target action');
  assert.equal(c.video.calls,1);
  assert.equal(c.stage.seekTo('dark'),true);
