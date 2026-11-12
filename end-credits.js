@@ -7,6 +7,9 @@
  // Credit pages 1-5 each run for 2.5 seconds, then the title closes.
  // The reference PDF's separate black pause has been removed by request.
  const CARD_DURATION_MS=2500;
+ const TITLE_ZOOM_MS=4700;
+ const TITLE_DECEL_MS=500;
+ const TITLE_HANDOFF_SCALE=2.3;
  const cards=Object.freeze([
   {id:"credit-directed",label:"Directed by",role:"DIRECTED BY",
    lines:["SOPHIA CHOU","CURRY CHEN","RICKY LIU"],motion:"rise"},
@@ -71,17 +74,20 @@
     {opacity:0,transform:"scaleX(1.28) translateY(24%)",letterSpacing:".35em"}],
    enterMs:1030,leaveMs:880},
   infinity:{
-   // scale(160) is a practical approximation to an infinitely large title:
-   // first portion is very fast then decelerates; a second gentler slowdown
-   // follows; the final .28 of the timeline is a strictly linear shrink.
+   // First 500ms: collapse from a practically infinite scale, initially
+   // extremely fast and decelerating. After exactly 500ms: ONE constant
+   // shrinking speed all the way to size 1, with no further easing phase.
+   // The .999215 Bézier endpoint slope matches the linear stage's speed,
+   // preventing a visible acceleration bump at the handoff.
    enter:[
-    {offset:0,opacity:1,transform:"scale(160)",easing:"cubic-bezier(.06,.81,.20,1)"},
-    {offset:.46,opacity:1,transform:"scale(2.15)",easing:"cubic-bezier(.24,.07,.25,1)"},
-    {offset:.72,opacity:1,transform:"scale(1.34)",easing:"linear"},
+    {offset:0,opacity:1,transform:"scale(160)",
+     easing:"cubic-bezier(.06,.81,.2,.999215)"},
+    {offset:TITLE_DECEL_MS/TITLE_ZOOM_MS,opacity:1,
+     transform:"scale("+TITLE_HANDOFF_SCALE+")",easing:"linear"},
     {offset:1,opacity:1,transform:"scale(1)"}
    ],
    leave:[{opacity:1,transform:"scale(1)"},{opacity:0,transform:"scale(.68)"}],
-   enterMs:4700,leaveMs:900}
+   enterMs:TITLE_ZOOM_MS,leaveMs:900}
  };
  function mount(rootElement,{onAdvance=()=>{}}={}){
   const layer=document.createElement("div");
@@ -164,5 +170,6 @@
   }
   return {show,get activeId(){return id;},get preview(){return preview;},layer};
  }
- return {cards,get,displayLines,appendToSubtitle,mount,motion,CARD_DURATION_MS};
+ return {cards,get,displayLines,appendToSubtitle,mount,motion,CARD_DURATION_MS,
+  TITLE_ZOOM_MS,TITLE_DECEL_MS,TITLE_HANDOFF_SCALE};
 });
