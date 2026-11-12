@@ -21,8 +21,18 @@ window.OPENING_CONFIG = Object.freeze({
     Object.freeze({ from: 195, to: 268, src: "assets/audio/background/act-2/182-264.mp3" }),
     Object.freeze({ from: 269, to: 283, src: "assets/audio/background/act-2/265-278.mp3" }),
     Object.freeze({ from: 284, to: 402, src: "assets/audio/background/act-3/after-chris-transition.mp3" }),
-    Object.freeze({ from: 407, to: 415, src: "assets/audio/background/act-4/Ending.m4a" })
+    Object.freeze({ from: 407, to: 415, src: "assets/audio/background/act-4/Ending.m4a" }),
+    // The separately supplied ending theme starts at scene cue 35 and
+    // remains audible through the five credit cards and final title.
+    Object.freeze({ from: 417, to: 424, src: "assets/audio/background/Ending.mp3" })
   ]),
+  closingTheme: Object.freeze({
+    src: "assets/audio/background/Ending.mp3",
+    startDelayMs: 1000,
+    sceneStartCue: "behind-the-scenes",
+    subtitleStartStep: 263,
+    subtitleEndParagraph: 403
+  }),
   // The scene mode follows the same revised soundtrack timeline, including Act IV.
   // Each cue points to a representative Word paragraph, not its UI step number.
   // The two modes therefore share the exact same audio files and crossfade rules.
