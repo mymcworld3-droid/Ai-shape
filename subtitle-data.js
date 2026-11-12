@@ -106,7 +106,8 @@
   "p222-2","p222-3","p222-4", // CEO's four separate subtitle screens
   "p272-0","p274-0","p277-0","p281-0", // Christopher's five separate confession screens
   "p341-1", // Rachel's parallelism quip in two operator-controlled screens
-  "p353-0" // Ethan's two separate observations about Chris and Rachel
+  "p353-0", // Ethan's two separate observations about Chris and Rachel
+  "p358-2" // Split Megan's coin-flip suggestion from her preceding question
  ]);
  const result=[];
  function sameLook(a,b){
