@@ -24,6 +24,7 @@
   <nav class="navigation" aria-label="切換演出步驟">
    <button type="button" data-action="previous" disabled>← 上一步</button>
    <button type="button" data-action="next" disabled>下一步 →</button>
+   <button type="button" id="openStepList" aria-haspopup="dialog" aria-controls="stepDialog" disabled>☷ 步驟清單</button>
   </nav>
   <section class="next-prompt" id="nextScenePrompt" aria-labelledby="nextPromptHeading" hidden>
    <h2 id="nextPromptHeading">下一步台詞提示</h2>
@@ -53,6 +54,21 @@
    </div>
    <button type="button" data-action="toggleVolumeDisplay" aria-pressed="false" disabled>在投影上顯示音量</button>
   </section></main>
+ <dialog id="stepDialog" aria-labelledby="stepDialogHeading">
+  <div class="step-dialog-content">
+   <header class="step-dialog-header">
+    <div><h2 id="stepDialogHeading">演出步驟清單</h2>
+     <p id="stepDialogInfo" aria-live="polite">正在讀取步驟…</p></div>
+    <button type="button" id="closeStepList" aria-label="關閉步驟清單">✕</button>
+   </header>
+   <label for="stepSearch">搜尋步驟編號、台詞或場景</label>
+   <input id="stepSearch" type="search" placeholder="輸入步驟、角色或台詞…" autocomplete="off">
+   <p class="step-dialog-hint">點選任一步驟即可讓播放裝置直接跳轉；跳過的媒體不會逐一播放。</p>
+   <ol id="remoteStepList" aria-label="可跳轉的演出步驟"></ol>
+  </div>
+ </dialog>
+ <script src="script-data.js"></script>
+ <script src="subtitle-data.js"></script>
  <script src="remote-link.js"></script>
  <script src="remote-control.js"></script>
 </body>
