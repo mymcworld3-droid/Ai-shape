@@ -18,7 +18,6 @@
       <canvas id="visualizer" aria-label="16:9 劇場投影；開始後空白鍵、右鍵或點一下換下一句，左鍵上一句"></canvas>
       <div id="subtitles" aria-live="off" hidden><div id="subtitleSpeaker"></div><div id="subtitleText"></div></div>
       <video id="roomRevealVideo" preload="auto" muted playsinline disablepictureinpicture aria-hidden="true" tabindex="-1"></video>
-      <video id="behindScenesVideo" preload="none" playsinline disablepictureinpicture aria-hidden="true" tabindex="-1" hidden></video>
       <audio id="openingAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
       <audio id="actOneBgm" preload="none" aria-hidden="true" tabindex="-1"></audio>
       <audio id="actOneBgmAlt" preload="none" aria-hidden="true" tabindex="-1"></audio>
@@ -88,15 +87,14 @@
         <li><button type="button" data-preview="ending-complete" aria-pressed="false"><span class="step-number">31</span><span>AI 宣布測試完成<small>原稿 p409</small></span></button></li>
         <li><button type="button" data-preview="ending-question" aria-pressed="false"><span class="step-number">32</span><span>眾人追問真相<small>What...? · Then who is the robot?</small></span></button></li>
         <li><button type="button" data-preview="ending-reveal" aria-pressed="false"><span class="step-number">33</span><span>AI 揭露真相<small>原稿 p414</small></span></button></li>
-        <li><button type="button" data-preview="ending-blackout" aria-pressed="false"><span class="step-number">34</span><span>最終全暗<small>You may leave. · 音樂淡出（等待操作）</small></span></button></li>
-        <li><button type="button" data-preview="behind-the-scenes" aria-pressed="false"><span class="step-number">35</span><span>播放幕後花絮<small>Ending.mp3 開始後 1.6 秒自動進入 36 · 幕後影片選用</small></span></button></li>
+        <li><button type="button" data-preview="ending-blackout" aria-pressed="false"><span class="step-number">34</span><span>最終全暗<small>You may leave. · Ending.mp3 播放 1.6 秒後自動進入片尾</small></span></button></li>
         <li class="scene-divider" role="presentation">片尾字幕 · 參照 Directed by.pdf（六張文字畫面）</li>
-        <li><button type="button" data-preview="credit-directed" aria-pressed="false"><span class="step-number">36</span><span>Directed by<small>3.0 秒 · Sophia Chou · Curry Chen · Ricky Liu</small></span></button></li>
-        <li><button type="button" data-preview="credit-conversation" aria-pressed="false"><span class="step-number">37</span><span>Based on the conversation between<small>2.8 秒 · Chat GPT · Sophia Chou</small></span></button></li>
-        <li><button type="button" data-preview="credit-produced" aria-pressed="false"><span class="step-number">38</span><span>Produced by<small>2.8 秒 · Sophia Chou</small></span></button></li>
-        <li><button type="button" data-preview="credit-executive" aria-pressed="false"><span class="step-number">39</span><span>Executive producers<small>2.7 秒 · Curry Chen · Ricky Liu</small></span></button></li>
-        <li><button type="button" data-preview="credit-backgrounds" aria-pressed="false"><span class="step-number">40</span><span>Backgrounds<small>7.0 秒 · Musics — Shiu-Chen Jou · Image — Ray Chen</small></span></button></li>
-        <li><button type="button" data-preview="credit-title" aria-pressed="false"><span class="step-number">41</span><span>The Button<small>前 0.5 秒快速減速，之後等速縮小至定格</small></span></button></li>
+        <li><button type="button" data-preview="credit-directed" aria-pressed="false"><span class="step-number">35</span><span>Directed by<small>3.0 秒 · Sophia Chou · Curry Chen · Ricky Liu</small></span></button></li>
+        <li><button type="button" data-preview="credit-conversation" aria-pressed="false"><span class="step-number">36</span><span>Based on the conversation between<small>2.8 秒 · Chat GPT · Sophia Chou</small></span></button></li>
+        <li><button type="button" data-preview="credit-produced" aria-pressed="false"><span class="step-number">37</span><span>Produced by<small>2.8 秒 · Sophia Chou</small></span></button></li>
+        <li><button type="button" data-preview="credit-executive" aria-pressed="false"><span class="step-number">38</span><span>Executive producers<small>2.7 秒 · Curry Chen · Ricky Liu</small></span></button></li>
+        <li><button type="button" data-preview="credit-backgrounds" aria-pressed="false"><span class="step-number">39</span><span>Backgrounds<small>7.0 秒 · Musics — Shiu-Chen Jou · Image — Ray Chen</small></span></button></li>
+        <li><button type="button" data-preview="credit-title" aria-pressed="false"><span class="step-number">40</span><span>The Button<small>前 0.5 秒快速減速，之後等速縮小至定格</small></span></button></li>
       </ol>
       <section id="audioTimeline" aria-label="直式媒體軌"></section>
     </div>
