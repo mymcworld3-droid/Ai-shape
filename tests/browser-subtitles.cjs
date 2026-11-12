@@ -80,45 +80,50 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.ok(await scriptFade.evaluate(()=>scriptProjectionFrame().ai)>.99,'Direct script fade completes');
   await scriptFade.close();
   checks.push('AI reveal visibly fades during script preview and when rehearsing from the selected reveal cue');
-  // Scene cue 35 and subtitle cue p376-0 are intentionally separate.
-  // The p376-0 cue unlocks the uploaded Ending.mp3 immediately but fades it in
-  // only after one second, carrying the soundtrack into subsequent lines.
-  const musicCueIndex=data.entries.findIndex(e=>e.id==="p376-0");
-  assert.ok(musicCueIndex>0);
+  // The subtitle list is edited frequently. The last Ending.mp3 must
+  // begin only at its stable p416 final-blackout cue, never at p376.
+  const musicCueIndex=data.entries.findIndex(e=>
+   e.action==="end-blackout"&&e.paragraph===416);
+  assert.ok(musicCueIndex>264);
+  assert.equal(data.entries[264].paragraph,376);
   const timedMusic=await browser.newPage({viewport:{width:1280,height:720}});
   await timedMusic.goto(url);
   await timedMusic.waitForFunction(()=>!document.getElementById('startButton').disabled);
   await timedMusic.locator('#stepsViewButton').click();
   await timedMusic.locator('#timelineTrack').selectOption('配樂');
-  assert.ok(await timedMusic.getByRole('button',{name:/配樂 Ending\.mp3/}).count()>0,
-    'The music-editing timeline must include the original p376-0 clip');
+  const endingClip=timedMusic.getByRole('button',{name:/配樂 Ending\\.mp3/});
+  assert.equal(await endingClip.count(),1,'Final song is a single timeline segment');
+  assert.match(await endingClip.getAttribute('title'),/Ending.mp3/);
   await timedMusic.locator('[data-script="'+musicCueIndex+'"]').click();
   assert.equal(await timedMusic.locator('#startLabel').textContent(),'從第 '+musicCueIndex+' 步開始');
   assert.ok(await timedMusic.locator('audio,video').evaluateAll(media=>
-    media.every(element=>element.paused)), 'Preview remains silent');
+   media.every(element=>element.paused)), 'Preview remains silent');
   await timedMusic.locator('#startButton').click();
   assert.equal(await timedMusic.evaluate(()=>scriptShow.index),musicCueIndex);
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current?.src),
-    'assets/audio/background/Ending.mp3');
+   'assets/audio/background/Ending.mp3');
   await timedMusic.waitForFunction(()=>actOneBackgroundMusic.activeAudio?.paused===false);
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.volume),0,
-    'The one-second pre-roll must be silent');
+   'First second of final-blackout song must be inaudible');
+  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.loop),false,
+   'Last Ending.mp3 must not repeat automatically');
   await timedMusic.waitForTimeout(350);
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.volume),0,
-    'Music start cue must not play its song before one second');
+   'Ending.mp3 must not become audible before its one-second delay');
   await timedMusic.waitForFunction(()=>actOneBackgroundMusic.activeAudio?.volume>.03,
-    null,{timeout:3500});
-  const playerBefore=await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.id);
-  await timedMusic.keyboard.press('ArrowRight');
-  assert.equal(await timedMusic.evaluate(()=>scriptShow.index),musicCueIndex+1);
-  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.id),playerBefore,
-    'Moving to the following subtitle must not restart the delayed song');
-  const blackoutIndex=data.entries.findIndex(entry=>entry.paragraph>=403);
-  await timedMusic.evaluate(index=>scriptShow.jumpTo(index),blackoutIndex);
+   null,{timeout:3500});
+  const audioId=await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.id);
+  await timedMusic.waitForFunction(index=>scriptShow.index===index,musicCueIndex+1,
+   {timeout:6000});
+  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.id),audioId,
+   'First end-credit must continue the SAME Ending.mp3 player');
+  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.loop),false);
+  const earlierBlackout=data.entries.findIndex(entry=>entry.paragraph===403);
+  await timedMusic.evaluate(index=>scriptShow.jumpTo(index),earlierBlackout);
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current),null,
-    'Existing later blackout must stop the override track');
+   'Rewinding to the earlier blackout must stop the final song');
   await timedMusic.close();
-  checks.push('Original p376-0 cue plays Ending.mp3 after one second, carries through subsequent subtitles and stops at blackout');
+  checks.push('Final p416 blackout begins non-looping Ending.mp3 after 1s, advances at 1.6s and shares audio with end credits');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
