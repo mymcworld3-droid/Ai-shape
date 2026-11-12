@@ -25,7 +25,7 @@ function stageState(state){
   state.step<0||state.step>=state.total||state.total>10000)return null;
  const {voice,effect,music}=state.volumes??{};
  if(![voice,effect,music].every(value=>Number.isInteger(value)&&value>=0&&value<=100))return null;
- const next=state.mode==="cues"?state.nextPreview:null;
+ const next=state.nextPreview;
  let nextPreview=null;
  if(next&&typeof next==="object"&&Number.isInteger(next.step)&&
     next.step===state.step+1&&next.step<state.total&&typeof next.label==="string"&&
@@ -33,8 +33,8 @@ function stageState(state){
   const parseLine=line=>line&&typeof line.speaker==="string"&&
    typeof line.text==="string"&&line.speaker.length<=60&&line.text.length<=500?
     {speaker:line.speaker,text:line.text}:null;
-  // Validate each of the two prior lines before relaying to remote viewers.
-  // Accept the historic single-line format from already-open projector tabs.
+  // Both scene and subtitle mode publish the same forward-looking shape.
+  // Keep compatibility with older projection tabs using one leadIn.
   const lines=next.lines.map(parseLine);
   const rawLeadIns=Array.isArray(next.leadIns)?next.leadIns:
    next.leadIn==null?[]:[next.leadIn];
