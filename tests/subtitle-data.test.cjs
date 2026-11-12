@@ -107,7 +107,9 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p277-0","He told me to tell the truth. I told the truth. I didn't lie."],
   ["p281-0","I just... ...chose which truth mattered."],
   ["p341-0","It would’ve been nice if you continue with it, parallelism（排比）, you know."],
-  ["p341-1","but clearly you don’t know that sooo…"]
+  ["p341-1","but clearly you don’t know that sooo…"],
+  ["p351-0","Don’t you think this line would fit Rachel better?"],
+  ["p353-0","I get it now, so you are saying that Chris would sacrifice someone when he’s under pressure?"]
  ];
  for(const [id,text] of screens){
   const matches=entries.filter(e=>e.parts?.some(p=>p.id===id));
@@ -123,7 +125,8 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p209-0","p209-2","p209-3"],
   ["p222-0","p222-2","p222-3","p222-4"],
   ["p270-0","p272-0","p274-0","p277-0","p281-0"],
-  ["p341-0","p341-1"]
+  ["p341-0","p341-1"],
+  ["p351-0","p353-0"]
  ];
  for(const group of consecutiveGroups){
   const indices=group.map(id=>entries.findIndex(e=>e.parts?.some(p=>p.id===id)));
@@ -145,6 +148,6 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.deepEqual(card?.parts.map(part=>part.id),["p83-1"]);
  assert.equal(entries.filter(e=>e.paragraph===83).length,1,
   "flip-card cue and reading are one navigable step");
- assert.equal(entries.length,290,
-  "splitting Rachel's parallelism line adds one operator-controlled subtitle step");
+ assert.equal(entries.length,291,
+  "splitting Ethan's observation adds one operator-controlled subtitle step");
 });
