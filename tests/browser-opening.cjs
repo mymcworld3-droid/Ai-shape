@@ -147,7 +147,9 @@ async function fastReveal(page) {
   await page.locator('#startButton').click(); await cue(page,"dark");
   await page.keyboard.press('ArrowRight'); await roomState(page,"playing");
   await page.locator('#roomRevealVideo').evaluate(video=>{video.currentTime=video.duration-.1;});
-  await cue(page,"bright"); await page.waitForTimeout(350);
+  await cue(page,"bright");
+  await page.waitForFunction(()=>roomHandoffProgress(performance.now())>=1);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
 }
 async function prepareWelcome(page) {
   await page.keyboard.press("Space"); await cue(page,"ai"); await settleLiveAi(page);
@@ -368,7 +370,7 @@ async function fastVoting(page){
     await page.waitForTimeout(500); await page.screenshot({path:path.join(output,"01-room-reveal.png")});
     await page.keyboard.down("Space"); await page.keyboard.down("Space");
     // Let the supplied video finish naturally, without synthetic end events.
-    await cue(page,"bright"); await page.waitForTimeout(400);
+    await cue(page,"bright"); await page.waitForTimeout(540);
     await page.keyboard.down("Space");
     await matchesStill(page,"assets/backgrounds/IMG_0165.png");
     assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0);
