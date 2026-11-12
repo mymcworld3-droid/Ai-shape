@@ -22,7 +22,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await trackSelect.selectOption('配樂');
   assert.equal(await track.getByRole('button',{name:/^配樂 Ending\.m4a/}).count(),1);
   await trackSelect.selectOption('音效');
-  await track.getByRole('button',{name:/^音效 door-open\.mp3/}).click();
+  await track.getByRole('button',{name:/^音效 heavy-auto-door\.mp3/}).click();
   assert.equal(await page.locator('#startLabel').textContent(),`從第 ${indexOf(87)} 步開始`);
   await page.locator('[data-script="0"]').click();
   assert.equal(await track.locator('.timeline-cursor').isVisible(),true);
