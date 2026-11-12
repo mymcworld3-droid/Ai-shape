@@ -159,7 +159,9 @@ const stage=new StageOpening.StageCueController({
   // update BGM. Stage previews never emit onCue and remain fully silent.
   if(!scriptMode&&startGate.started){
    document.body.dataset.musicError="false";
-   sceneBackgroundMusic.setStep(config.sceneMusicSteps[cue]??20);
+   sceneBackgroundMusic.setStep(config.sceneMusicSteps[cue]??20,{
+    delayMs:cue===config.closingTheme.sceneStartCue?config.closingTheme.startDelayMs:0
+   });
   }
   if(cue==="bright")roomReadyAt=performance.now();
   if(cue==="ai"){animate("ai",0,0);animate("ai",1,config.aiFadeMs);}
