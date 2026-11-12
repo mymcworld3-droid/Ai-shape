@@ -329,6 +329,15 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   assert.deepEqual(await remote.locator("#stepContextList li").evaluateAll(rows=>
    rows.map(row=>Number(row.dataset.step))),[29,30,31,32,33],
    "The five-step context survives remote reconnect");
+  await remote.setViewportSize({width:320,height:568});
+  await remote.waitForFunction(()=>{
+   const rect=document.querySelector("main").getBoundingClientRect();
+   return rect.top>=-1&&rect.left>=-1&&rect.right<=innerWidth+1&&
+    rect.bottom<=innerHeight+1;
+  });
+  assert.equal(await remote.locator("#stepContextList li").count(),5,
+   "Even a short mobile remote must retain all five actual steps");
+  await remote.setViewportSize({width:390,height:844});
 
   await start("/?mode=cues",'[data-preview="card-hidden"]',7);
   await next.tap();
