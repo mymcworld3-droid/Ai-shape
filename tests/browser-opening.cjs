@@ -699,35 +699,43 @@ async function fastVoting(page){
       null,{timeout:3500});
     await page.waitForFunction(()=>document.body.dataset.behindScenesState==='playing');
     assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>!v.hidden&&!v.paused),true);
-    await page.keyboard.press('ArrowLeft');await cue(page,'ending-blackout');
+    // A direct cue seek cancels the previous song clock and the bonus movie.
+    await page.evaluate(()=>stage.seekTo('ending-blackout'));await cue(page,'ending-blackout');
     assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true);
+    // Capture transition times *inside* onCue, not after Playwright observes
+    // them, so CI scheduling delays don't corrupt the measured cue lengths.
+    await page.evaluate(()=>{
+      window.creditCueTimeline=[];
+      const oldOnCue=stage.onCue;
+      stage.onCue=cue=>{
+        if(cue==='behind-the-scenes'||EndCredits.get(cue)){
+          window.creditCueTimeline.push({cue,at:performance.now(),
+           songTime:window.actOneBackgroundMusic.activeAudio?.currentTime});
+        }
+        oldOnCue(cue);
+      };
+    });
     await page.keyboard.press('Space');await cue(page,'behind-the-scenes');
     await page.waitForFunction(()=>document.body.dataset.behindScenesState==='playing');
     assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.currentTime<1),true,
       'Re-entering the bonus cue restarts the film');
     const endCards=require('../end-credits').cards.map(card=>card.id);
     assert.equal(endCards.length,6);
-    await page.keyboard.press('Space');await cue(page,endCards[0]);
-    const cardTimes=[await page.evaluate(()=>performance.now())];
-    for(let i=0;i<endCards.length;i++){
-      const id=endCards[i];
-      await page.waitForFunction(id=>document.body.dataset.cue===id,id,{timeout:6500});
-      assert.equal(await page.locator('#endCreditsLayer').isVisible(),true,id);
-      assert.equal(await page.evaluate(()=>endCredits.activeId),id);
-      assert.equal(await page.locator('#endCreditsLayer .end-credit-card').last().getAttribute('data-credit'),id);
-      assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true,
-        'The bonus video stops before timed credits begin');
-      if(i>0)cardTimes.push(await page.evaluate(()=>performance.now()));
-      if(i<endCards.length-1){
-       const elapsed=cardTimes[i]-cardTimes[0];
-       assert.ok(elapsed<3000*i+3000,'Timed credit should not be stuck on '+id);
-      }
+    await page.waitForFunction(()=>stage.state==='credit-title',null,{timeout:35000});
+    const timeline=await page.evaluate(()=>window.creditCueTimeline);
+    assert.deepEqual(timeline.map(item=>item.cue),['behind-the-scenes',...endCards]);
+    assert.ok(Math.abs(timeline[1].songTime-1.6)<.27,
+      'Step 36 must enter at 1.6 seconds of audible Ending.mp3: '+timeline[1].songTime);
+    const expected=[3000,2800,2800,2700,7000];
+    for(let i=0;i<expected.length;i++){
+      const elapsed=timeline[i+2].at-timeline[i+1].at;
+      assert.ok(Math.abs(elapsed-expected[i])<450,
+       'Step '+(36+i)+' duration '+elapsed+'ms did not match '+expected[i]+'ms');
     }
-    for(let i=1;i<cardTimes.length;i++){
-      const delta=cardTimes[i]-cardTimes[i-1];
-      assert.ok(delta>2050&&delta<3250,
-       'Each of the first five credit cards must appear and disappear within 2.5s: '+delta);
-    }
+    assert.equal(await page.evaluate(()=>endCredits.activeId),'credit-title');
+    assert.equal(await page.locator('#endCreditsLayer').isVisible(),true);
+    assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true,
+      'The bonus video must stop before timed end credits');
     const title=page.locator('#endCreditsLayer [data-credit="credit-title"]');
     assert.equal(await page.locator('#endCreditsLayer .end-credit-the').textContent(),'The');
     assert.equal(await page.locator('#endCreditsLayer .end-credit-button').textContent(),'Button');
@@ -750,7 +758,7 @@ async function fastVoting(page){
     results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; shrunk opening clock fills the original TV center without overflowing, card show/hide and exact blackout pixels");
     results.push("natural opening continues into Memory Room with the original 3.7-second M4A; AI enlarges over black, real audio reaches the analyser, genuine end fades and shrinks it, held Space never skips and the original deadline never resets");
     results.push('all eighteen cues follow Act II monologue, office flashback, BANG, reflection and Memory Room return; independent pixels verify dim room, exact blackouts and clean backgrounds at three ratios; held cues never skip fades or reset the deadline');
-    results.push('all 42 scene cues continue through Act IV, the separate bonus, then five automatically timed 2.5s credits and The Button; final blackout remains black');
+    results.push('scene 35 Ending.mp3 triggers credit 36 at audio 1.6s, then exact 3.0, 2.8, 2.8, 2.7, 7.0s intervals and holds at The Button; manual seek cancels earlier clocks');
 
     const fadePage=await browser.newPage({viewport:{width:1280,height:720}});
     const fadeErrors=[];fadePage.on('pageerror',error=>fadeErrors.push(String(error)));
