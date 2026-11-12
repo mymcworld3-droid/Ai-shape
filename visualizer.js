@@ -30,42 +30,6 @@ const endCredits=EndCredits.mount(visualizerWrap,{
   }else if(EndCredits.get(stage.state))stage.advance();
  }
 });
-const behindScenesVideo=document.getElementById("behindScenesVideo");
-let behindScenesRun=0;
-// Never load or play this optional file until the separate post-show step.
-function syncBehindScenes(isBonus){
- const run=++behindScenesRun;
- behindScenesVideo.pause();
- behindScenesVideo.hidden=true;
- if(!isBonus){document.body.dataset.behindScenesState="idle";return;}
- if(!config.behindScenes){document.body.dataset.behindScenesState="missing";return;}
- document.body.dataset.behindScenesState="loading";
- if(behindScenesVideo.getAttribute("src")!==config.behindScenes)
-  behindScenesVideo.src=config.behindScenes;
- behindScenesVideo.load();
- try{behindScenesVideo.currentTime=0;}catch(_){}
- try{
-  Promise.resolve(behindScenesVideo.play()).then(()=>{
-   if(run!==behindScenesRun)return;
-   behindScenesVideo.hidden=false;
-   document.body.dataset.behindScenesState="playing";
-  },error=>{
-   if(run!==behindScenesRun)return;
-   behindScenesVideo.hidden=true;
-   document.body.dataset.behindScenesState="unavailable";
-   console.info("[Post-show] Optional video not yet available.",error);
-  });
- }catch(error){
-  if(run!==behindScenesRun)return;
-  document.body.dataset.behindScenesState="unavailable";
- }
-}
-behindScenesVideo.addEventListener("ended",()=>{
- if(!behindScenesVideo.hidden)document.body.dataset.behindScenesState="ended";
-});
-behindScenesVideo.addEventListener("error",()=>{
- behindScenesVideo.hidden=true;document.body.dataset.behindScenesState="unavailable";
-});
 const projectionViewport=document.getElementById("projectionViewport");
 const fullscreenRoot=document.getElementById("showShell");
 const backgroundImage=new Image();
@@ -111,8 +75,8 @@ function updateTransitions(now){
 }
 
 // Scene mode shares the script's real soundtrack files and crossfade player.
-// The 35 -> 36 change is synchronized to actual music.currentTime (not the
-// initial one-second silent media pre-roll or the optional bonus video).
+// After deleting the bonus cue, final blackout 34 goes directly into
+// credit 35 when Ending.mp3 reaches 1.6 seconds of audible playback.
 let sceneMusicLeadTimer=null;
 function cancelSceneMusicLead(){
  if(sceneMusicLeadTimer!==null)clearInterval(sceneMusicLeadTimer);
@@ -175,15 +139,14 @@ const stage=new StageOpening.StageCueController({
  onCue(cue){
   cancelSceneMusicLead();
   document.body.dataset.cue=cue;
-  syncBehindScenes(cue==="behind-the-scenes");
   if(!scriptMode)endCredits.show(cue);
   window.sceneVoiceSubtitles?.clearCompleted();
   // All live scene transitions (including rewind and a direct rehearsal jump)
   // update BGM. Stage previews never emit onCue and remain fully silent.
   if(!scriptMode&&startGate.started){
    document.body.dataset.musicError="false";
-   // Returning manually to 35 must restart Ending.mp3 from zero; it
-   // otherwise remains the same track across the entire credit sequence.
+   // Re-entering final blackout restarts the song so a manual rewind
+   // cannot inherit the old countdown or a partially played track.
    if(cue===config.closingTheme.sceneStartCue&&
       sceneBackgroundMusic.current?.src===config.closingTheme.src)
     sceneBackgroundMusic.stop({immediate:true});
