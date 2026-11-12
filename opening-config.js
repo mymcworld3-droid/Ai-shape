@@ -31,7 +31,7 @@ window.OPENING_CONFIG = Object.freeze({
     // Resolve the final-blackout cue by its stable script action/paragraph.
     // Numeric subtitle indexes move whenever spoken lines are split/merged.
     subtitleStartAction: "end-blackout",
-    subtitleStartParagraph: 416
+    subtitleStartParagraph: 416,
     subtitleEndParagraph: 425
   }),
   // The scene mode follows the same revised soundtrack timeline, including Act IV.
