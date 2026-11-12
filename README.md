@@ -26,6 +26,8 @@
 
 **從 Ending.mp3 真正開始播放起算：** 第 35 步 1.6s；第 36 步 4.6s；第 37 步 7.4s；第 38 步 10.2s；第 39 步 12.9s；第 40 步 19.9s。
 
+**片尾歌曲只播放一次：** `assets/audio/background/Ending.mp3` 設定 `loop: false`；播放完自然停止，不會自動從頭重播。跨片尾字幕步驟共用同一首歌，不因字幕自動切換而重啟；只有使用者明確返回最終全黑並重新開始該段，才會刻意重播。
+
 1. **Directed by** — SOPHIA CHOU / CURRY CHEN / RICKY LIU：由下方上浮與聚焦淡入，離開時向上飄散。
 2. **Based on the conversation between** — CHAT GPT / SOPHIA CHOU：橫向遮罩滑入，離開時向右抽離。
 3. **Produced by** — SOPHIA CHOU：由略大、失焦狀態凝聚，離開時向中心縮小淡出。
