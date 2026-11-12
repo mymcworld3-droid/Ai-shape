@@ -47,6 +47,19 @@
    parts:[{id:patch.id,paragraph:patch.paragraph,text:patch.text}]};
   entries.splice(position,0,entry);
  }
+ // Knock/kick SFX and Megan's shout are one simultaneous operator cue.
+ // Retain the cue's original ID/action so the audio timeline, bookmarks and
+ // playback still trigger doorKick when this one subtitle step is selected.
+ const kickCue=entries.find(e=>e.id==="p33-0");
+ const kickLineIds=["p33-1","p33-2","p33-3"];
+ const kickLines=kickLineIds.map(id=>entries.find(e=>e.id===id));
+ if(kickCue&&kickLines.every(Boolean)){
+  kickCue.kind="dialogue";
+  kickCue.speaker="MEGAN";
+  kickCue.text=kickLines.map(e=>e.text).join(" ");
+  kickCue.parts=kickLines.flatMap(e=>e.parts);
+  for(const line of kickLines)entries.splice(entries.indexOf(line),1);
+ }
  // The latest Google Doc explicitly says "among the four of you".
  const finalFirst=entries.find(e=>e.id==="p414-0");
  if(finalFirst){
@@ -70,6 +83,7 @@
  const manualSubtitleBreakIds=new Set([
   "p28-1","p28-3","p28-4","p28-5", // opening AI announcement: 5 screens plus timer
   "p32-3", // separate Christopher's escape-room remark
+  "p43-2", // separate Ethan's recap from the next sentence
   "p62-1",  // after "check your pocket."
   "p75-0", // before "Wait, what is that?"
   "p139-0",// keep the photo inscription separate from its introduction
