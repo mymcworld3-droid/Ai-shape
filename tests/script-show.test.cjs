@@ -24,8 +24,8 @@ test('every spoken Word paragraph is reproduced once and in order, without stage
 
  assert.ok(!entries.some(x=>x.text==="It's empty."));
  assert.ok(entries.some(x=>x.paragraph===110&&x.action==='memoryClick'));
- assert.equal(entries.at(-2).action,'end-blackout');
- assert.equal(entries.at(-1).action,'behind-the-scenes');
+ assert.equal(entries.at(-1).action,'end-blackout');
+ assert.equal(entries.some(x=>x.action==='behind-the-scenes'),false);
  assert.equal(data.source.sha256,source.sha256);
 });
 test('all four acts, source-specific two-vote order, card, door, room, office and ending boundaries match',()=>{
@@ -36,7 +36,7 @@ test('all four acts, source-specific two-vote order, card, door, room, office an
  assert.equal(e.filter(x=>x.group==='two').at(-1).text,'Two votes.');assert.ok(!e.some(x=>/Three votes/.test(x.text)));
  assert.ok(e.some(x=>x.group==='prompt'&&x.text==='1 minute remaining.'));
  assert.equal(e.filter(x=>x.group==='revealTruth').at(-1).text,'You may leave.');
- assert.equal(e.length,381);
+ assert.equal(e.length,380);
  const prompt=e.find(x=>x.action==='selection-button');
  assert.equal(prompt.paragraph,388);assert.equal(prompt.group,'prompt');assert.equal(prompt.text,'Please make your selection.');
  assert.ok(!e.some(x=>x.paragraph===385||x.paragraph===386));
@@ -53,10 +53,8 @@ test('all four acts, source-specific two-vote order, card, door, room, office an
  assert.equal(e.find(x=>x.paragraph===43).look.scene,.35);
  assert.equal(e.find(x=>x.paragraph===186).look.blackout,0);
  assert.equal(e.find(x=>x.paragraph===198).look.background,'office');
- assert.equal(e.at(-3).text,'You may leave.');
- assert.equal(e.at(-2).action,'end-blackout');
- assert.equal(e.at(-2).look.blackout,1);
- assert.equal(e.at(-1).action,'behind-the-scenes');
+ assert.equal(e.at(-2).text,'You may leave.');
+ assert.equal(e.at(-1).action,'end-blackout');
  assert.equal(e.at(-1).look.blackout,1);
  assert.equal(e.some(x=>x.paragraph===415),false,'No extra silence or relighting after the final line');
 });
