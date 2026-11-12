@@ -339,6 +339,8 @@ test('Act IV continues after third-act blackout, plays both original AI recordin
  assert.equal(c.stage.opening.deadline,openingDeadline);
  assert.equal(c.stage.voting.deadline,selectionDeadline);
  assert.equal(c.stage.previous(),true);
+ assert.equal(c.stage.state,'behind-the-scenes');
+ assert.equal(c.stage.previous(),true);
  assert.equal(c.stage.state,'ending-blackout');
  assert.equal(c.stage.previous(),true);
  assert.equal(c.stage.state,'ending-reveal');
