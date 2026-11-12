@@ -34,6 +34,7 @@
  function applyRemoteCommand(message){
   if(!StageRemoteLink.actions.includes(message.action))return;
   if(message.action==="setVolume")stageActions.setVolume(message.channel,message.value);
+  else if(message.action==="jump")stageActions.jump(message.step);
   else stageActions[message.action]?.(false);
  }
 
