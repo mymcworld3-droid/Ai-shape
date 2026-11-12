@@ -669,6 +669,40 @@ function advanceStage(fullscreen=true){
  for(const kind of ["Prompt","One","Two","Final"])document.body.dataset["selection"+kind+"Error"]="false";
  stage.advance();if(fullscreen)requestStageFullscreen();
 }
+// A remote seek replaces the entire current cue (including its media), not
+// just the number shown on the operator's controller.
+function jumpStageTo(index){
+ if(!startGate.started||!Number.isInteger(index)||index<0)return false;
+ if(scriptMode)return index<SUBTITLE_SCRIPT.entries.length&&transcript.jumpTo(index);
+ const cue=StageOpening.STAGE_START_CUES[index];
+ if(!cue)return false;
+ if(cue===stage.state||cue==="bright"&&stage.state==="room-reveal")return true;
+ if(audioRecovery){
+  clearTimeout(audioRecovery.timer);
+  audioRecovery=null;
+  updateAudioRecoveryUI();
+ }
+ window.sceneVoiceSubtitles?.clear();
+ const voice={
+  welcome:audioElement,"memory-welcome":memoryAudio,
+  "vote-prompt":selectionAudio.prompt,"vote-one":selectionAudio.one,
+  "vote-two":selectionAudio.two,"vote-final":selectionAudio.final,
+  "ending-complete":endingCompleteAudio,"ending-reveal":endingRevealAudio
+ }[cue];
+ if(voice)prepareAudio(voice);
+ const accepted=stage.seekTo(cue);
+ if(!accepted)return false;
+ const frame=StageLayout.previewFrame(cue);
+ if(frame){
+  const values=Object.fromEntries(Object.keys(transitions).map(name=>
+   [name,Number(frame[name])||0]));
+  if(cue==="ai")values.ai=0;
+  stage.restorePresentation({scene:frame.background||"opening",values});
+  if(cue==="ai")animate("ai",1,config.aiFadeMs);
+ }
+ if(cue==="bright"){revealFreezeReady=false;scriptRevealHandoffAt=null;}
+ return true;
+}
 let voiceVolume=100,effectVolume=100,otherVolume=100;
 const volumeDisplay=document.getElementById("volumeDisplay");
 function applyVolumes(){
@@ -702,7 +736,13 @@ function toggleVolumeDisplay(){volumeDisplay.hidden=!volumeDisplay.hidden;}
 applyVolumes();
 const stageActions={
  start:()=>startGate.start(),next:advanceStage,
- previous:()=>{if(startGate.started){if(scriptMode)transcript.previous();else if(!window.sceneVoiceSubtitles?.previous())stage.previous();}},
+ previous:()=>{if(startGate.started){if(scriptMode)transcript.previous();
+  else if(!window.sceneVoiceSubtitles?.previous()&&!stage.previous()){
+   const at=StageOpening.STAGE_START_CUES.indexOf(stage.state==="room-reveal"?"bright":stage.state);
+   if(at>0)jumpStageTo(at-1);
+  }
+ }},
+ jump:jumpStageTo,
  voiceUp:()=>changeVoiceVolume(5),voiceDown:()=>changeVoiceVolume(-5),
  effectUp:()=>changeEffectVolume(5),effectDown:()=>changeEffectVolume(-5),
  otherUp:()=>changeOtherVolume(5),otherDown:()=>changeOtherVolume(-5),
