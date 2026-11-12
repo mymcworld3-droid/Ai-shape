@@ -673,7 +673,16 @@ function advanceStage(fullscreen=true){
 // just the number shown on the operator's controller.
 function jumpStageTo(index){
  if(!startGate.started||!Number.isInteger(index)||index<0)return false;
- if(scriptMode)return index<SUBTITLE_SCRIPT.entries.length&&transcript.jumpTo(index);
+ if(scriptMode){
+  if(index>=SUBTITLE_SCRIPT.entries.length)return false;
+  if(index===transcript.index)return true;
+  if(audioRecovery){
+   clearTimeout(audioRecovery.timer);
+   audioRecovery=null;
+   updateAudioRecoveryUI();
+  }
+  return transcript.jumpTo(index);
+ }
  const cue=StageOpening.STAGE_START_CUES[index];
  if(!cue)return false;
  if(cue===stage.state||cue==="bright"&&stage.state==="room-reveal")return true;
