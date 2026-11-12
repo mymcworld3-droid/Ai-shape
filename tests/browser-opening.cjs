@@ -688,6 +688,15 @@ async function fastVoting(page){
       route.fulfill({path:path.join(__dirname,'../assets/videos/Start_animation.mp4'),
         contentType:'video/mp4'}));
     await page.keyboard.press('Space');await cue(page,'behind-the-scenes');
+    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current?.src),
+      'assets/audio/background/Ending.mp3');
+    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio?.volume),0,
+      'Scene cue 35 pre-rolls the song silently');
+    await page.waitForTimeout(400);
+    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio?.volume),0,
+      'Ending.mp3 must not become audible before the one-second cue delay');
+    await page.waitForFunction(()=>actOneBackgroundMusic.activeAudio?.volume>.03,
+      null,{timeout:3500});
     await page.waitForFunction(()=>document.body.dataset.behindScenesState==='playing');
     assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>!v.hidden&&!v.paused),true);
     await page.keyboard.press('ArrowLeft');await cue(page,'ending-blackout');
