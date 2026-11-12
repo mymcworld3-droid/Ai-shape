@@ -696,6 +696,28 @@ async function fastVoting(page){
     await page.waitForFunction(()=>document.body.dataset.behindScenesState==='playing');
     assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.currentTime<1),true,
       'Re-entering the bonus cue restarts the film');
+    const endCards=EndCredits.cards.map(card=>card.id);
+    for(const id of endCards){
+      await page.keyboard.press('Space');await cue(page,id);
+      assert.equal(await page.locator('#endCreditsLayer').isVisible(),true,id);
+      assert.equal(await page.evaluate(()=>endCredits.activeId),id);
+      assert.equal(await page.locator('#endCreditsLayer .end-credit-card').last().getAttribute('data-credit'),id);
+      assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true,
+        'The bonus video must stop when end credits begin');
+    }
+    const title=page.locator('#endCreditsLayer .end-credit-title');
+    assert.equal(await page.locator('#endCreditsLayer .end-credit-the').textContent(),'The');
+    assert.equal(await page.locator('#endCreditsLayer .end-credit-button').textContent(),'Button');
+    const titleFrames=await title.evaluate(el=>el.getAnimations()[0].effect.getKeyframes());
+    assert.deepEqual(titleFrames.map(frame=>frame.offset),[0,.46,.72,1]);
+    assert.equal(titleFrames[2].easing,'linear','The final shrinking interval must be uniform');
+    await page.waitForTimeout(4800);
+    const finalScale=await title.evaluate(el=>new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
+    assert.ok(finalScale>.98&&finalScale<1.02);
+    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>stage.state),'credit-title',
+      'The Button title is the final operator step');
+    await page.keyboard.press('ArrowLeft');await cue(page,'credit-pause');
+    assert.equal(await page.evaluate(()=>endCredits.activeId),'credit-pause');
     assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
     assert.equal(await page.evaluate(()=>opening.deadline),deadline);
     assert.equal(errors.length,0,errors.join("\n"));
