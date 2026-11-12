@@ -738,14 +738,22 @@ function drawBackground(now,frame){
  ctx.clearRect(0,0,w,h);ctx.fillStyle=frame.hideBackground?"#000":"#050505";ctx.fillRect(0,0,w,h);
  if(frame.hideBackground)return; // No room or office backgrounds after the vote clock begins.
  const openingRoom=!frame.background||frame.background==="opening";
+ // Step 0 is deliberately at 5% brightness. The FIRST Next (room-reveal)
+ // restores full projection brightness as soon as its actual video frame
+ // decodes. Do not carry the cue-zero dimming overlay into step 1.
+ const firstReveal=!frame.script&&!frame.preview&&openingRoom&&
+  (roomReveal.state==="starting"||roomReveal.state==="playing");
+ const revealDecoded=firstReveal&&roomReveal.state==="playing"&&
+  revealVideo.readyState>=2&&revealVideo.videoWidth>0;
  const ready=frame.background==="office"?officeBackgroundReady:frame.background==="memory"?memoryBackgroundReady:backgroundReady;
- const image=frame.background==="office"?officeBackgroundImage:frame.background==="memory"?memoryBackgroundImage:frame.room?backgroundImage:darkBackgroundImage;
- if(frame.room?ready:openingRoom&&darkBackgroundReady){
+ const image=frame.background==="office"?officeBackgroundImage:frame.background==="memory"?memoryBackgroundImage:
+  frame.room||revealDecoded?backgroundImage:darkBackgroundImage;
+ if((frame.room||revealDecoded)?ready:openingRoom&&darkBackgroundReady){
   const b=StageLayout.coverLayout(w,h,image.naturalWidth,image.naturalHeight);ctx.drawImage(image,b.x,b.y,b.width,b.height);
  }
- // Only the step-zero backdrop is extremely dim: the next real video fades
- // over the same dim backdrop, never revealing an intervening bright photo.
- if(openingRoom&&!frame.room&&(!frame.script||frame.cueZero)){
+ // Keep the original dim room only before the first decoded reveal frame.
+ // While decoding, show the dark room rather than flashing an unrelated still.
+ if(openingRoom&&!frame.room&&(!frame.script||frame.cueZero)&&!revealDecoded){
   ctx.fillStyle=`rgba(0,0,0,${config.cueZeroDim})`;
   ctx.fillRect(0,0,w,h);
  }
@@ -760,7 +768,9 @@ function drawBackground(now,frame){
   if(p<1)drawRevealVideo(1-easeInOutCubic(p));
   else scriptRevealHandoffAt=null;
  }else if(!frame.script&&openingRoom&&!frame.preview&&roomReveal.state==="playing"){
-  drawRevealVideo(easeInOutCubic(Math.min(1,revealVideo.currentTime*1000/config.revealFadeMs)));
+  // Play the source video at its original brightness. Fading its opacity
+  // over a nearly black backdrop made the first cue remain dim.
+  if(revealDecoded)drawRevealVideo(1);
  }else if(!frame.script&&openingRoom&&!frame.preview&&roomReveal.state==="ready"){
   drawRevealVideo(1-roomHandoffProgress(now));
  }
