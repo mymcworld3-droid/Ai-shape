@@ -109,7 +109,8 @@
   "p353-0", // Ethan's two separate observations about Chris and Rachel
   "p358-2", // Split Megan's coin-flip suggestion from her preceding question
   "p363-1", // Rachel's consistency retort is a separate step
-  "p375-2" // Ethan's unnecessary-actions line is a separate step
+  "p375-2", // Ethan's unnecessary-actions line is a separate step
+  "p383-1" // Separate Christopher's minimal-damage conclusion
  ]);
  const result=[];
  function sameLook(a,b){
