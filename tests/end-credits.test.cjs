@@ -34,7 +34,12 @@ test("credits copy the user's reference names and go directly to the title",()=>
  assert.deepEqual(backgrounds.lines,["MUSICS — SHIU-CHEN JOU","IMAGE — RAY CHEN"]);
  assert.deepEqual(title.lines,["The Button"]);
  assert.deepEqual(EndCredits.displayLines("credit-pause"),[]);
- assert.equal(EndCredits.CARD_DURATION_MS,2500);
+ assert.equal(EndCredits.SONG_LEAD_MS,1600);
+ assert.deepEqual([...EndCredits.CREDIT_HOLD_MS],[3000,2800,2800,2700,7000]);
+ assert.deepEqual(EndCredits.cards.slice(0,5).map(card=>card.durationMs),
+  [3000,2800,2800,2700,7000]);
+ assert.equal(EndCredits.cards.at(-1).durationMs,undefined,
+  "The Button is held at the end and never auto-advances");
  assert.deepEqual(EndCredits.displayLines("credit-title"),[{speaker:"片名",text:"The Button"}]);
 });
 test("each lettered page has a distinct entry and exit and title zoom ends with a linear phase",()=>{
@@ -45,8 +50,8 @@ test("each lettered page has a distinct entry and exit and title zoom ends with 
  for(const card of entries){
   const pattern=EndCredits.motion[card.motion];
   assert.ok(pattern.enterMs>0&&pattern.leaveMs>0);
-  if(card.id!=="credit-title")assert.ok(pattern.enterMs+pattern.leaveMs<=EndCredits.CARD_DURATION_MS,
-   "Both entrance and exit must fit into the card's 2.5s");
+  if(card.id!=="credit-title")assert.ok(pattern.enterMs+pattern.leaveMs<=card.durationMs,
+   "Entrance and exit must both finish within this cue's specific duration");
   assert.ok(pattern.enter.length>=2&&pattern.leave.length>=2);
   enterShapes.add(JSON.stringify(pattern.enter));
   leaveShapes.add(JSON.stringify(pattern.leave));
@@ -61,4 +66,10 @@ test("each lettered page has a distinct entry and exit and title zoom ends with 
  assert.equal(zoom[1].transform,"scale(2.3)");
  assert.equal(zoom[1].easing,"linear","Shrink speed must stay constant after the first 0.5s");
  assert.equal(zoom[2].transform,"scale(1)");
+});
+
+test("Ending.mp3 cue sheet has the exact requested cumulative music timestamps",()=>{
+ const timeline=[EndCredits.SONG_LEAD_MS];
+ for(const card of EndCredits.cards.slice(0,5))timeline.push(timeline.at(-1)+card.durationMs);
+ assert.deepEqual(timeline,[1600,4600,7400,10200,12900,19900]);
 });
