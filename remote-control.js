@@ -149,14 +149,16 @@
   const items=context?.items;
   prompt.hidden=!Array.isArray(items)||!items.length;
   if(prompt.hidden){contextList.replaceChildren();return;}
-  promptStep.textContent=`第 ${context.step} 步 · 前後各兩步`;
+  promptStep.textContent=context.focus!==context.step?
+   `第 ${context.focus} 步 · 下一步與前後各兩步`:
+   `第 ${context.step} 步 · 最後一步`;
   const fragment=document.createDocumentFragment();
   for(const entry of items){
-   const current=entry.step===context.step;
-   const offset=entry.step-context.step;
-   const caption=offset===0?"目前":offset<0?"前"+(-offset)+"步":"後"+offset+"步";
+   const current=entry.step===context.step,next=entry.step===context.focus&&!current;
+   const offset=entry.step-context.focus;
+   const caption=current?"目前":next?"下一步":offset<0?"前"+(-offset)+"步":"後"+offset+"步";
    const li=document.createElement("li");
-   li.className=current?"is-current":"";
+   li.className=current?"is-current":next?"is-next":"";
    li.dataset.step=String(entry.step);
    if(current)li.setAttribute("aria-current","step");
    const index=document.createElement("span");
