@@ -5,10 +5,11 @@
  */
 (function(root,factory){
  const source=typeof module==="object"&&module.exports?require("./script-data"):root.SHOW_SCRIPT;
- const result=factory(source);
+ const credits=typeof module==="object"&&module.exports?require("./end-credits"):root.EndCredits;
+ const result=factory(source,credits);
  if(typeof module==="object"&&module.exports)module.exports=result;
  else root.SUBTITLE_SCRIPT=result;
-})(typeof globalThis!=="undefined"?globalThis:this,function(source){
+})(typeof globalThis!=="undefined"?globalThis:this,function(source,credits){
  "use strict";
  const entries=source.entries.map(e=>({...e,look:{...e.look},
   parts:e.text?[{id:e.id,paragraph:e.paragraph,text:e.text}]:[]}));
@@ -80,5 +81,5 @@
  }
  // Preserve the final post-show media action and the inserted blackout hold.
  return {source:{...source.source,subtitleDocument:"Power playyyy (Google Docs)"},
-  entries:result};
+  entries:credits.appendToSubtitle(result)};
 });
