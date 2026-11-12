@@ -20,7 +20,9 @@
       fadeMs = 1400, fadeOutMs = 1100, masterVolume = .4,
       now = () => performance.now(),
       requestFrame = fn => requestAnimationFrame(fn),
-      cancelFrame = id => cancelAnimationFrame(id)
+      cancelFrame = id => cancelAnimationFrame(id),
+      setTimer = (fn, ms) => setTimeout(fn, ms),
+      clearTimer = id => clearTimeout(id)
     }) {
       if (!audio || !alternateAudio || audio === alternateAudio) {
         throw new Error("Two distinct background audio elements are required");
@@ -35,6 +37,9 @@
       this.now = now;
       this.requestFrame = requestFrame;
       this.cancelFrame = cancelFrame;
+      this.setTimer = setTimer;
+      this.clearTimer = clearTimer;
+      this.pendingIntro = null;
       this.levels = new Map(this.players.map(player => [player, 0]));
       this.current = null;
       this.activeAudio = null;
@@ -87,7 +92,13 @@
       tick();
     }
 
+    cancelIntro(){
+      if(this.pendingIntro!==null)this.clearTimer(this.pendingIntro);
+      this.pendingIntro=null;
+    }
+
     clearPlayers() {
+      this.cancelIntro();
       for (const player of this.players) {
         player.pause();
         this.setLevel(player, 0);
@@ -105,8 +116,12 @@
       }, null);
     }
 
-    setStep(step) {
-      const track = trackForStep(step, this.tracks);
+    // Optionally select a cue-specific track without duplicating players.
+    // For a delayed cue, play() is invoked inside the operator's trusted
+    // gesture with zero gain. The source is then rewound and faded in after
+    // the one-second delay, so browser autoplay rules cannot suppress it.
+    setStep(step,{track:override=null,delayMs=0}={}) {
+      const track = override||trackForStep(step, this.tracks);
       if (!track) {
         // The pre-reveal black screen is strictly silent, even on rewind.
         this.stop({ immediate: step < this.tracks[0].from });
@@ -117,6 +132,7 @@
         return;
       }
 
+      this.cancelIntro();
       this.cancelFade();
       ++this.run;
       const outgoing = this.audiblePlayer() || this.activeAudio || this.stoppingAudio;
@@ -133,20 +149,33 @@
       this.stoppingAudio = null;
       this.stopping = false;
       this.failed = false;
-      this.startPlayback(this.run);
+      this.startPlayback(this.run,delayMs);
     }
 
-    startPlayback(run) {
+    startPlayback(run,delayMs=0) {
       const incoming = this.activeAudio;
       const outgoing = this.outgoingAudio;
       this.failed = false;
+      const began=this.now();
       try {
-        // play() runs synchronously in the operator's key/click gesture.
+        // play() runs inside the operator's gesture, inaudibly if delayed.
+        // Starting the media for the first time inside a later timer callback
+        // would be rejected by iOS Safari and other autoplay-blocking browsers.
         Promise.resolve(incoming.play()).then(() => {
           if (run !== this.run || incoming !== this.activeAudio) return;
-          this.fade(outgoing, incoming, this.fadeMs, () => {
-            if (run === this.run) this.outgoingAudio = null;
-          });
+          const startAudible=()=>{
+            this.pendingIntro=null;
+            if (run !== this.run || incoming !== this.activeAudio) return;
+            // The delayed song must start at its actual beginning, not one
+            // second into the file after its silent browser-unlock pre-roll.
+            if(delayMs>0)incoming.currentTime=0;
+            this.fade(outgoing, incoming, this.fadeMs, () => {
+              if (run === this.run) this.outgoingAudio = null;
+            });
+          };
+          const remaining=delayMs-(this.now()-began);
+          if(remaining>0)this.pendingIntro=this.setTimer(startAudible,remaining);
+          else startAudible();
         }).catch(error => this.playbackError(run, incoming, error));
       } catch (error) {
         this.playbackError(run, incoming, error);
@@ -155,6 +184,7 @@
 
     playbackError(run, incoming, error) {
       if (run !== this.run || incoming !== this.activeAudio) return;
+      this.cancelIntro();
       incoming.pause();
       this.setLevel(incoming, 0);
       this.failed = true;
@@ -164,6 +194,7 @@
     }
 
     stop({ immediate = false } = {}) {
+      this.cancelIntro();
       if (!immediate && this.stopping) return;
       if (!this.current && !this.activeAudio && !this.stoppingAudio && !this.stopping) return;
       ++this.run;
