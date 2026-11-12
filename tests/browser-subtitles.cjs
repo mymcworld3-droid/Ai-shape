@@ -287,7 +287,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
     284:'assets/audio/background/act-3/after-chris-transition.mp3',
     290:'assets/audio/background/act-3/after-chris-transition.mp3',
     403:null,
-    407:'assets/audio/background/act-4/Ending.m4a',
+    407:'assets/audio/background/act-4/Act4.m4a',
     416:'assets/audio/background/Ending.mp3'
    };
    if(Object.prototype.hasOwnProperty.call(soundtrackByParagraph,to.paragraph)){
