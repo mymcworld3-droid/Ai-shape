@@ -167,7 +167,7 @@ test("silent step frames cover every cue and cannot mutate the playback transiti
  assert.equal(previewFrame("ending-complete").ai,1);
  assert.equal(previewFrame("ending-reveal").ai,1);
  assert.equal(previewFrame("ending-blackout").blackout,1);
- assert.equal(previewFrame("behind-the-scenes").blackout,1);
+ assert.equal(previewFrame("behind-the-scenes"),null);
  assert.equal(previewFrame("unknown"),null);assert.equal(previewFrame("__proto__"),null);
 });
 test("merely creating a Start gate or checking readiness never begins playback",()=>{
