@@ -104,7 +104,9 @@ test("crossing into the memory scene preserves the opening's running deadline an
  await step(800);assert.equal(stage.state,"memory-light");
  await step(1100);assert.equal(stage.state,"memory-welcome");voice.end();
  await step(700);assert.equal(stage.state,"memory-room");
- await step(700);assert.equal(stage.state,"memory-blackout");
+ for(const cue of ["memory-photo-front","memory-photo-back","memory-photo-hide","memory-blackout"]){
+  await step(700);assert.equal(stage.state,cue);
+ }
  assert.equal(stage.opening.deadline,deadline);assert.ok(stage.opening.getRemainingMs()<900000);
  assert.equal(audio.calls,1);assert.equal(video.calls,1);assert.equal(voice.calls,1);
  time=deadline;assert.equal(stage.opening.getRemainingMs(),0);assert.equal(stage.state,"memory-blackout");
