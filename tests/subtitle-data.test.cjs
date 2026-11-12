@@ -25,7 +25,7 @@ test("restore all meaningful omitted lines from screenplay and latest Ben farewe
  const allParts=subtitles.entries.flatMap(e=>e.parts||[]);
  const ids=new Set(allParts.map(p=>p.id));
  for(const id of ["p33-1","p321-0","p322-0","p323-0","p325-0",
-  "p325-1","p326-0","p327-0","p360-0","p362-0","p257-ben-exit"])
+  "p325-1","p326-0","p327-0","p360-0","p362-0","p257-ben-song","p257-ben-exit"])
   assert.ok(ids.has(id),"missing restored line "+id);
  for(const e of original.entries.filter(e=>e.text)){
   const changed=e.id==="p414-0";
@@ -35,6 +35,7 @@ test("restore all meaningful omitted lines from screenplay and latest Ben farewe
    "lost original spoken fragment "+e.id);
  }
  assert.ok(subtitles.entries.some(e=>e.speaker==="BEN"&&
+  e.text.includes("Goodbye, Goodbye, see you tomorrow!")&&
   e.text.includes("I won't be seeing you tomorrow")));
  assert.ok(subtitles.entries.some(e=>e.group==="revealTruth"&&
   e.text.includes("There is no robot among the four of you.")));
