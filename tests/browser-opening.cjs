@@ -729,7 +729,27 @@ async function fastVoting(page){
     gradualPixels(await fadePixels(fadePage),'live second cue');
     await noControls(fadePage);assert.equal(fadeErrors.length,0,fadeErrors.join('\n'));
     await fadePage.screenshot({path:path.join(output,'25-ai-fade-live.png')});await fadePage.close();
-    results.push('second-step AI fades through independently measured transparent, intermediate and complete pixels in preview and live playback; delayed loading, same-step replay, switching away and Start during a fade never leak overlays or start media or timers');
+    // Regression: rehearsing from selected Step 02 must not restore the
+    // *finished* graphic over the 1.5-second live reveal.
+    const directAiPage=await browser.newPage({viewport:{width:1280,height:720}});
+    await ready(directAiPage,url);
+    await directAiPage.locator('#stepsViewButton').click();
+    await directAiPage.locator('[data-preview="ai"]').click();
+    await directAiPage.locator('#startButton').click();
+    await cue(directAiPage,'ai');
+    const initialAi=await directAiPage.evaluate(()=>({
+      value:transitions.ai.value,target:transitions.ai.target,duration:transitions.ai.duration
+    }));
+    assert.equal(initialAi.target,1);
+    assert.equal(initialAi.duration,OPENING_CONFIG.aiFadeMs);
+    assert.ok(initialAi.value<.05,'Direct-start AI must initially be transparent: '+JSON.stringify(initialAi));
+    await directAiPage.waitForTimeout(550);
+    const intermediateAi=await directAiPage.evaluate(()=>projectionFrame().ai);
+    assert.ok(intermediateAi>.05&&intermediateAi<.85,'Direct-start AI must be mid-fade: '+intermediateAi);
+    await directAiPage.waitForTimeout(1200);
+    assert.ok(await directAiPage.evaluate(()=>projectionFrame().ai)>.99,'Direct-start AI fade must complete');
+    await directAiPage.close();
+    results.push('second-step AI fades through independently measured transparent, intermediate and complete pixels in preview, live playback and direct Step 02 rehearsal start; delayed loading, same-step replay, switching away and Start during a fade never leak overlays or start media or timers');
 
     const review=await browser.newPage({viewport:{width:1440,height:900}});
     const reviewErrors=[];review.on('pageerror',error=>reviewErrors.push(String(error)));
