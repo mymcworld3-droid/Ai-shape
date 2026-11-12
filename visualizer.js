@@ -111,12 +111,34 @@ function updateTransitions(now){
 }
 
 // Scene mode shares the script's real soundtrack files and crossfade player.
- // Keep it idle until a live cue; selecting a rehearsal preview must stay silent.
+// The 35 -> 36 change is synchronized to actual music.currentTime (not the
+// initial one-second silent media pre-roll or the optional bonus video).
+let sceneMusicLeadTimer=null;
+function cancelSceneMusicLead(){
+ if(sceneMusicLeadTimer!==null)clearInterval(sceneMusicLeadTimer);
+ sceneMusicLeadTimer=null;
+}
 const sceneBackgroundMusic=scriptMode?null:new ActOneMusic.Controller({
  audio:document.getElementById("actOneBgm"),
  alternateAudio:document.getElementById("actOneBgmAlt"),
  tracks:config.actOneMusic,fadeMs:1400,fadeOutMs:1100,
- onError(error){document.body.dataset.musicError="true";console.error("[Scene BGM]",error);}
+ onError(error){document.body.dataset.musicError="true";console.error("[Scene BGM]",error);},
+ onAudibleStart(track,player){
+  if(track?.src!==config.closingTheme.src||!startGate.started||
+     stage.state!==config.closingTheme.sceneStartCue)return;
+  cancelSceneMusicLead();
+  const check=()=>{
+   if(!startGate.started||stage.state!==config.closingTheme.sceneStartCue||
+      sceneBackgroundMusic.current!==track||sceneBackgroundMusic.activeAudio!==player){
+    cancelSceneMusicLead();return;
+   }
+   if(!player.paused&&player.currentTime>=EndCredits.SONG_LEAD_MS/1000){
+    cancelSceneMusicLead();
+    void stage.advance();
+   }
+  };
+  sceneMusicLeadTimer=setInterval(check,25);
+ }
 });
 if(sceneBackgroundMusic)window.actOneBackgroundMusic=sceneBackgroundMusic;
 
@@ -151,6 +173,7 @@ const stage=new StageOpening.StageCueController({
   for(const key of Object.keys(document.body.dataset))if(key.endsWith("Error"))document.body.dataset[key]="false";
  },
  onCue(cue){
+  cancelSceneMusicLead();
   document.body.dataset.cue=cue;
   syncBehindScenes(cue==="behind-the-scenes");
   if(!scriptMode)endCredits.show(cue);
@@ -159,6 +182,11 @@ const stage=new StageOpening.StageCueController({
   // update BGM. Stage previews never emit onCue and remain fully silent.
   if(!scriptMode&&startGate.started){
    document.body.dataset.musicError="false";
+   // Returning manually to 35 must restart Ending.mp3 from zero; it
+   // otherwise remains the same track across the entire credit sequence.
+   if(cue===config.closingTheme.sceneStartCue&&
+      sceneBackgroundMusic.current?.src===config.closingTheme.src)
+    sceneBackgroundMusic.stop({immediate:true});
    sceneBackgroundMusic.setStep(config.sceneMusicSteps[cue]??20,{
     delayMs:cue===config.closingTheme.sceneStartCue?config.closingTheme.startDelayMs:0
    });
