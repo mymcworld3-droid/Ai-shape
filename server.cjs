@@ -42,14 +42,16 @@ function stageState(state){
   if(lines.every(Boolean)&&leadIns!==null&&leadIns.every(Boolean))
    nextPreview={step:next.step,label:next.label.slice(0,120),leadIns,lines};
  }
- // The replacement preview includes exactly the current operator cue and
- // its two immediate neighbors in each direction (truncated at the edges).
+ // Preview is centered on the next operator step, with two neighbors
+ // before and after it. When there is no next step, keep the final cue.
+ // Only real contiguous cue indices may pass across the WebSocket.
  const rawContext=state.stepContext;
  let stepContext=null;
  if(rawContext&&typeof rawContext==="object"&&rawContext.step===state.step&&
     Array.isArray(rawContext.items)){
-  const first=Math.max(0,state.step-2),last=Math.min(state.total-1,state.step+2);
-  if(rawContext.items.length===last-first+1){
+  const focus=Math.min(state.total-1,state.step+1);
+  const first=Math.max(0,focus-2),last=Math.min(state.total-1,focus+2);
+  if(rawContext.focus===focus&&rawContext.items.length===last-first+1){
    const items=rawContext.items.map((item,index)=>{
     if(!item||item.step!==first+index||typeof item.label!=="string"||
        item.label.length>120||typeof item.speaker!=="string"||
@@ -57,7 +59,7 @@ function stageState(state){
        item.text.length>500)return null;
     return {step:item.step,label:item.label,speaker:item.speaker,text:item.text};
    });
-   if(items.every(Boolean))stepContext={step:state.step,items};
+   if(items.every(Boolean))stepContext={step:state.step,focus,items};
   }
  }
  const incomingVoiceStatus=state.voiceStatus;
