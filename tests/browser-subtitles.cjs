@@ -46,6 +46,33 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
   assert.match(await page.locator('#startLabel').textContent(),/從第 .* 步開始/);
   await page.screenshot({path:path.join(out,'script-card-preview.png')});checks.push('Updated manuscript previews show media filenames; step zero uses the blue room, remains silent and does not autoplay');
+  // The manuscript's AI-reveal cue also fades in silent preview and when
+  // directly starting there, rather than snapping to the final opaque image.
+  const aiRevealIndex=data.entries.findIndex(e=>e.action==='ai');
+  assert.ok(aiRevealIndex>0,'Script must contain a separate AI reveal cue');
+  const scriptFade=await browser.newPage({viewport:{width:1280,height:720}});
+  await scriptFade.goto(url);
+  await scriptFade.waitForFunction(()=>!document.getElementById('startButton').disabled);
+  await scriptFade.locator('#stepsViewButton').click();
+  await scriptFade.locator(`[data-script="${aiRevealIndex}"]`).click();
+  assert.ok(await scriptFade.evaluate(()=>scriptProjectionFrame().ai)<.05,'Script preview starts transparent');
+  await scriptFade.waitForTimeout(650);
+  const previewMid=await scriptFade.evaluate(()=>scriptProjectionFrame().ai);
+  assert.ok(previewMid>.05&&previewMid<.85,'Script preview fades gradually: '+previewMid);
+  await scriptFade.waitForTimeout(1100);
+  assert.ok(await scriptFade.evaluate(()=>scriptProjectionFrame().ai)>.99,'Script preview ends fully visible');
+  assert.ok(await scriptFade.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused)),'Preview remains silent');
+  await scriptFade.locator('#startButton').click();
+  assert.equal(await scriptFade.evaluate(()=>scriptShow.index),aiRevealIndex);
+  assert.equal(await scriptFade.evaluate(()=>transitions.ai.duration),1500);
+  assert.ok(await scriptFade.evaluate(()=>scriptProjectionFrame().ai)<.05,'Direct script start resets opacity');
+  await scriptFade.waitForTimeout(650);
+  const liveMid=await scriptFade.evaluate(()=>scriptProjectionFrame().ai);
+  assert.ok(liveMid>.05&&liveMid<.85,'Direct script start fades gradually: '+liveMid);
+  await scriptFade.waitForTimeout(1100);
+  assert.ok(await scriptFade.evaluate(()=>scriptProjectionFrame().ai)>.99,'Direct script fade completes');
+  await scriptFade.close();
+  checks.push('AI reveal visibly fades during script preview and when rehearsing from the selected reveal cue');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
