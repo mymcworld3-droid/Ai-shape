@@ -745,7 +745,7 @@ async function fastVoting(page){
       value:transitions.ai.value,target:transitions.ai.target,duration:transitions.ai.duration
     }));
     assert.equal(initialAi.target,1);
-    assert.equal(initialAi.duration,OPENING_CONFIG.aiFadeMs);
+    assert.equal(initialAi.duration,await directAiPage.evaluate(()=>OPENING_CONFIG.aiFadeMs));
     assert.ok(initialAi.value<.05,'Direct-start AI must initially be transparent: '+JSON.stringify(initialAi));
     await directAiPage.waitForTimeout(550);
     const intermediateAi=await directAiPage.evaluate(()=>projectionFrame().ai);
