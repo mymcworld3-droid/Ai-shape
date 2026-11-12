@@ -146,7 +146,7 @@
   }
  }
  function renderPrompt(){
-  const next=state?.mode==="cues"&&state?.started?state.nextPreview:null;
+  const next=state?.started?state.nextPreview:null;
   prompt.hidden=!next;
   if(!next)return;
   promptStep.textContent=`第 ${next.step} 步 · ${next.label}`;
