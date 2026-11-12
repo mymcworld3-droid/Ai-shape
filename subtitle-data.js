@@ -14,9 +14,10 @@
   parts:e.text?[{id:e.id,paragraph:e.paragraph,text:e.text}]:[]}));
  // The online manuscript restores several real dialogue lines removed from
  // earlier operator-review revisions, plus Ben's newly written exit taunt.
- // "Ha Ha Ha", "Hahaha" and the sung stage direction are sound-only cues.
+ // "Ha Ha Ha" and "Hahaha" are sound-only; his sung words are dialogue.
  const additions=[
   {id:"p33-1",paragraph:33,speaker:"MEGAN",text:"Hey!"},
+  {id:"p257-ben-song",paragraph:257,speaker:"BEN",text:"Goodbye, Goodbye, see you tomorrow!"},
   {id:"p257-ben-exit",paragraph:257,speaker:"BEN",text:"Oh sorry, I won't be seeing you tomorrow."},
   {id:"p321-0",paragraph:321,speaker:"CHRISTOPHER",text:"You."},
   {id:"p322-0",paragraph:322,speaker:"RACHEL",text:"Me?"},
