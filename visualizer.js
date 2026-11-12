@@ -479,7 +479,7 @@ function prepareAudio(media=audioElement){
 // a later play() invoked by a WebSocket command. Do not touch the voice
 // scheduled to play immediately when rehearsing from a speech cue.
 function primeRemoteNarrations(){
- const selected=scriptMode?SHOW_SCRIPT.entries[window.selectedScriptStartIndex??0]:
+ const selected=scriptMode?SUBTITLE_SCRIPT.entries[window.selectedScriptStartIndex??0]:
   null;
  const directCue=scriptMode?selected?.group:window.selectedSceneStartCue;
  const immediate=new Set(["opening","memory","prompt","one","two","final",
