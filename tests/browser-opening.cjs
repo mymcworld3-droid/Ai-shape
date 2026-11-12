@@ -571,38 +571,41 @@ async function fastVoting(page){
     await page.waitForFunction(()=>['playing','finished'].includes(document.body.dataset.selectionButtonState));
     assert.ok(await page.locator('#selectionButtonAudio').evaluate(m=>m.currentTime>0||m.ended),'actor button sound must actually play');
     await flag(page,'selectionPromptState','missing');assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
-    const promptPanel=await expectedDifference(page,'assets/backgrounds/memory-room.png',[.1,.81,.9,.98],15,.2);
-    assert.ok(promptPanel.width>700&&promptPanel.height>75,'Selection prompt must visibly render');
+    // The legacy canvas vote banner must stay absent; stage dialogue is handled
+    // by the independently controlled subtitle renderer instead.
+    const noLegacyVoteText=async()=>{
+      const drawn=await page.locator('#visualizer').evaluate(async canvas=>{
+        const ctx=canvas.getContext('2d'),original=ctx.fillText,labels=[];
+        ctx.fillText=function(label,...args){labels.push(String(label));return original.call(this,label,...args);};
+        try{await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));}
+        finally{ctx.fillText=original;}
+        return labels;
+      });
+      assert.deepEqual(drawn,[],'Act III must not draw legacy vote text over subtitles');
+    };
+    await noLegacyVoteText();
     for(const id of ['selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio']){
       assert.equal(await page.locator('#'+id).getAttribute('src'),null);
     }
     assert.equal(await page.evaluate(()=>stage.voting.getRemainingMs()),null);
     await page.keyboard.press('Space');await cue(page,'vote-one');await page.waitForTimeout(700);
     assert.equal(await page.evaluate(()=>transitions.clock.value),0,'Voting must never display a timer');
-    const voteOne=await page.locator('#visualizer').evaluate(c=>{
-      const d=c.getContext('2d').getImageData(0,Math.round(c.height*.83),c.width,Math.round(c.height*.12)).data;
-      let hash=0;for(const v of d)hash=(hash*31+v)>>>0;return hash;
-    });
+    await noLegacyVoteText();
     await flag(page,'selectionOneState','missing');
     await page.keyboard.press('Space');await cue(page,'vote-two');await page.waitForTimeout(700);
-    const voteTwo=await page.locator('#visualizer').evaluate(c=>{
-      const d=c.getContext('2d').getImageData(0,Math.round(c.height*.83),c.width,Math.round(c.height*.12)).data;
-      let hash=0;for(const v of d)hash=(hash*31+v)>>>0;return hash;
-    });
-    assert.notEqual(voteOne,voteTwo,'One vote and two votes must have distinct visible text');
+    await noLegacyVoteText();
     await flag(page,'selectionTwoState','missing');
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await page.setViewportSize(viewport);await page.waitForTimeout(100);await noControls(page);
       const room=await expectedDifference(page,'assets/backgrounds/memory-room.png',[0,0,1,.2],15,.2);
       assert.ok(room.mean<1,'Voting retains the correct background and cover crop');
-      const box=await page.locator('#visualizer').boundingBox();
       assert.equal(await page.evaluate(()=>transitions.clock.target),0,'No third-act clock at any viewport');
-      const text=await expectedDifference(page,'assets/backgrounds/memory-room.png',[0,.81,1,.98],15,.2);
-      assert.ok(text.x>0&&text.x+text.width<box.width,'Vote panel stays inside the stage at every ratio');
+      await noLegacyVoteText();
     }
     await page.setViewportSize({width:1280,height:720});await page.waitForTimeout(100);
     await page.screenshot({path:path.join(output,'20-vote-two.png')});
     await page.keyboard.press('Space');await cue(page,'vote-final');await page.waitForTimeout(700);
+    await noLegacyVoteText();
     await flag(page,'selectionFinalState','missing');
     assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
     await page.keyboard.press('Space');await cue(page,'vote-blackout');await page.waitForTimeout(1300);
