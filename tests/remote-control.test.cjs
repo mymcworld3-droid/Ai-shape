@@ -233,24 +233,24 @@ test("subtitle-mode next-step preview is relayed and validated like scene previe
  const rejected=await remote.next("state");
  assert.equal(rejected.state.nextPreview,undefined);
 });
-test("remote preview transports exactly two previous, current and two next operator steps", {timeout:5000},async t=>{
+test("remote preview centers on the next operator step with two steps on each side", {timeout:5000},async t=>{
  const {client}=await startRelay(t);
  const host=await client();host.send({type:"host"});await host.next("ready");
  const remote=await client();remote.send({type:"watch"});
  await remote.next("ready");await remote.next("peer");
- const context={step:31,items:[
+ const context={step:30,focus:31,items:[
   {step:29,label:"Maybe we should look around first.",speaker:"CHRISTOPHER",text:"Maybe we should look around first."},
   {step:30,label:"Ugh Fair.",speaker:"MEGAN",text:"Ugh Fair."},
   {step:31,label:"Didn’t we already do that? Can we just press the button?",speaker:"RACHEL",text:"Didn’t we already do that? Can we just press the button?"},
   {step:32,label:"No!",speaker:"EVERYONE ELSE",text:"No!"},
   {step:33,label:"We don't know just who the bot is.",speaker:"ETHAN",text:"We don't know just who the bot is."}
  ]};
- const state={started:true,mode:"script",step:31,total:270,label:context.items[2].label,
+ const state={started:true,mode:"script",step:30,total:270,label:context.items[1].label,
   stepContext:context,volumes:{voice:100,effect:100,music:100},volumeVisible:false};
  host.send({type:"state",state});
  assert.deepEqual((await remote.next("state")).state,state);
- // Valid new windows may include only 3 at the first and final cue.
- const first={step:0,items:context.items.slice(0,3).map((item,i)=>({...item,step:i}))};
+ // The first step focuses on next cue 1 and thus shows steps 0–3.
+ const first={step:0,focus:1,items:context.items.slice(0,4).map((item,i)=>({...item,step:i}))};
  host.send({type:"state",state:{...state,step:0,label:"Beginning",stepContext:first}});
  assert.deepEqual((await remote.next("state")).state.stepContext,first);
  // Reject forged gaps and wrong parent step rather than displaying them.
