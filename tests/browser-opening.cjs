@@ -671,72 +671,47 @@ async function fastVoting(page){
     await flag(page,'endingRevealState','finished');
     await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
     await advanceRemainingSceneCaptions(page,'revealTruth');
-    await page.keyboard.press('Space');await cue(page,'ending-blackout');
-    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-    assert.equal(await page.locator('#visualizer').evaluate(c=>{
-      const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.every((v,i)=>i%4===3||v===0);
-    }),true,'Final Act IV blackout must be solid black');
-    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current),null);
-    await page.screenshot({path:path.join(output,'27-ending-blackout.png')});
-    // The blackout itself must never request or start the optional extra video.
-    assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>
-      v.hidden&&v.paused&&!v.hasAttribute('src')),true);
-    await page.waitForTimeout(100);
-    assert.equal(await page.evaluate(()=>stage.state),'ending-blackout');
-    // Simulate the future uploaded MP4 without committing it to this branch.
-    await page.route('**/assets/videos/behind-the-scenes.mp4',route=>
-      route.fulfill({path:path.join(__dirname,'../assets/videos/Start_animation.mp4'),
-        contentType:'video/mp4'}));
-    await page.keyboard.press('Space');await cue(page,'behind-the-scenes');
-    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current?.src),
-      'assets/audio/background/Ending.mp3');
-    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio?.volume),0,
-      'Scene cue 35 pre-rolls the song silently');
-    await page.waitForTimeout(400);
-    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.activeAudio?.volume),0,
-      'Ending.mp3 must not become audible before the one-second cue delay');
-    await page.waitForFunction(()=>actOneBackgroundMusic.activeAudio?.volume>.03,
-      null,{timeout:3500});
-    await page.waitForFunction(()=>document.body.dataset.behindScenesState==='playing');
-    assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>!v.hidden&&!v.paused),true);
-    // A direct cue seek cancels the previous song clock and the bonus movie.
-    await page.evaluate(()=>stage.seekTo('ending-blackout'));await cue(page,'ending-blackout');
-    const creditsOpeningDeadline=await page.evaluate(()=>opening.deadline);
-    assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true);
-    // Capture transition times *inside* onCue, not after Playwright observes
-    // them, so CI scheduling delays don't corrupt the measured cue lengths.
+    // The bonus cue was deleted. The final blackout itself starts Ending.mp3
+    // and advances to the first card when the audio reaches 1.6 seconds.
     await page.evaluate(()=>{
       window.creditCueTimeline=[];
       const oldOnCue=stage.onCue;
       stage.onCue=cue=>{
-        if(cue==='behind-the-scenes'||EndCredits.get(cue)){
+        if(cue==='ending-blackout'||EndCredits.get(cue)){
           window.creditCueTimeline.push({cue,at:performance.now(),
-           songTime:window.actOneBackgroundMusic.activeAudio?.currentTime});
+            songTime:window.actOneBackgroundMusic.activeAudio?.currentTime});
         }
         oldOnCue(cue);
       };
     });
-    await page.keyboard.press('Space');await cue(page,'behind-the-scenes');
-    await page.waitForFunction(()=>document.body.dataset.behindScenesState==='playing');
-    assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.currentTime<1),true,
-      'Re-entering the bonus cue restarts the film');
+    await page.keyboard.press('Space');await cue(page,'ending-blackout');
+    const creditsOpeningDeadline=await page.evaluate(()=>opening.deadline);
+    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current?.src),
+      'assets/audio/background/Ending.mp3');
+    assert.equal(await page.locator('#behindScenesVideo').count(),0,
+      'The optional bonus video element is removed');
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    assert.equal(await page.locator('#visualizer').evaluate(c=>{
+      const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+      return d.every((v,i)=>i%4===3||v===0);
+    }),true,'Final Act IV blackout remains solid black during the soundtrack lead');
+    await page.screenshot({path:path.join(output,'27-ending-blackout.png')});
     const endCards=require('../end-credits').cards.map(card=>card.id);
     assert.equal(endCards.length,6);
     await page.waitForFunction(()=>stage.state==='credit-title',null,{timeout:35000});
     const timeline=await page.evaluate(()=>window.creditCueTimeline);
-    assert.deepEqual(timeline.map(item=>item.cue),['behind-the-scenes',...endCards]);
+    assert.deepEqual(timeline.map(item=>item.cue),['ending-blackout',...endCards],
+      'Credits directly follow final blackout with no behind-scenes cue');
     assert.ok(Math.abs(timeline[1].songTime-1.6)<.27,
-      'Step 36 must enter at 1.6 seconds of audible Ending.mp3: '+timeline[1].songTime);
+      'Credit 35 must enter at song time 1.6s: '+timeline[1].songTime);
     const expected=[3000,2800,2800,2700,7000];
     for(let i=0;i<expected.length;i++){
       const elapsed=timeline[i+2].at-timeline[i+1].at;
       assert.ok(Math.abs(elapsed-expected[i])<450,
-       'Step '+(36+i)+' duration '+elapsed+'ms did not match '+expected[i]+'ms');
+        'Step '+(35+i)+' duration '+elapsed+'ms did not match '+expected[i]+'ms');
     }
     assert.equal(await page.evaluate(()=>endCredits.activeId),'credit-title');
     assert.equal(await page.locator('#endCreditsLayer').isVisible(),true);
-    assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true,
-      'The bonus video must stop before timed end credits');
     const title=page.locator('#endCreditsLayer [data-credit="credit-title"]');
     assert.equal(await page.locator('#endCreditsLayer .end-credit-the').textContent(),'The');
     assert.equal(await page.locator('#endCreditsLayer .end-credit-button').textContent(),'Button');
@@ -753,14 +728,14 @@ async function fastVoting(page){
     assert.equal(await page.evaluate(()=>endCredits.activeId),'credit-backgrounds');
     assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
     assert.equal(await page.evaluate(()=>opening.deadline),creditsOpeningDeadline,
-      'A rehearsal seek resets the prior countdown once; timed credits do not alter it');
+      'Timed credits must not alter the opening deadline');
     assert.equal(errors.length,0,errors.join("\n"));
     assert.ok(requests.every(request=>request.startsWith(url)),"Show assets must be local");
     await page.close();
     results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; shrunk opening clock fills the original TV center without overflowing, card show/hide and exact blackout pixels");
     results.push("natural opening continues into Memory Room with the original 3.7-second M4A; AI enlarges over black, real audio reaches the analyser, genuine end fades and shrinks it, held Space never skips and the original deadline never resets");
     results.push('all eighteen cues follow Act II monologue, office flashback, BANG, reflection and Memory Room return; independent pixels verify dim room, exact blackouts and clean backgrounds at three ratios; held cues never skip fades or reset the deadline');
-    results.push('scene 35 Ending.mp3 triggers credit 36 at audio 1.6s, then exact 3.0, 2.8, 2.8, 2.7, 7.0s intervals and holds at The Button; manual seek cancels earlier clocks');
+    results.push('final blackout 34 triggers credit 35 at Ending.mp3 time 1.6s, then 3.0, 2.8, 2.8, 2.7, 7.0s intervals and holds at The Button');
 
     const fadePage=await browser.newPage({viewport:{width:1280,height:720}});
     const fadeErrors=[];fadePage.on('pageerror',error=>fadeErrors.push(String(error)));
@@ -844,14 +819,14 @@ async function fastVoting(page){
     await markDoor.click();
     await review.locator('[data-preview="bright"]').click();
     await review.waitForTimeout(100);await fixedFrame(review);
-    assert.equal(await review.locator('#stepList [data-preview]').count(),42);
+    assert.equal(await review.locator('#stepList [data-preview]').count(),41);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
     for(const preview of ['dark','welcome','clock','door-kick','card','card-hidden','door-open','blackout','ai','bright',
       'memory-light','memory-welcome','memory-room','memory-photo-front',
       'memory-photo-back','memory-photo-hide','memory-blackout',
       'past-intro','past-isolate','office-light','office-bang','past-reflection','memory-return',
       'discussion','vote-prompt','vote-one','vote-two','vote-final','vote-blackout',
-      'ending-light','ending-dialogue','ending-complete','ending-question','ending-reveal','ending-blackout','behind-the-scenes',
+      'ending-light','ending-dialogue','ending-complete','ending-question','ending-reveal','ending-blackout',
       'credit-directed','credit-conversation','credit-produced','credit-executive','credit-backgrounds','credit-title']){
       await review.locator(`[data-preview="${preview}"]`).click();await flag(review,'previewCue',preview);
       await review.waitForTimeout(60);
