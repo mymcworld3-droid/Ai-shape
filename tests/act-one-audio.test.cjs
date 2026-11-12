@@ -90,9 +90,12 @@ test("all 41 scene cues cover Act IV, photo turnover and six closing credit card
  assert.equal(config.closingTheme.subtitleStartParagraph,416);
  const subtitles=require("../subtitle-data.js").entries;
  const actualBlackoutIndex=subtitles.findIndex(e=>e.action==='end-blackout');
- assert.ok(actualBlackoutIndex>264,'Latest script has added cues before final blackout');
+ const earlierDialogueIndex=subtitles.findIndex(e=>e.id==='p376-0');
+ assert.ok(earlierDialogueIndex>=0&&earlierDialogueIndex<actualBlackoutIndex,
+  'p376 is not the final music cue even when earlier subtitles are split');
  assert.equal(subtitles[actualBlackoutIndex].paragraph,config.closingTheme.subtitleStartParagraph);
- assert.equal(subtitles[264].paragraph,376,'p376 must not steal the final ending music');
+ assert.equal(trackForStep(subtitles[earlierDialogueIndex].paragraph,config.actOneMusic).src,
+  'assets/audio/background/act-3/after-chris-transition.mp3');
  assert.equal(config.closingTheme.subtitleEndParagraph,425);
  assert.equal(trackForStep(417,config.actOneMusic).src,
   'assets/audio/background/Ending.mp3');
