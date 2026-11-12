@@ -53,6 +53,10 @@
   finalFirst.text="There is no robot among the four of you.";
   finalFirst.parts=[{id:finalFirst.id,paragraph:414,text:finalFirst.text}];
  }
+ // One punctuation correction for the operator's requested display text.
+ // The original script wording remains preserved inside parts for traceability.
+ const pocket=entries.find(e=>e.id==="p62-0");
+ if(pocket)pocket.text="Wait. Cut it, everyone, check your pocket.";
  // Pure nonlexical sounds have no readable subtitle. Keep meaningful
  // interjections and lines that contain other spoken words.
  const soundOnly=/^(?:(?:huh|ugh|ah|aah|haha+|ha(?:[\s-]*ha)+|hehe+|he(?:[\s-]*he)+|hm+|hmm+|uh+|um+|ohh+|gasp|groan|chuckle)[\s.!?…]*)+$/i;
@@ -60,6 +64,14 @@
  const visualBoundaryIds=new Set([
   "p122-2","p137-0","p143-0","p149-0",
   "p389-0","p407-0","p408-0","p409-0"
+ ]);
+ // Operator-directed manual subtitle boundaries. Preserve all intervening
+ // stage cues and only split the explicitly selected spoken fragments.
+ const manualSubtitleBreakIds=new Set([
+  "p62-1",  // after "check your pocket."
+  "p75-0", // before "Wait, what is that?"
+  "p139-0",// keep the photo inscription separate from its introduction
+  "p207-1","p207-2","p207-3" // Liam's four separate sentences
  ]);
  const result=[];
  function sameLook(a,b){
@@ -72,7 +84,8 @@
   if(previous&&previous.kind==="dialogue"&&e.kind==="dialogue"&&
      previous.speaker===e.speaker&&previous.group===e.group&&
      previous.act===e.act&&previous.scene===e.scene&&
-     !visualBoundaryIds.has(e.id)&&e.action==null&&
+     !visualBoundaryIds.has(e.id)&&!manualSubtitleBreakIds.has(e.id)&&
+     e.action==null&&
      (previous.action==null||previous.action==="selection-button")&&
      sameLook(previous,e)){
     previous.text=previous.text.trimEnd()+" "+e.text.trimStart();
