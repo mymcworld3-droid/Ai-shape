@@ -130,7 +130,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     }
     return hasDimRoom;
   });
-  assert.equal(await canvasIsBlack(),true,'Step zero must be dim enough for stagehands (all pixels <=15)');
+  assert.equal(await canvasIsBlack(),false,'Step zero must retain a faint, nonblack room image');
   assert.equal(await page.evaluate(()=>scriptProjectionFrame().room),false);
   assert.equal(await page.evaluate(()=>scriptProjectionFrame().blackout),0);
   assert.equal(await page.locator('#actOneBgm').getAttribute('src'),null);
