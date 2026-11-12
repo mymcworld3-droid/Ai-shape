@@ -91,7 +91,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   await timedMusic.waitForFunction(()=>!document.getElementById('startButton').disabled);
   await timedMusic.locator('#stepsViewButton').click();
   await timedMusic.locator('#timelineTrack').selectOption('配樂');
-  const endingClip=timedMusic.getByRole('button',{name:/配樂 Ending\\.mp3/});
+  const endingClip=timedMusic.getByRole('button',{name:/配樂 Ending\.mp3/});
   assert.equal(await endingClip.count(),1,'Final song is a single timeline segment');
   assert.match(await endingClip.getAttribute('title'),/Ending.mp3/);
   await timedMusic.locator('[data-script="'+musicCueIndex+'"]').click();
