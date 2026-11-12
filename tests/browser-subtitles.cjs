@@ -84,8 +84,9 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   // begin only at its stable p416 final-blackout cue, never at p376.
   const musicCueIndex=data.entries.findIndex(e=>
    e.action==="end-blackout"&&e.paragraph===416);
-  assert.ok(musicCueIndex>264);
-  assert.equal(data.entries[264].paragraph,376);
+  const priorDialogueIndex=data.entries.findIndex(e=>e.id==="p376-0");
+  assert.ok(priorDialogueIndex>0&&priorDialogueIndex<musicCueIndex,
+   'p376 remains an earlier spoken cue and must not start the closing song');
   const timedMusic=await browser.newPage({viewport:{width:1280,height:720}});
   await timedMusic.goto(url);
   await timedMusic.waitForFunction(()=>!document.getElementById('startButton').disabled);
@@ -118,6 +119,10 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.id),audioId,
    'First end-credit must continue the SAME Ending.mp3 player');
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.loop),false);
+  await timedMusic.evaluate(index=>scriptShow.jumpTo(index),priorDialogueIndex);
+  assert.notEqual(await timedMusic.evaluate(()=>actOneBackgroundMusic.current?.src),
+   'assets/audio/background/Ending.mp3',
+   'Rewinding to p376 must restore Act III music, not replay the ending theme');
   const earlierBlackout=data.entries.findIndex(entry=>entry.paragraph===403);
   await timedMusic.evaluate(index=>scriptShow.jumpTo(index),earlierBlackout);
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current),null,
