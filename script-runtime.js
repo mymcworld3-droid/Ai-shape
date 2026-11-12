@@ -27,7 +27,7 @@ if(scriptMode){
  });
  window.actOneBackgroundMusic=actOneMusic;
  applyVolumes(); // Include ending voices and newly constructed scripted effects.
- let previewEntry=null,flashUntil=0;
+ let previewEntry=null,scriptPreviewAiStartedAt=null,flashUntil=0;
  // Immutable script IDs avoid coupling the visual effect to mutable step counts.
  const cornerStart=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p389-0');
  const backgroundStart=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p407-0');
@@ -110,7 +110,10 @@ if(scriptMode){
   onEntry(entry,{direction,index,starting}){
    document.body.dataset.musicError='false';
    actOneMusic.setStep(entry.paragraph);
-   applyEntry(entry,starting&&index>0?0:direction);
+   // The AI reveal itself is an animated cue even when rehearsal begins here.
+   // Other direct rehearsal jumps continue to render without a transition.
+   if(starting&&entry.action==='ai')animate('ai',0,0);
+   applyEntry(entry,starting&&index>0&&entry.action!=='ai'?0:direction);
    syncBehindScenes(entry.action==='behind-the-scenes');
    if(entry.action==='selection-button'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
   },
@@ -130,16 +133,25 @@ if(scriptMode){
  window.scriptProjectionFrame=()=>{
   const entry=startGate.started?transcript.entry:previewEntry;
   if(!entry)return {...StageLayout.previewFrame("dark"),script:true,preview:true,caption:null,cueZero:true};
+  const visualValues=Object.fromEntries(Object.entries(transitions).map(([name,t])=>[name,t.value]));
+  // Silent script-step previews must fade as well. Do not consume the fade
+  // before the projector background finishes loading.
+  if(!startGate.started&&entry.action==='ai'){
+   if(backgroundReady&&scriptPreviewAiStartedAt===null)scriptPreviewAiStartedAt=performance.now();
+   visualValues.ai=scriptPreviewAiStartedAt===null?0:
+    StageLayout.fadeInProgress(performance.now()-scriptPreviewAiStartedAt,config.aiFadeMs);
+  }
   return {...entry.look,voiceGroup:entry.group,preview:!startGate.started,caption:null,script:true,
    photoSide:photoForEntry(entry),
    cueZero:entry.id==='pre-show',
    hideBackground:votingState(entry).hideBackground,
    backgroundOnly:votingState(entry).backgroundOnly,
    finalShape:votingState(entry).finalShape,
-   ...Object.fromEntries(Object.entries(transitions).map(([name,t])=>[name,t.value])),
+   ...visualValues,
    flash:Math.max(0,(flashUntil-performance.now())/280)};
  };
  window.previewScriptEntry=index=>{if(startGate.started)return;previewEntry=SUBTITLE_SCRIPT.entries[index]||null;
+  scriptPreviewAiStartedAt=null;
   if(previewEntry)applyEntry(previewEntry,0);
   else subtitleRenderer.render(null);};
 }
