@@ -20,6 +20,20 @@ AI 會在真實 `ended` 後自動淡出，
 原本十五分鐘期限會繼續，但第二場不顯示碼錶。
 記憶室歡迎語音使用獨立播放器，不會重新啟動十五分鐘，或重播第一場語音。
 
+
+## 2026-11-12 相框實拍投影更新
+
+已加入使用者提供的實拍素材（不是生成圖片）：
+
+| 場景模式新步驟 | 劇本／逐句字幕位置 | 投影內容 |
+| --- | --- | --- |
+| 13 相框正面 | p122「Is this...」起；Megan：「It looks like Christopher!」 | `assets/cards/Frame-front.png` 雙人合照 |
+| 14 相框背面 | p137「There's also some writing on the back.」；p139 Ethan 朗讀 | `assets/cards/Frame-back.png` 手寫留言與簽名 |
+| 15 收起相框 | Christopher：「You know there are other things in this room.」前後依現場台詞節奏操作 | 恢復記憶室背景 |
+| 16 記憶室全暗 | Ethan：「Go ahead.」之後 | 全黑、銜接第二幕 |
+
+逐句字幕模式不另設多餘的獨立操作步驟：圖片隨相應台詞亮起／切換；在 p143「Who's that with you?」回到合照，p149 結束相框投影。以上新規則取代下方歷史段落「不額外加上照片投影 cue」的說明。既有配樂與計時器保持不變。
+
 ## 需要補的素材
 
 | 素材 | 建議檔案／內容 |
