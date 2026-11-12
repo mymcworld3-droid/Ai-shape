@@ -303,8 +303,12 @@ const startGate=new StageOpening.StartGate({
     // A rehearsal jump must show the selected stage immediately, not animate
     // from an unrelated opening-room/blackout state.
     const frame=StageLayout.previewFrame(cue);
-    stage.restorePresentation({scene:frame.background||"opening",
-     values:Object.fromEntries(Object.keys(transitions).map(name=>[name,Number(frame[name])||0]))});
+    const values=Object.fromEntries(Object.keys(transitions).map(name=>[name,Number(frame[name])||0]));
+    // An AI rehearsal starts from a truly invisible graphic. Restoring the
+    // completed preview had overridden the second cue's live fade immediately.
+    if(cue==="ai")values.ai=0;
+    stage.restorePresentation({scene:frame.background||"opening",values});
+    if(cue==="ai")animate("ai",1,config.aiFadeMs);
     requestStageFullscreen();
    }
   }
