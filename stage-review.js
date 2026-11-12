@@ -149,7 +149,7 @@ function updateStartButton(){
  startButton.disabled=!showAssetsReady();
  startLabel.textContent=startButton.disabled?"載入中…":
   scriptMode&&selectedScript!==null?`從第 ${selectedScript} 步開始`:
-  !scriptMode&&selectedScene!==null?`從第 ${Number(stepButtons.find(item=>item.dataset.preview===selectedScene)?.querySelector(".step-number")?.textContent)} 步開始`:"開始";
+  !scriptMode&&selectedScene!==null?`從第 ${stepButtons.find(item=>item.dataset.preview===selectedScene)?.querySelector(".step-number")?.textContent?.trim()} 步開始`:"開始";
  resetStartStep.hidden=scriptMode?selectedScript===null:selectedScene===null;
  const failed=["backgroundReady","darkBackgroundReady","cardReady","memoryBackgroundReady","officeBackgroundReady","videoError","audioError"]
   .some(key=>document.body.dataset[key]===(key.endsWith("Error")?"true":"false"));
