@@ -68,3 +68,39 @@ test("uninterrupted same-speaker words are grouped, but stage/photo/voice bounda
  assert.equal(source.paragraphs[414].includes("There is no robot in the room"),true,
   "archived Word source stays intact; new subtitle text follows Google Doc");
 });
+
+test("requested subtitle breaks remain separate navigable steps",()=>{
+ const entries=subtitles.entries;
+ const screens=[
+  ["p62-0","Wait. Cut it, everyone, check your pocket."],
+  ["p62-1","Oh… I don’t have a pocket."],
+  ["p72-0","Let me think. What are some human things? Reflexes... Heads up!"],
+  ["p75-0","Wait, what is that?"],
+  ["p137-0","There's also some writing on the back."],
+  ["p139-0","“To remember, to forgive, to forget. —Chris”"],
+  ["p207-0","They were the one stealing!"],
+  ["p207-1","They were the ones snatching other’s proposal and claiming it’s theirs!"],
+  ["p207-2","What I'm doing is purely what they are doing."],
+  ["p207-3","An eye for an eye."],
+  ["p222-0","You know what I want to hear, don’t you? Explanation?"],
+  ["p222-2","Ben showed me clear evidence that they came up with the proposal of building a psychological test."],
+  ["p222-3","Detailed meeting minutes, thought processes, clearly something other groups can't put their hands on."],
+  ["p222-4","So how come it was submitted by your group? There is only one explanation."]
+ ];
+ for(const [id,text] of screens){
+  const matches=entries.filter(e=>e.parts?.some(p=>p.id===id));
+  assert.equal(matches.length,1,"unique subtitle for "+id);
+  assert.equal(matches[0].text,text,"subtitle text for "+id);
+ }
+ const consecutiveGroups=[
+  ["p62-0","p62-1"],["p72-0","p75-0"],["p137-0","p139-0"],
+  ["p207-0","p207-1","p207-2","p207-3"],
+  ["p222-0","p222-2","p222-3","p222-4"]
+ ];
+ for(const group of consecutiveGroups){
+  const indices=group.map(id=>entries.findIndex(e=>e.parts?.some(p=>p.id===id)));
+  for(let i=1;i<indices.length;i++)assert.equal(indices[i],indices[i-1]+1,
+   "adjacent operator subtitle lines: "+group.join(", "));
+ }
+ assert.equal(entries.length,279,"270 original steps plus nine manual splits");
+});
