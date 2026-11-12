@@ -77,16 +77,19 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
 #subtitleText,.subtitle-text{font-size:clamp(11px,1.9vw,32px);font-weight:500;white-space:normal;overflow-wrap:break-word}
 #subtitleSpeaker,.subtitle-speaker{font-size:clamp(9px,.95vw,16px);font-weight:400;margin-bottom:.35em;opacity:.72;letter-spacing:.07em}
 
-/* Subtle black mist behind subtitles: improve contrast on bright scenes
-   without a hard-edged caption box. The ghost inherits this during fades. */
+/* The caption mist rises like a soft half-oval from the bottom.
+   A low-centered, narrower radial ellipse gives it a curved upper edge
+   rather than a full-width horizontal strip. Ghosts keep the same shape
+   when captions cross-fade. */
 #subtitles,.subtitle-ghost{isolation:isolate}
 #subtitles::before,.subtitle-ghost::before{
  content:"";position:absolute;z-index:-1;pointer-events:none;
- inset:-3.2cqh -3cqw -2.4cqh;
- background:radial-gradient(ellipse 85% 105% at 50% 52%,
-  rgba(0,0,0,.78) 0%,rgba(0,0,0,.68) 46%,
-  rgba(0,0,0,.38) 74%,transparent 100%);
- filter:blur(clamp(6px,1.4cqw,20px));
+ inset:-4.2cqh -5cqw -3.4cqh;
+ background:radial-gradient(ellipse 60% 94% at 50% 100%,
+  rgba(0,0,0,.82) 0%,rgba(0,0,0,.72) 40%,
+  rgba(0,0,0,.43) 65%,rgba(0,0,0,.16) 82%,
+  transparent 100%);
+ filter:blur(clamp(7px,1.15cqw,17px));
 }
 
 
