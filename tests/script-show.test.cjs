@@ -100,6 +100,31 @@ test('rehearsal start jumps to cue, plays that effect once and starts a fresh ti
  assert.equal(c.previous(),true);assert.equal(c.index,2);
  assert.equal(effect.calls,1,'rewind does not replay effects');
 });
+test('direct subtitle jumps stop outgoing media and play only the target cue',async()=>{
+ const {c,opening,effect}=setup();
+ assert.equal(c.jumpTo(2),false,'Cannot jump before show Start');
+ assert.equal(c.start(0),true);
+ await Promise.resolve();
+ assert.equal(c.jumpTo(1),true);
+ await Promise.resolve();
+ assert.equal(c.index,1);assert.equal(opening.calls,1);
+ assert.equal(c.jumpTo(2),true);
+ assert.equal(opening.paused,true,'Old narration must stop');
+ assert.equal(effect.calls,1,'Destination effect plays exactly once');
+ assert.equal(c.index,2);
+ assert.equal(c.jumpTo(2),true);
+ assert.equal(effect.calls,1,'Re-selecting current cue cannot replay the effect');
+ assert.equal(c.jumpTo(0),true);
+ assert.equal(effect.paused,true,'Leaving sound effect must stop playback');
+ assert.equal(c.deadlines.opening,null,'Jumping back before the opening resets its timer');
+ assert.equal(c.jumpTo(1),true);
+ await Promise.resolve();
+ assert.equal(opening.calls,2,'Voice cue can be replayed deliberately');
+ assert.equal(c.jumpTo(-1),false);
+ assert.equal(c.jumpTo(99),false);
+ assert.equal(c.jumpTo(2.3),false);
+ c.destroy();
+});
 test('rehearsal start inside a voice group starts the recording even if not first sentence',async()=>{
  const {c,opening,effect}=setup();
  assert.equal(c.start(1),true);await Promise.resolve();
