@@ -2,6 +2,7 @@
 const {test}=require("node:test"),assert=require("node:assert/strict");
 const original=require("../script-data"),subtitles=require("../subtitle-data");
 const source=require("../docs/script-source.json");
+const soundOnly=/^(?:(?:huh|ugh|ah|aah|haha+|ha(?:[\s-]*ha)+|hehe+|he(?:[\s-]*he)+|hm+|hmm+|uh+|um+|ohh+|gasp|groan|chuckle)[\s.!?…]*)+$/i;
 
 test("subtitle mode keeps all scripted media cues, but scene-mode AI sentences are untouched",()=>{
  assert.ok(subtitles.entries.length<original.entries.length);
@@ -29,7 +30,7 @@ test("restore all meaningful omitted lines from screenplay and latest Ben farewe
  for(const e of original.entries.filter(e=>e.text)){
   const changed=e.id==="p414-0";
   if(changed)continue;
-  if(/^(huh|ugh|ah|aah|haha+|hehe+|hm+)[\s.!?…]*$/i.test(e.text.trim()))continue;
+  if(soundOnly.test(e.text.trim()))continue;
   assert.ok(allParts.some(p=>p.id===e.id&&p.text===e.text),
    "lost original spoken fragment "+e.id);
  }
@@ -58,7 +59,7 @@ test("uninterrupted same-speaker words are grouped, but stage/photo/voice bounda
  for(const e of entries){
   if(e.kind!=="dialogue")continue;
   assert.ok(e.text.trim());
-  assert.ok(!/^(huh|ugh|ah|aah|haha+|hehe+|hm+)[\s.!?…]*$/i.test(e.text.trim()),
+  assert.ok(!soundOnly.test(e.text.trim()),
    "sound-only line should have no subtitle "+e.id);
  }
  assert.ok(entries.every((e,i)=>i===0||e.paragraph>=entries[i-1].paragraph||
