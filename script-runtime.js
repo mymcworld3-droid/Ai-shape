@@ -167,6 +167,11 @@ if(!scriptMode){
    prompt:selectionAudio.prompt,one:selectionAudio.one,
    two:selectionAudio.two,final:selectionAudio.final,
    complete:endingCompleteAudio,revealTruth:endingRevealAudio},
-  renderer,isStarted:()=>startGate.started
+  // Silent narration priming at Start is not an AI scene. The projector's
+  // first Next must reveal the room, never consume an invisible AI caption.
+  renderer,isStarted:()=>startGate.started&&!remoteAudioPreparing&&new Set([
+   "welcome","clock","memory-welcome","vote-prompt","vote-one",
+   "vote-two","vote-final","ending-complete","ending-reveal"
+  ]).has(stage.state)
  });
 }
