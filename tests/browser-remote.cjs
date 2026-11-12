@@ -135,6 +135,16 @@ const {createServer}=require("../server.cjs");
   await stage.waitForFunction(()=>document.body.dataset.openingState==="narration" &&
    !document.getElementById("openingAudio").paused);
   await stage.waitForTimeout(1700);
+  // The first sentence appears with voice playback; later sentences are
+  // intentionally controlled by independent remote Next presses.
+  const startTime=await stage.locator("#openingAudio").evaluate(media=>media.currentTime);
+  for(let line=1;line<7;line++){
+   await next.tap();
+   await stage.waitForFunction(i=>window.sceneVoiceSubtitles.index===i,line);
+   assert.equal(await stage.evaluate(()=>stageOpening.state),"welcome",
+    "A caption press must not accidentally advance the scene");
+  }
+  assert.ok(await stage.locator("#openingAudio").evaluate(media=>media.currentTime)>=startTime);
   await next.tap();
   await waitForStep(4);
   await remote.waitForFunction(()=>document.querySelector('[data-action="next"]').disabled &&
