@@ -90,8 +90,33 @@ test("all 41 scene cues cover Act IV, photo turnover and six closing credit card
  assert.equal(config.closingTheme.subtitleEndParagraph,425);
  assert.equal(trackForStep(417,config.actOneMusic).src,
   'assets/audio/background/Ending.mp3');
+ assert.equal(trackForStep(416,config.actOneMusic).loop,false,
+  'Final Ending.mp3 must play only once rather than automatically repeat');
+ assert.equal(trackForStep(424,config.actOneMusic).loop,false,
+  'The Button title must still use the same non-looping closing track');
 });
  
+test("closing soundtrack never loops or restarts between black screen and final title",async()=>{
+ const {music}=setup();
+ const theme={from:416,to:424,src:"assets/audio/background/Ending.mp3",loop:false};
+ music.setStep(416,{track:theme});await flush();
+ const player=music.activeAudio;
+ assert.equal(player.loop,false,"Audio element loop property must be disabled");
+ const playCount=player.events.filter(event=>event==="play:"+theme.src).length;
+ player.currentTime=21;
+ for(const step of [418,419,420,421,422,424]){
+  music.setStep(step,{track:theme});await flush();
+  assert.equal(music.activeAudio,player);
+  assert.equal(player.currentTime,21,"Moving through credits cannot rewind the music");
+  assert.equal(player.events.filter(event=>event==="play:"+theme.src).length,playCount,
+   "Moving through credits cannot replay the last soundtrack");
+  assert.equal(player.loop,false);
+ }
+ player.paused=true; // Simulate the natural end of the one-shot media.
+ music.setStep(424,{track:theme});
+ assert.equal(player.paused,true,"Revisiting the current cue cannot restart finished music");
+ assert.equal(music.activeAudio,player);
+});
 test("delayed ending audio is pre-unlocked silently and becomes audible after exactly one second",async()=>{
  const {music,a,b,tick,pendingTimers}=setup();
  const theme={from:417,to:424,src:"assets/audio/background/Ending.mp3"};
