@@ -69,6 +69,18 @@ async function settlePreview(page) {
 async function settleLiveAi(page) {
   await page.waitForFunction(()=>transitions.ai.value===1&&performance.now()>=stage.busyUntil);
 }
+async function advanceRemainingSceneCaptions(page,group) {
+  const count=await page.evaluate(name=>{
+   const entries=SceneAiSubtitles.groupedAiLines(SHOW_SCRIPT.entries)[name]||[];
+   return Math.max(0,entries.length-1-sceneVoiceSubtitles.index);
+  },group);
+  for(let n=0;n<count;n++){
+   await page.keyboard.press('Space');
+   assert.equal(await page.evaluate(()=>stage.state),
+    group==='complete'?'ending-complete':'ending-reveal',
+    'Changing AI captions must not skip its scene');
+  }
+}
 async function fadePixels(page) {
   return page.evaluate(async()=>{
     const c=document.getElementById('visualizer'),context=c.getContext('2d');
@@ -604,6 +616,7 @@ async function fastVoting(page){
     await page.locator('#endingCompleteAudio').evaluate(a=>{a.currentTime=a.duration-.12;});
     await flag(page,'endingCompleteState','finished');
     await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
+    await advanceRemainingSceneCaptions(page,'complete');
     await page.keyboard.press('Space');await cue(page,'ending-question');
     await page.keyboard.press('Space');await cue(page,'ending-reveal');
     await flag(page,'endingRevealState','playing');
@@ -612,6 +625,7 @@ async function fastVoting(page){
     await page.locator('#endingRevealAudio').evaluate(a=>{a.currentTime=a.duration-.12;});
     await flag(page,'endingRevealState','finished');
     await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
+    await advanceRemainingSceneCaptions(page,'revealTruth');
     await page.keyboard.press('Space');await cue(page,'ending-blackout');
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     assert.equal(await page.locator('#visualizer').evaluate(c=>{
