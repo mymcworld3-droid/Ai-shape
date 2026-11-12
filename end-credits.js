@@ -4,8 +4,9 @@
  else root.EndCredits=api;
 })(typeof globalThis!=="undefined"?globalThis:this,function(){
  "use strict";
- // In order, these seven cards reproduce the seven pages of Directed by.pdf.
- // Page six is intentionally an entirely black beat before the title.
+ // Credit pages 1-5 each run for 2.5 seconds, then the title closes.
+ // The reference PDF's separate black pause has been removed by request.
+ const CARD_DURATION_MS=2500;
  const cards=Object.freeze([
   {id:"credit-directed",label:"Directed by",role:"DIRECTED BY",
    lines:["SOPHIA CHOU","CURRY CHEN","RICKY LIU"],motion:"rise"},
@@ -18,14 +19,13 @@
    lines:["CURRY CHEN","RICKY LIU"],motion:"turn"},
   {id:"credit-backgrounds",label:"Backgrounds",role:"BACKGROUNDS",
    lines:["MUSICS — SHIU-CHEN JOU","IMAGE — RAY CHEN"],motion:"unfold"},
-  {id:"credit-pause",label:"黑幕停頓",role:"",lines:[],motion:"silence"},
   {id:"credit-title",label:"The Button",role:"",lines:["The Button"],motion:"infinity"}
  ].map(card=>Object.freeze({...card,lines:Object.freeze(card.lines)})));
  const byId=new Map(cards.map(card=>[card.id,card]));
  function get(id){return byId.get(id)||null;}
  function displayLines(id){
   const card=get(id);
-  if(!card||card.motion==="silence")return [];
+  if(!card)return [];
   if(card.motion==="infinity")return [{speaker:"片名",text:"The Button"}];
   return card.lines.map(text=>({speaker:"片尾字幕",text}));
  }
@@ -83,11 +83,16 @@
    leave:[{opacity:1,transform:"scale(1)"},{opacity:0,transform:"scale(.68)"}],
    enterMs:4700,leaveMs:900}
  };
- function mount(rootElement){
+ function mount(rootElement,{onAdvance=()=>{}}={}){
   const layer=document.createElement("div");
   layer.id="endCreditsLayer";layer.hidden=true;layer.setAttribute("aria-hidden","true");
   rootElement.append(layer);
   let current=null,id=null,preview=false,run=0;
+  let exitTimer=null,advanceTimer=null,alreadyLeaving=false;
+  function cancelTimers(){
+   clearTimeout(exitTimer);clearTimeout(advanceTimer);
+   exitTimer=null;advanceTimer=null;
+  }
   function quiet(){return typeof window!=="undefined"&&window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;}
   function make(card){
    const element=document.createElement("div");
@@ -98,7 +103,7 @@
     const the=document.createElement("div");the.className="end-credit-the";the.textContent="The";
     const button=document.createElement("div");button.className="end-credit-button";button.textContent="Button";
     title.append(the,button);element.append(title);
-   }else if(card.motion!=="silence"){
+   }else{
     const block=document.createElement("div");block.className="end-credit-block";
     const role=document.createElement("div");role.className="end-credit-role";role.textContent=card.role;
     const names=document.createElement("div");names.className="end-credit-names";
@@ -111,16 +116,17 @@
    const card=get(newId);
    const normalized=card?.id||null;
    if(id===normalized&&preview===isPreview)return;
+   cancelTimers();
    id=normalized;preview=isPreview;
-   const generation=++run,old=current;
-   current=null;
+   const generation=++run,old=current,wasLeaving=alreadyLeaving;
+   alreadyLeaving=false;current=null;
    for(const element of [...layer.children])if(element!==old)element.remove();
    if(!card&&!old){layer.hidden=true;return;}
    layer.hidden=false;
    if(old){
     old.getAnimations().forEach(animation=>animation.cancel());
     const oldCard=get(old.dataset.credit),model=motion[oldCard?.motion];
-    if(isPreview||quiet()||!model||typeof old.animate!=="function")old.remove();
+    if(isPreview||quiet()||wasLeaving||!model||typeof old.animate!=="function")old.remove();
     else{
      const animation=old.animate(model.leave,{duration:model.leaveMs,easing:"ease-in",fill:"both"});
      animation.finished.then(()=>{old.remove();if(generation===run&&!current)layer.hidden=true;},
@@ -133,14 +139,30 @@
    }
    const element=make(card);
    layer.append(element);current=element;
-   if(isPreview||quiet()||card.motion==="silence"||typeof element.animate!=="function")return;
    const model=motion[card.motion];
-   // Title easing lives on individual keyframe segments, not a single ease-out.
-   element.animate(model.enter,{duration:model.enterMs,
-    easing:card.motion==="infinity"?"linear":"cubic-bezier(.18,.58,.2,1)",
-    fill:"both"});
+   if(!isPreview&&!quiet()&&typeof element.animate==="function"){
+    // Title easing lives on individual keyframe segments, not a single ease-out.
+    element.animate(model.enter,{duration:model.enterMs,
+     easing:card.motion==="infinity"?"linear":"cubic-bezier(.18,.58,.2,1)",
+     fill:"both"});
+   }
+   // The first five cards always enter and vanish WITHIN their own 2500ms
+   // interval. The operator may jump sooner; all stale timers are cancelled.
+   if(isPreview||card.motion==="infinity")return;
+   exitTimer=setTimeout(()=>{
+    if(run!==generation||id!==normalized)return;
+    alreadyLeaving=true;
+    element.getAnimations().forEach(animation=>animation.cancel());
+    if(!quiet()&&typeof element.animate==="function"){
+     element.animate(model.leave,{duration:model.leaveMs,easing:"ease-in",fill:"forwards"});
+    }else element.style.opacity="0";
+   },CARD_DURATION_MS-model.leaveMs);
+   advanceTimer=setTimeout(()=>{
+    if(run!==generation||id!==normalized)return;
+    onAdvance();
+   },CARD_DURATION_MS);
   }
   return {show,get activeId(){return id;},get preview(){return preview;},layer};
  }
- return {cards,get,displayLines,appendToSubtitle,mount,motion};
+ return {cards,get,displayLines,appendToSubtitle,mount,motion,CARD_DURATION_MS};
 });
