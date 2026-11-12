@@ -334,7 +334,8 @@ test('Act IV continues after third-act blackout, plays both original AI recordin
  await c.next();assert.equal(c.stage.state,'ending-blackout');
  await c.next();assert.equal(c.stage.state,'behind-the-scenes',
   'post-show video is a separate operator-controlled step');
- await c.next();assert.equal(c.stage.state,'behind-the-scenes','bonus cue is terminal');
+ await c.next();assert.equal(c.stage.state,'credit-directed',
+  'The manual post-show cue now leads into seven separate credit cards');
  assert.equal(c.stage.opening.deadline,openingDeadline);
  assert.equal(c.stage.voting.deadline,selectionDeadline);
  assert.equal(c.stage.previous(),true);
