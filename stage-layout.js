@@ -107,7 +107,6 @@
     "credit-produced": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     "credit-executive": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     "credit-backgrounds": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
-    "credit-pause": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 },
     "credit-title": { background: "memory", room: true, ai: 0, scene: 0, clock: 0, card: 0, blackout: 1 }
   });
   for (const frame of Object.values(previews)) Object.freeze(frame);
