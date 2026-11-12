@@ -17,6 +17,7 @@
   class Controller {
     constructor({
       audio, alternateAudio, tracks, onError = () => {},
+      onAudibleStart = () => {},
       fadeMs = 1400, fadeOutMs = 1100, masterVolume = .4,
       now = () => performance.now(),
       requestFrame = fn => requestAnimationFrame(fn),
@@ -31,6 +32,7 @@
       this.players = [audio, alternateAudio];
       this.tracks = tracks;
       this.onError = onError;
+      this.onAudibleStart = onAudibleStart;
       this.fadeMs = fadeMs;
       this.fadeOutMs = fadeOutMs;
       this.masterVolume = clamp(masterVolume);
@@ -172,6 +174,10 @@
             this.fade(outgoing, incoming, this.fadeMs, () => {
               if (run === this.run) this.outgoingAudio = null;
             });
+            // Audio is now aligned at currentTime=0 and its fade has begun.
+            // Client cue automation uses THIS moment rather than media.play()
+            // (which happens silently before a delayed start).
+            this.onAudibleStart(this.current,incoming);
           };
           const remaining=delayMs-(this.now()-began);
           if(remaining>0)this.pendingIntro=this.setTimer(startAudible,remaining);
