@@ -87,6 +87,7 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p62-1","Oh… I don’t have a pocket."],
   ["p72-0","Let me think. What are some human things? Reflexes... Heads up!"],
   ["p75-0","Wait, what is that?"],
+  ["p83-1","“Access to one's memory.”"],
   ["p137-0","There's also some writing on the back."],
   ["p139-0","“To remember, to forgive, to forget. —Chris”"],
   ["p207-0","They were the one stealing!"],
@@ -124,6 +125,13 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.deepEqual(kick?.parts.map(part=>part.id),["p33-1","p33-2","p33-3"]);
  assert.equal(entries.filter(e=>e.paragraph===33).length,1,
   "kick effect and shouted dialogue must not be separate steps");
- assert.equal(entries.length,284,
-  "one recap split and one knock-and-shout merge leave the total unchanged");
+ const card=entries.find(e=>e.action==="card");
+ assert.equal(card?.id,"p83-0","original flip-card action must remain");
+ assert.equal(card?.speaker,"ETHAN");
+ assert.equal(card?.text,"“Access to one's memory.”");
+ assert.deepEqual(card?.parts.map(part=>part.id),["p83-1"]);
+ assert.equal(entries.filter(e=>e.paragraph===83).length,1,
+  "flip-card cue and reading are one navigable step");
+ assert.equal(entries.length,283,
+  "the card flip and reading merge reduces the previous total by one");
 });
