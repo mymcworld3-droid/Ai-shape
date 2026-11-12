@@ -995,23 +995,6 @@ function drawTimerFace(unit,remainingMs){
  }
  ctx.restore();
 }
-function drawVoteCue(cue,opacity){
- if(!opacity)return;
- const lines={"vote-prompt":["PLEASE MAKE YOUR SELECTION.",""],
-  "vote-one":["SUBJECT ETHAN","ONE VOTE"],"vote-two":["SUBJECT ETHAN","TWO VOTES"],
-  "vote-final":["PLEASE MAKE YOUR FINAL SELECTION.",""]}[cue];
- if(!lines)return;
- ctx.save();ctx.globalAlpha=opacity;
- const bw=w*.66,bh=h*.12,x=(w-bw)/2,y=h*.83;
- ctx.fillStyle="rgba(8,10,13,.9)";ctx.fillRect(x,y,bw,bh);
- ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle="#f5f7fa";
- let font=Math.min(w*.027,h*.043);
- ctx.font=`500 ${font}px sans-serif`;
- if(ctx.measureText(lines[0]).width>bw*.9){font*=bw*.9/ctx.measureText(lines[0]).width;ctx.font=`500 ${font}px sans-serif`;}
- ctx.fillText(lines[0],w/2,y+bh*(lines[1] ? .34 : .5));
- if(lines[1]){ctx.font=`400 ${Math.min(w*.022,h*.033)}px sans-serif`;ctx.fillText(lines[1],w/2,y+bh*.73);}
- ctx.restore();
-}
 function graphicPlacement(frame,radius){
  const openingRoom=!frame.background||frame.background==="opening";
  const selection=frame.script||frame.caption?.startsWith("vote-");
@@ -1110,7 +1093,6 @@ function draw(){
   ctx.save();ctx.globalAlpha=frame.card;ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=24;
   ctx.drawImage(cardImage,(w-width)/2,h*(frame.script ? .68 : .72)-height/2,width,height);ctx.restore();
  }
- drawVoteCue(frame.caption,frame.vote||0);
  if(frame.flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(.3,frame.flash*.3)})`;ctx.fillRect(0,0,w,h);}
  if(frame.blackout>0){
   ctx.fillStyle=`rgba(0,0,0,${frame.blackout})`;ctx.fillRect(0,0,w,h);
