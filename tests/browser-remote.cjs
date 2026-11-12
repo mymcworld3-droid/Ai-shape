@@ -309,26 +309,32 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   });
   await remote.waitForFunction(()=>document.getElementById("remoteEffect").textContent==="95%");
   assert.equal(await stage.locator("#scriptEffect-doorOpen").evaluate(audio=>audio.volume),.95);
-  // User's concrete example: when step 30 is playing, next step 31
-  // is centered between steps 29–30 and 32–33.
+  // User's quoted example moves as early subtitles are split/merged.
+  // Resolve its real index rather than assuming it remains cue 31.
+  const quoteIndex=subtitle.entries.findIndex(entry=>
+   entry.text?.includes("Didn’t we already do that? Can we just press the button?"));
+  assert.ok(quoteIndex>2);
   await remote.locator("#openStepList").click();
-  await remote.locator("#stepSearch").fill("30");
-  await remote.locator('#remoteStepList [data-jump="30"]').click();
-  await waitForStep(30);
+  await remote.locator("#stepSearch").fill(String(quoteIndex-1));
+  await remote.locator('#remoteStepList [data-jump="'+(quoteIndex-1)+'"]').click();
+  await waitForStep(quoteIndex-1);
+  const expectedWindow=Array.from({length:5},(_,i)=>quoteIndex-2+i);
   assert.deepEqual(await remote.locator("#stepContextList li").evaluateAll(rows=>
-   rows.map(row=>Number(row.dataset.step))),[29,30,31,32,33]);
-  assert.equal(await remote.locator("#stepContextList [aria-current=step]").getAttribute("data-step"),"30");
-  assert.equal(await remote.locator("#stepContextList li.is-next").getAttribute("data-step"),"31");
-  assert.match(await remote.locator('#stepContextList [data-step="30"]').textContent(),/MEGAN.*Ugh Fair/);
-  assert.match(await remote.locator('#stepContextList [data-step="31"]').textContent(),
+   rows.map(row=>Number(row.dataset.step))),expectedWindow);
+  assert.equal(await remote.locator("#stepContextList [aria-current=step]").getAttribute("data-step"),
+   String(quoteIndex-1));
+  assert.equal(await remote.locator("#stepContextList li.is-next").getAttribute("data-step"),
+   String(quoteIndex));
+  assert.match(await remote.locator('#stepContextList [data-step="'+(quoteIndex-1)+'"]').textContent(),/MEGAN.*Ugh Fair/);
+  assert.match(await remote.locator('#stepContextList [data-step="'+quoteIndex+'"]').textContent(),
    /RACHEL.*Didn’t we already do that\? Can we just press the button\?/);
-  assert.match(await remote.locator('#stepContextList [data-step="32"]').textContent(),/EVERYONE ELSE.*No!/);
-  assert.match(await remote.locator('#stepContextList [data-step="33"]').textContent(),
+  assert.match(await remote.locator('#stepContextList [data-step="'+(quoteIndex+1)+'"]').textContent(),/EVERYONE ELSE.*No!/);
+  assert.match(await remote.locator('#stepContextList [data-step="'+(quoteIndex+2)+'"]').textContent(),
    /ETHAN.*We don't know just who the bot is/);
   await remote.reload();
-  await waitForStep(30);
+  await waitForStep(quoteIndex-1);
   assert.deepEqual(await remote.locator("#stepContextList li").evaluateAll(rows=>
-   rows.map(row=>Number(row.dataset.step))),[29,30,31,32,33],
+   rows.map(row=>Number(row.dataset.step))),expectedWindow,
    "The five-step context survives remote reconnect");
   await remote.setViewportSize({width:320,height:568});
   await remote.waitForFunction(()=>{
