@@ -73,6 +73,43 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.ok(await scriptFade.evaluate(()=>scriptProjectionFrame().ai)>.99,'Direct script fade completes');
   await scriptFade.close();
   checks.push('AI reveal visibly fades during script preview and when rehearsing from the selected reveal cue');
+  // Scene cue 35 and subtitle cue 263 are intentionally separate indexes.
+  // Step 263 unlocks the uploaded Ending.mp3 immediately but fades it in
+  // only after one second, carrying the soundtrack into subsequent lines.
+  const timedMusic=await browser.newPage({viewport:{width:1280,height:720}});
+  await timedMusic.goto(url);
+  await timedMusic.waitForFunction(()=>!document.getElementById('startButton').disabled);
+  await timedMusic.locator('#stepsViewButton').click();
+  await timedMusic.locator('#timelineTrack').selectOption('配樂');
+  assert.ok(await timedMusic.getByRole('button',{name:/配樂 Ending\\.mp3/}).count()>0,
+    'The music-editing timeline must include the new step-263 clip');
+  await timedMusic.locator('[data-script="263"]').click();
+  assert.equal(await timedMusic.locator('#startLabel').textContent(),'從第 263 步開始');
+  assert.ok(await timedMusic.locator('audio,video').evaluateAll(media=>
+    media.every(element=>element.paused)), 'Preview remains silent');
+  await timedMusic.locator('#startButton').click();
+  assert.equal(await timedMusic.evaluate(()=>scriptShow.index),263);
+  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current?.src),
+    'assets/audio/background/Ending.mp3');
+  await timedMusic.waitForFunction(()=>actOneBackgroundMusic.activeAudio?.paused===false);
+  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.volume),0,
+    'The one-second pre-roll must be silent');
+  await timedMusic.waitForTimeout(350);
+  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.volume),0,
+    'Subtitle cue 263 must not play its song before one second');
+  await timedMusic.waitForFunction(()=>actOneBackgroundMusic.activeAudio?.volume>.03,
+    null,{timeout:3500});
+  const playerBefore=await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.id);
+  await timedMusic.keyboard.press('ArrowRight');
+  assert.equal(await timedMusic.evaluate(()=>scriptShow.index),264);
+  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.id),playerBefore,
+    'Moving to subtitle 264 must not restart the delayed song');
+  const blackoutIndex=data.entries.findIndex(entry=>entry.paragraph>=403);
+  await timedMusic.evaluate(index=>scriptShow.jumpTo(index),blackoutIndex);
+  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current),null,
+    'Existing later blackout must stop the override track');
+  await timedMusic.close();
+  checks.push('Step 263 plays Ending.mp3 after one second, carries through subsequent subtitles and stops at blackout');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
