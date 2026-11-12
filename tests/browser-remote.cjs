@@ -223,8 +223,21 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   assert.equal(await stage.locator("#audioUnlockDock").isVisible(),false);
   await start("/",`[data-script="${doorIndex-1}"]`,doorIndex-1);
   await next.tap();
-  await stage.waitForFunction(n=>Number(document.body.dataset.scriptIndex)===n&&
-   document.getElementById("scriptEffect-doorOpen").currentTime>0,doorIndex);
+  try{
+   await stage.waitForFunction(n=>Number(document.body.dataset.scriptIndex)===n,doorIndex,{timeout:8000});
+   await stage.waitForFunction(()=>{const media=document.getElementById("scriptEffect-doorOpen");
+    return media.currentTime>0||media.ended;},null,{timeout:8000});
+  }catch(error){
+   console.error("Scripted door remote diagnostic",await stage.evaluate(()=>({
+    step:scriptShow.index,entry:scriptShow.entry,active:scriptShow.active?.state,
+    effect:{src:document.getElementById("scriptEffect-doorOpen").src,
+     time:document.getElementById("scriptEffect-doorOpen").currentTime,
+     paused:document.getElementById("scriptEffect-doorOpen").paused,
+     error:document.getElementById("scriptEffect-doorOpen").error?.message},
+    stageFlags:{...document.body.dataset}
+   })));
+   throw error;
+  }
   await remote.reload();
   await waitForStep(doorIndex);
   assert.equal(await remote.locator("#nextScenePrompt").isVisible(),false);
