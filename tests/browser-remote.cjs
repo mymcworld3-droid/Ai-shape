@@ -139,11 +139,9 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
    openingIndex);
   assert.equal(await remote.locator("#nextScenePrompt").isVisible(),true,
    "Subtitle mode must show the next operator cue before advancing");
-  assert.match(await remote.locator("#nextPromptLines").textContent(),
-   new RegExp(subtitle.entries[openingIndex].text.slice(0,14).replace(/[.*+?^${}()|[\]\\]/g,'\\  await next.tap();
-  await waitForStep(openingIndex);
-  await stage.waitForFunction(()=>!document.getElementById("openingAudio").paused &&
-   scriptShow.active?.state==="playing");')));
+  assert.ok((await remote.locator("#nextPromptLines").textContent())
+   .includes(subtitle.entries[openingIndex].text.slice(0,14)),
+   "Script preview must contain the actual upcoming subtitle text");
   assert.ok(await remote.locator("#nextPromptLeads li").count()>=1,
    "Subtitle pre-cue panel shows preceding dialogue");
   await next.tap();
