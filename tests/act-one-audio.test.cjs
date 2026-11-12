@@ -20,15 +20,23 @@ class FakeAudio{
  removeAttribute(name){if(name==="src")this.src="";}
 }
 function setup(){
- let now=0,frameId=0;const callbacks=new Map(),a=new FakeAudio("a"),b=new FakeAudio("b"),errors=[];
+ let now=0,frameId=0,timerId=0;
+ const callbacks=new Map(),timers=new Map(),a=new FakeAudio("a"),b=new FakeAudio("b"),errors=[];
  const music=new Controller({
   audio:a,alternateAudio:b,tracks,onError:e=>errors.push(e.message),
   now:()=>now,requestFrame:fn=>{const id=++frameId;callbacks.set(id,fn);return id;},
-  cancelFrame:id=>callbacks.delete(id),fadeMs:1400,fadeOutMs:1100
+  cancelFrame:id=>callbacks.delete(id),
+  setTimer:(fn,delay)=>{const id=++timerId;timers.set(id,{fn,at:now+delay});return id;},
+  clearTimer:id=>timers.delete(id),
+  fadeMs:1400,fadeOutMs:1100
  });
  return {music,a,b,errors,tick(ms){
-  now+=ms;const pending=[...callbacks.values()];callbacks.clear();for(const fn of pending)fn();
- }};
+  now+=ms;
+  for(const [id,entry] of [...timers]){
+   if(entry.at<=now){timers.delete(id);entry.fn();}
+  }
+  const pending=[...callbacks.values()];callbacks.clear();for(const fn of pending)fn();
+ },pendingTimers:()=>timers.size};
 }
 const flush=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
 const close=(a,b)=>assert.ok(Math.abs(a-b)<.01,`${a} != ${b}`);
@@ -48,8 +56,10 @@ test("all 42 scene cues cover Act IV, photo turnover, bonus film and six silent 
  for(const cue of STAGE_START_CUES){
   assert.equal(Number.isInteger(cueSteps[cue]),true,'missing paragraph for '+cue);
   const track=trackForStep(cueSteps[cue],config.actOneMusic);
-  if(['dark','vote-blackout','ending-blackout','behind-the-scenes'].includes(cue)||cue.startsWith('credit-'))
-   assert.equal(track,null,'pre-show, blackout, bonus and end credits do not trigger background music');
+  if(['dark','vote-blackout','ending-blackout'].includes(cue))
+   assert.equal(track,null,'Pre-show and original blackouts must remain silent');
+  else if(cue==='behind-the-scenes'||cue.startsWith('credit-'))
+   assert.equal(track?.src,config.closingTheme.src,'Bonus and credits share the uploaded Ending.mp3');
   else assert.ok(track,'no music for '+cue);
  }
  assert.equal(trackForStep(cueSteps.card,config.actOneMusic).src,
@@ -74,8 +84,57 @@ test("all 42 scene cues cover Act IV, photo turnover, bonus film and six silent 
   'assets/audio/background/act-4/Ending.m4a');
  assert.equal(trackForStep(cueSteps['ending-reveal'],config.actOneMusic).src,
   'assets/audio/background/act-4/Ending.m4a');
+ assert.equal(config.closingTheme.startDelayMs,1000);
+ assert.equal(config.closingTheme.sceneStartCue,'behind-the-scenes');
+ assert.equal(config.closingTheme.subtitleStartStep,263);
+ assert.equal(config.closingTheme.subtitleEndParagraph,403);
+ assert.equal(trackForStep(417,config.actOneMusic).src,
+  'assets/audio/background/Ending.mp3');
 });
  
+test("delayed ending audio is pre-unlocked silently and becomes audible after exactly one second",async()=>{
+ const {music,a,b,tick,pendingTimers}=setup();
+ const theme={from:417,to:424,src:"assets/audio/background/Ending.mp3"};
+ music.setStep(290);await flush();tick(1400);
+ const outgoing=music.activeAudio;
+ close(outgoing.volume,.4);
+ music.setStep(417,{track:theme,delayMs:1000});
+ await flush();
+ const intro=music.activeAudio;
+ assert.ok(intro!==outgoing);
+ assert.equal(intro.src,theme.src);
+ assert.equal(intro.paused,false,"play() is called immediately during operator gesture");
+ close(intro.volume,0);
+ close(outgoing.volume,.4);
+ assert.equal(pendingTimers(),1);
+ intro.currentTime=.6;
+ tick(999);
+ assert.equal(intro.currentTime,.6,"Delay must not rewind or fade before 1000ms");
+ close(intro.volume,0);
+ tick(1);
+ assert.equal(intro.currentTime,0,"Audible intro begins at the start of the file");
+ assert.equal(pendingTimers(),0);
+ tick(700);
+ close(intro.volume,.4*Math.SQRT1_2);
+ close(outgoing.volume,.4*Math.SQRT1_2);
+ music.setStep(420,{track:theme});
+ assert.equal(music.activeAudio,intro,"Subsequent credit cards must not restart the song");
+ music.setStep(403);
+ assert.equal(music.current,null,"Previous explicit blackout still stops music");
+});
+test("leaving a pending delayed cue cancels its scheduled music start",async()=>{
+ const {music,a,b,tick,pendingTimers}=setup();
+ const theme={from:417,to:424,src:"assets/audio/background/Ending.mp3"};
+ music.setStep(417,{track:theme,delayMs:1000});
+ await flush();
+ assert.equal(pendingTimers(),1);
+ music.setStep(20);
+ assert.equal(pendingTimers(),0);
+ tick(2000);
+ assert.equal(music.current,null);
+ assert.ok(a.paused&&b.paused);
+ assert.deepEqual([a.src,b.src],["",""]);
+});
 test("opening first three steps are pure silence; cue 4 fades the first track in",async()=>{
  const {music,a,b,tick}=setup();
  for(let step=20;step<=22;step++)music.setStep(step);
