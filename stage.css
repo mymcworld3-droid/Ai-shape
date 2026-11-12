@@ -111,3 +111,29 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
 #audioUnlockButton{width:100%;min-height:44px;border:0;border-radius:9px;
  background:#f0c57c;color:#192332;font-weight:700;font-size:15px;cursor:pointer}
 #audioUnlockDock p{font-size:12px;line-height:1.5;color:#e0e6ee;margin:9px 0 0}
+
+/* Seven reference-backed end cards are real DOM type, not baked-in images:
+   all text is crisp when the projection is resized or opened fullscreen. */
+#endCreditsLayer{position:absolute;inset:0;z-index:6;background:#000;overflow:hidden;
+ pointer-events:none;isolation:isolate}
+#endCreditsLayer[hidden]{display:none!important}
+.end-credit-card{position:absolute;inset:0;display:grid;place-items:center;
+ transform-origin:50% 50%;will-change:transform,opacity,filter;
+ color:#e9e9e9;font-family:Arial,Helvetica,sans-serif}
+.end-credit-block{max-width:92%;display:flex;flex-direction:column;
+ align-items:center;justify-content:center;gap:1.2cqh;text-align:center;
+ font-variant-caps:all-small-caps}
+.end-credit-role{color:#9b2325;font-size:1.82cqh;font-weight:700;
+ letter-spacing:.24em;line-height:1.45;text-transform:uppercase}
+.end-credit-names{display:flex;flex-direction:column;align-items:center;
+ gap:1.05cqh;color:#e5e5e5;font-size:2.15cqh;font-weight:600;
+ letter-spacing:.19em;line-height:1.32;text-transform:uppercase}
+.end-credit-unfold .end-credit-names{font-size:2.05cqh}
+.end-credit-film-title{display:flex;flex-direction:column;align-items:center;
+ justify-content:center;line-height:.94;transform-origin:center center}
+.end-credit-the{font-family:Georgia,serif;font-size:3.0cqh;font-weight:500;
+ line-height:1;letter-spacing:.13em;font-variant:small-caps;color:#e4e3e3;
+ transform:translateX(.06em);margin-bottom:.1cqh}
+.end-credit-button{font-family:Impact,Haettenschweiler,'Arial Narrow',sans-serif;
+ font-size:18.2cqh;font-weight:700;font-stretch:condensed;line-height:.95;
+ letter-spacing:-.035em;transform:scaleX(.56);color:#a21d20}
