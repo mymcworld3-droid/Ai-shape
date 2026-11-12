@@ -69,6 +69,7 @@
  // stage cues and only split the explicitly selected spoken fragments.
  const manualSubtitleBreakIds=new Set([
   "p28-1","p28-3","p28-4","p28-5", // opening AI announcement: 5 screens plus timer
+  "p32-3", // separate Christopher's escape-room remark
   "p62-1",  // after "check your pocket."
   "p75-0", // before "Wait, what is that?"
   "p139-0",// keep the photo inscription separate from its introduction
