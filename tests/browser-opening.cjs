@@ -705,7 +705,7 @@ async function fastVoting(page){
       assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true,
         'The bonus video must stop when end credits begin');
     }
-    const title=page.locator('#endCreditsLayer .end-credit-title');
+    const title=page.locator('#endCreditsLayer [data-credit="credit-title"]');
     assert.equal(await page.locator('#endCreditsLayer .end-credit-the').textContent(),'The');
     assert.equal(await page.locator('#endCreditsLayer .end-credit-button').textContent(),'Button');
     const titleFrames=await title.evaluate(el=>el.getAnimations()[0].effect.getKeyframes());
