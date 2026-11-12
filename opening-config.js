@@ -47,8 +47,8 @@ window.OPENING_CONFIG = Object.freeze({
   card: "assets/cards/memory-access-card.svg",
   memory: Object.freeze({
     background: "assets/backgrounds/memory-room.png",
-    frameFront: "assets/cards/Frame-front.webp",
-    frameBack: "assets/cards/Frame-back.webp",
+    frameFront: "assets/cards/Frame-front.png",
+    frameBack: "assets/cards/Frame-back.png",
     // Original uploaded recording; keep its filename and bytes unchanged.
     narration: "assets/audio/Memory-room.m4a",
     lightClick: "assets/audio/effects/light-click.wav",
