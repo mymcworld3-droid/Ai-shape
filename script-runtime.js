@@ -45,6 +45,18 @@ if(scriptMode){
    backgroundOnly,finalShape,
    corner:index>=cornerStart&&index<backgroundStart&&entry.action!=='blackout'};
  };
+ const frontStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p122-2');
+ const backStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p137-0');
+ const frontReturn=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p143-0');
+ const photoEnd=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p149-0');
+ const photoForEntry=entry=>{
+  const i=SHOW_SCRIPT.entries.indexOf(entry);
+  if(frontStart<0||backStart<0||frontReturn<0||photoEnd<0)return null;
+  if(i>=frontStart&&i<backStart)return 'front';
+  if(i>=backStart&&i<frontReturn)return 'back';
+  if(i>=frontReturn&&i<photoEnd)return 'front';
+  return null;
+ };
  const applyEntry=(entry,direction=1)=>{
   if(!entry)return;
   document.body.dataset.scene=entry.look.background;
@@ -119,6 +131,7 @@ if(scriptMode){
   const entry=startGate.started?transcript.entry:previewEntry;
   if(!entry)return {...StageLayout.previewFrame("dark"),script:true,preview:true,caption:null,cueZero:true};
   return {...entry.look,voiceGroup:entry.group,preview:!startGate.started,caption:null,script:true,
+   photoSide:photoForEntry(entry),
    cueZero:entry.id==='pre-show',
    hideBackground:votingState(entry).hideBackground,
    backgroundOnly:votingState(entry).backgroundOnly,
