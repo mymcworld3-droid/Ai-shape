@@ -192,5 +192,9 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  }
  assert.equal(entries.find(e=>e.id==="p388-0").action,"selection-button");
  assert.equal(entries[264].id,"p376-0",
-  "Ending.mp3 opening cue must stay with its original dialogue");
+  "The p376 actor dialogue retains its own operator step");
+ const finalSongCue=entries.findIndex(e=>e.action==="end-blackout");
+ assert.equal(entries[finalSongCue].paragraph,416,
+  "The final non-looping Ending.mp3 must start on the p416 blackout, not p376");
+ assert.equal(entries[finalSongCue+1].action,"credit-directed");
 });
