@@ -17,6 +17,8 @@ if(scriptMode){
  }
  // The Act I soundtrack follows fixed manuscript paragraphs, not mutable cue numbers. Two hidden elements
  // overlap for 1.4s only while crossfading; the second is not an extra song.
+ const closingThemeTrack=config.actOneMusic.find(track=>track.src===config.closingTheme.src);
+ if(!closingThemeTrack)throw Error('Ending.mp3 is absent from the soundtrack timeline');
  const actOneMusic=new ActOneMusic.Controller({
   audio:document.getElementById('actOneBgm'),
   alternateAudio:document.getElementById('actOneBgmAlt'),
@@ -109,7 +111,15 @@ if(scriptMode){
  transcript=new ScriptShow.Controller({entries:SUBTITLE_SCRIPT.entries,voices,effects,video:revealVideo,
   onEntry(entry,{direction,index,starting}){
    document.body.dataset.musicError='false';
-   actOneMusic.setStep(entry.paragraph);
+   // Subtitle step 263 independently cues the uploaded ending theme.
+   // Keep the track through the present act until its existing blackout;
+   // otherwise the next manually triggered sentence would cut it off.
+   const closingThemeActive=index>=config.closingTheme.subtitleStartStep &&
+    entry.paragraph<config.closingTheme.subtitleEndParagraph;
+   actOneMusic.setStep(entry.paragraph,closingThemeActive?{
+    track:closingThemeTrack,
+    delayMs:index===config.closingTheme.subtitleStartStep?config.closingTheme.startDelayMs:0
+   }:undefined);
    // The AI reveal itself is an animated cue even when rehearsal begins here.
    // Other direct rehearsal jumps continue to render without a transition.
    if(starting&&entry.action==='ai')animate('ai',0,0);
