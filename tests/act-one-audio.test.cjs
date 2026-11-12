@@ -41,14 +41,14 @@ function setup(){
 const flush=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
 const close=(a,b)=>assert.ok(Math.abs(a-b)<.01,`${a} != ${b}`);
 
-test("all 42 scene cues cover Act IV, photo turnover, bonus film and six silent credit cards",()=>{
+test("all 41 scene cues cover Act IV, photo turnover and six closing credit cards",()=>{
  const fs=require('node:fs'),vm=require('node:vm');
  const source=fs.readFileSync(require.resolve('../opening-config.js'),'utf8');
  const context={window:{}};vm.runInNewContext(source,context);
  const config=context.window.OPENING_CONFIG;
  const {STAGE_START_CUES}=require('../opening-controller.js');
  const cueSteps=config.sceneMusicSteps;
- assert.equal(Object.keys(cueSteps).length,43);
+ assert.equal(Object.keys(cueSteps).length,42);
  assert.equal(cueSteps.dark,20);
  assert.equal(trackForStep(cueSteps.dark,config.actOneMusic),null);
  assert.equal(trackForStep(cueSteps['room-reveal'],config.actOneMusic).src,
@@ -56,10 +56,10 @@ test("all 42 scene cues cover Act IV, photo turnover, bonus film and six silent 
  for(const cue of STAGE_START_CUES){
   assert.equal(Number.isInteger(cueSteps[cue]),true,'missing paragraph for '+cue);
   const track=trackForStep(cueSteps[cue],config.actOneMusic);
-  if(['dark','vote-blackout','ending-blackout'].includes(cue))
-   assert.equal(track,null,'Pre-show and original blackouts must remain silent');
-  else if(cue==='behind-the-scenes'||cue.startsWith('credit-'))
-   assert.equal(track?.src,config.closingTheme.src,'Bonus and credits share the uploaded Ending.mp3');
+  if(['dark','vote-blackout'].includes(cue))
+   assert.equal(track,null,'Pre-show and vote blackout must remain silent');
+  else if(cue==='ending-blackout'||cue.startsWith('credit-'))
+   assert.equal(track?.src,config.closingTheme.src,'Final blackout and credits share Ending.mp3');
   else assert.ok(track,'no music for '+cue);
  }
  assert.equal(trackForStep(cueSteps.card,config.actOneMusic).src,
@@ -85,7 +85,7 @@ test("all 42 scene cues cover Act IV, photo turnover, bonus film and six silent 
  assert.equal(trackForStep(cueSteps['ending-reveal'],config.actOneMusic).src,
   'assets/audio/background/act-4/Ending.m4a');
  assert.equal(config.closingTheme.startDelayMs,1000);
- assert.equal(config.closingTheme.sceneStartCue,'behind-the-scenes');
+ assert.equal(config.closingTheme.sceneStartCue,'ending-blackout');
  assert.equal(config.closingTheme.subtitleStartStep,263);
  assert.equal(config.closingTheme.subtitleEndParagraph,425);
  assert.equal(trackForStep(417,config.actOneMusic).src,
