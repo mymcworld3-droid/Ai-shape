@@ -19,12 +19,33 @@ if(scriptMode){
  // overlap for 1.4s only while crossfading; the second is not an extra song.
  const closingThemeTrack=config.actOneMusic.find(track=>track.src===config.closingTheme.src);
  if(!closingThemeTrack)throw Error('Ending.mp3 is absent from the soundtrack timeline');
+ let scriptMusicLeadTimer=null;
+ const cancelScriptMusicLead=()=>{
+  if(scriptMusicLeadTimer!==null)clearInterval(scriptMusicLeadTimer);
+  scriptMusicLeadTimer=null;
+ };
  const actOneMusic=new ActOneMusic.Controller({
   audio:document.getElementById('actOneBgm'),
   alternateAudio:document.getElementById('actOneBgmAlt'),
   tracks:config.actOneMusic,
   fadeMs:1400,
   fadeOutMs:1100,
+  onAudibleStart(track,player){
+   if(track!==closingThemeTrack||!startGate.started||
+      transcript?.index!==config.closingTheme.subtitleStartStep)return;
+   cancelScriptMusicLead();
+   const check=()=>{
+    if(!startGate.started||transcript.index!==config.closingTheme.subtitleStartStep||
+       actOneMusic.current!==track||actOneMusic.activeAudio!==player){
+      cancelScriptMusicLead();return;
+    }
+    if(!player.paused&&player.currentTime>=EndCredits.SONG_LEAD_MS/1000){
+     cancelScriptMusicLead();
+     transcript.next();
+    }
+   };
+   scriptMusicLeadTimer=setInterval(check,25);
+  },
   onError(error){document.body.dataset.musicError='true';console.error('[Act I BGM]',error);}
  });
  window.actOneBackgroundMusic=actOneMusic;
@@ -110,7 +131,13 @@ if(scriptMode){
  };
  transcript=new ScriptShow.Controller({entries:SUBTITLE_SCRIPT.entries,voices,effects,video:revealVideo,
   onEntry(entry,{direction,index,starting}){
+   cancelScriptMusicLead();
    document.body.dataset.musicError='false';
+   // Returning from the credits to the final-blackout cue restarts the
+   // music from the beginning, so the 1.6-second transition stays aligned.
+   if(index===config.closingTheme.subtitleStartStep &&
+       actOneMusic.current?.src===closingThemeTrack.src)
+    actOneMusic.stop({immediate:true});
    // Subtitle step 263 independently cues the uploaded ending theme.
    // Keep the track through the present act until its existing blackout;
    // otherwise the next manually triggered sentence would cut it off.
@@ -125,7 +152,6 @@ if(scriptMode){
    if(starting&&entry.action==='ai')animate('ai',0,0);
    applyEntry(entry,starting&&index>0&&entry.action!=='ai'?0:direction);
    endCredits.show(entry.action);
-   syncBehindScenes(entry.action==='behind-the-scenes');
    if(entry.action==='selection-button'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
   },
   onVoice(group,state){document.body.dataset.scriptVoice=group+':'+state;
