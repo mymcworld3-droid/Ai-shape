@@ -80,6 +80,9 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p28-6","You have 15 minutes."],
   ["p32-0","A joke? If this were a kidnapping, my lawyers would have already infiltrated the building."],
   ["p32-3","Whoever designed this budget escape room clearly lacks taste."],
+  ["p33-1","Hey! Let us out! you freaking robot!!!"],
+  ["p43-0","Great. Now let's recap."],
+  ["p43-2","The four of us are now trapped in a room by some mysterious robot."],
   ["p62-0","Wait. Cut it, everyone, check your pocket."],
   ["p62-1","Oh… I don’t have a pocket."],
   ["p72-0","Let me think. What are some human things? Reflexes... Heads up!"],
@@ -103,6 +106,7 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  const consecutiveGroups=[
   ["p28-0","p28-1","p28-3","p28-4","p28-5","p28-6"],
   ["p32-0","p32-3"],
+  ["p43-0","p43-2"],
   ["p62-0","p62-1"],["p72-0","p75-0"],["p137-0","p139-0"],
   ["p207-0","p207-1","p207-2","p207-3"],
   ["p222-0","p222-2","p222-3","p222-4"]
@@ -112,5 +116,14 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   for(let i=1;i<indices.length;i++)assert.equal(indices[i],indices[i-1]+1,
    "adjacent operator subtitle lines: "+group.join(", "));
  }
- assert.equal(entries.length,284,"270 original steps plus fourteen manual splits");
+ const kick=entries.find(e=>e.action==="doorKick");
+ assert.equal(kick?.id,"p33-0","original kick effect stays on the same step");
+ assert.equal(kick?.kind,"dialogue");
+ assert.equal(kick?.speaker,"MEGAN");
+ assert.equal(kick?.text,"Hey! Let us out! you freaking robot!!!");
+ assert.deepEqual(kick?.parts.map(part=>part.id),["p33-1","p33-2","p33-3"]);
+ assert.equal(entries.filter(e=>e.paragraph===33).length,1,
+  "kick effect and shouted dialogue must not be separate steps");
+ assert.equal(entries.length,284,
+  "one recap split and one knock-and-shout merge leave the total unchanged");
 });
