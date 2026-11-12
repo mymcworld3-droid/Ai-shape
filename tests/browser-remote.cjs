@@ -111,6 +111,20 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   await guestB.waitForFunction(()=>document.getElementById("remoteStep").textContent.includes("第 1 步"));
   assert.match(await guestB.locator("#nextPromptStep").textContent(),/第 2 步/);
   assert.equal(await guestB.locator("#meterEffect").getAttribute("min"),"-60");
+  // The controller can browse the entire scene catalog and jump across acts
+  // without expanding the compact mixer or playing intermediate effects.
+  await guestA.locator("#openStepList").click();
+  await guestA.waitForFunction(()=>document.querySelectorAll('#remoteStepList [data-jump]').length===36);
+  assert.equal(await guestA.locator('#remoteStepList [aria-current="step"]').count(),1);
+  assert.equal(await guestA.locator('#remoteStepList [aria-current="step"]').getAttribute("data-jump"),"1");
+  await guestA.locator("#stepSearch").fill("辦公室回憶");
+  assert.equal(await guestA.locator("#remoteStepList [data-jump]").count(),1);
+  assert.equal(await guestA.locator('#remoteStepList [data-jump="19"]').count(),1);
+  await guestA.locator('#remoteStepList [data-jump="19"]').click();
+  await guestB.waitForFunction(()=>document.getElementById("remoteStep").textContent.includes("第 19 步"));
+  assert.equal(await stage.locator("body").getAttribute("data-cue"),"office-light");
+  assert.equal(await stage.evaluate(()=>document.body.dataset.scene),"office");
+  assert.equal(await guestA.locator("#stepDialog").isVisible(),false);
   await stage.reload();
   await guestA.waitForFunction(()=>document.querySelector('[data-action="next"]').disabled);
   await guestB.waitForFunction(()=>document.querySelector('[data-action="next"]').disabled);
@@ -129,6 +143,19 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   await next.tap();
   await waitForStep(openingIndex+1);
   assert.equal(await stage.locator("#openingAudio").evaluate(media=>media.paused),false);
+  // Script-mode jump also uses the exact full manuscript list and must stop
+  // the previous AI recording while activating the requested visual cue.
+  await remote.locator("#openStepList").click();
+  await remote.waitForFunction(total=>document.querySelectorAll('#remoteStepList [data-jump]').length===total,
+   subtitle.entries.length);
+  await remote.locator("#stepSearch").fill("Access to");
+  assert.ok(await remote.locator("#remoteStepList [data-jump]").count()>0);
+  await remote.locator("#stepSearch").fill(String(doorIndex));
+  await remote.locator(`#remoteStepList [data-jump="${doorIndex}"]`).click();
+  await waitForStep(doorIndex);
+  assert.equal(await stage.evaluate(()=>scriptShow.index),doorIndex);
+  assert.equal(await stage.locator("#openingAudio").evaluate(media=>media.paused),true);
+  assert.equal(await stage.evaluate(()=>scriptShow.entry.action),"doorOpen");
 
   // Scene mode permits the clock cue during narration, then gates the next
   // scene until the actual recording finishes. The remote must explain it.
