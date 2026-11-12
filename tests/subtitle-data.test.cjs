@@ -17,8 +17,9 @@ test("subtitle mode keeps all scripted media cues, but scene-mode AI sentences a
  const ai=subtitles.entries.filter(e=>e.group==="opening");
  assert.equal(ai.length,2,"Opening speech joins adjacent lines until clock cue");
  assert.equal(ai.at(-1).action,"opening-clock");
- assert.equal(subtitles.entries.at(-2).action,"end-blackout");
- assert.equal(subtitles.entries.at(-1).action,"behind-the-scenes");
+ assert.equal(subtitles.entries.at(-9).action,"end-blackout");
+ assert.equal(subtitles.entries.at(-8).action,"behind-the-scenes");
+ assert.equal(subtitles.entries.at(-1).action,"credit-title");
 });
 
 test("restore all meaningful omitted lines from screenplay and latest Ben farewell",()=>{
