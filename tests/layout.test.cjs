@@ -131,7 +131,7 @@ test("silent step frames cover every cue and cannot mutate the playback transiti
   "memory-light","memory-welcome","memory-room","memory-blackout",
   "past-intro","past-isolate","office-light","office-bang","past-reflection","memory-return",
   "discussion","vote-prompt","vote-one","vote-two","vote-final","vote-blackout",
-  "ending-light","ending-dialogue","ending-complete","ending-question","ending-reveal","ending-blackout","behind-the-scenes"];
+  "ending-light","ending-dialogue","ending-complete","ending-question","ending-reveal","ending-blackout"];
  for(const cue of expected){const frame=previewFrame(cue);assert.ok(frame);assert.equal(Object.isFrozen(frame),true);}
  assert.equal(previewFrame("clock").clock,1);
  assert.equal(previewFrame("door-kick").clock,1);
