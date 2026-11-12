@@ -55,7 +55,10 @@ test("each lettered page has a distinct entry and exit and title zoom ends with 
  assert.equal(leaveShapes.size,6,"All exit animations differ");
  const zoom=EndCredits.motion.infinity.enter;
  assert.equal(zoom[0].transform,"scale(160)");
- assert.deepEqual(zoom.map(frame=>frame.offset),[0,.46,.72,1]);
- assert.equal(zoom[2].easing,"linear","The last shrink segment must have constant speed");
- assert.equal(zoom[3].transform,"scale(1)");
+ assert.equal(EndCredits.TITLE_DECEL_MS,500);
+ assert.equal(EndCredits.TITLE_ZOOM_MS,4700);
+ assert.deepEqual(zoom.map(frame=>frame.offset),[0,500/4700,1]);
+ assert.equal(zoom[1].transform,"scale(2.3)");
+ assert.equal(zoom[1].easing,"linear","Shrink speed must stay constant after the first 0.5s");
+ assert.equal(zoom[2].transform,"scale(1)");
 });
