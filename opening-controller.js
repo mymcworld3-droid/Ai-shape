@@ -841,7 +841,9 @@
           this.lock(this.blackoutMs); this.setCue("blackout"); return true;
         case "blackout": return this.memory ? this.memory.enter() : false;
         case "memory-light":
-        case "memory-welcome":
+        case "memory-welcome": return this.memory ? this.memory.advance() : false;
+        // The photo sequence begins only AFTER the memory-room AI voice ends
+        // and the operator deliberately advances into the unobstructed room.
         case "memory-room": this.setCue("memory-photo-front"); return true;
         case "memory-photo-front": this.setCue("memory-photo-back"); return true;
         case "memory-photo-back": this.setCue("memory-photo-hide"); return true;
