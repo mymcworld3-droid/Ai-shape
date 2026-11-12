@@ -309,6 +309,26 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   });
   await remote.waitForFunction(()=>document.getElementById("remoteEffect").textContent==="95%");
   assert.equal(await stage.locator("#scriptEffect-doorOpen").evaluate(audio=>audio.volume),.95);
+  // User's concrete example: a step-31 prompt must show actual operator
+  // steps 29–33, including a non-spoken visual step when present.
+  await remote.locator("#openStepList").click();
+  await remote.locator("#stepSearch").fill("31");
+  await remote.locator('#remoteStepList [data-jump="31"]').click();
+  await waitForStep(31);
+  assert.deepEqual(await remote.locator("#stepContextList li").evaluateAll(rows=>
+   rows.map(row=>Number(row.dataset.step))),[29,30,31,32,33]);
+  assert.equal(await remote.locator("#stepContextList [aria-current=step]").getAttribute("data-step"),"31");
+  assert.match(await remote.locator('#stepContextList [data-step="30"]').textContent(),/MEGAN.*Ugh Fair/);
+  assert.match(await remote.locator('#stepContextList [data-step="31"]').textContent(),
+   /RACHEL.*Didn’t we already do that\? Can we just press the button\?/);
+  assert.match(await remote.locator('#stepContextList [data-step="32"]').textContent(),/EVERYONE ELSE.*No!/);
+  assert.match(await remote.locator('#stepContextList [data-step="33"]').textContent(),
+   /ETHAN.*We don't know just who the bot is/);
+  await remote.reload();
+  await waitForStep(31);
+  assert.deepEqual(await remote.locator("#stepContextList li").evaluateAll(rows=>
+   rows.map(row=>Number(row.dataset.step))),[29,30,31,32,33],
+   "The five-step context survives remote reconnect");
 
   await start("/?mode=cues",'[data-preview="card-hidden"]',7);
   await next.tap();
