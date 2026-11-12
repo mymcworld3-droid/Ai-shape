@@ -69,6 +69,18 @@ async function settlePreview(page) {
 async function settleLiveAi(page) {
   await page.waitForFunction(()=>transitions.ai.value===1&&performance.now()>=stage.busyUntil);
 }
+async function advanceRemainingSceneCaptions(page,group) {
+  const count=await page.evaluate(name=>{
+   const entries=SceneAiSubtitles.groupedAiLines(SHOW_SCRIPT.entries)[name]||[];
+   return Math.max(0,entries.length-1-sceneVoiceSubtitles.index);
+  },group);
+  for(let n=0;n<count;n++){
+   await page.keyboard.press('Space');
+   assert.equal(await page.evaluate(()=>stage.state),
+    group==='complete'?'ending-complete':'ending-reveal',
+    'Changing AI captions must not skip its scene');
+  }
+}
 async function fadePixels(page) {
   return page.evaluate(async()=>{
     const c=document.getElementById('visualizer'),context=c.getContext('2d');
@@ -133,9 +145,15 @@ async function state(page, expected) { await flag(page,"openingState",expected);
 async function roomState(page, expected) { await flag(page,"roomState",expected,15000); }
 async function fastReveal(page) {
   await page.locator('#startButton').click(); await cue(page,"dark");
-  await page.keyboard.press('ArrowRight'); await roomState(page,"playing");
+  // Use the controller directly for this long-running visual preparation.
+  // Separate opening/keyboard cases above test actual Space and ArrowRight
+  // input. This avoids CI-only focus loss during fullscreen transitions.
+  await page.evaluate(()=>advanceStage(false));
+  await roomState(page,"playing");
   await page.locator('#roomRevealVideo').evaluate(video=>{video.currentTime=video.duration-.1;});
-  await cue(page,"bright"); await page.waitForTimeout(350);
+  await cue(page,"bright");
+  await page.waitForFunction(()=>roomHandoffProgress(performance.now())>=1);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
 }
 async function prepareWelcome(page) {
   await page.keyboard.press("Space"); await cue(page,"ai"); await settleLiveAi(page);
@@ -178,6 +196,17 @@ async function matchesStill(page, sourcePath, region=null) {
   const comparison=await expectedDifference(page,sourcePath,region);
   assert.ok(comparison.mean<1,`Projection must match ${sourcePath}; mean pixel error ${comparison.mean}`);
 }
+async function matchesDimmedCueZero(page) {
+  const comparison=await expectedDifference(page,"assets/backgrounds/Start_dark.PNG",null,15,OPENING_DARK_DIM);
+  assert.ok(comparison.mean<1.5,"Step 0 must retain its blue room at 5% brightness; mean error "+comparison.mean);
+  const max=await page.locator("#visualizer").evaluate(canvas=>{
+   const p=canvas.getContext("2d").getImageData(0,0,canvas.width,canvas.height).data;
+   let maximum=0;for(let i=0;i<p.length;i+=4)maximum=Math.max(maximum,p[i],p[i+1],p[i+2]);
+   return maximum;
+  });
+  assert.ok(max<=15,"Stage-safe cue 0 must not cast bright light; brightest pixel "+max);
+}
+const OPENING_DARK_DIM=.95;
 async function fixedFrame(page) {
   const box=await page.locator('#visualizer').boundingBox();
   const available=await page.locator('#projectionViewport').boundingBox();
@@ -324,7 +353,7 @@ async function fastVoting(page){
     assert.equal(await page.locator('#startButton').isVisible(),true);
     assert.equal(await page.locator('#stepsPanel').isVisible(),false);
     assert.equal(await page.locator('#startDock').evaluate(e=>getComputedStyle(e).position),"fixed");
-    await matchesStill(page,"assets/backgrounds/Start_dark.PNG");
+    await matchesDimmedCueZero(page);
     assert.equal(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused)),true,'Blue room step zero must be silent');
     assert.equal(await page.locator('body').getAttribute('data-cue'),"dark");
     await page.screenshot({path:path.join(output,"00-dark.png")});
@@ -336,7 +365,7 @@ async function fastVoting(page){
     assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0);
     await page.locator('#startButton').click(); await cue(page,"dark");
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-    await matchesStill(page,"assets/backgrounds/Start_dark.PNG");
+    await matchesDimmedCueZero(page);
     assert.equal(await page.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
     await page.keyboard.press('ArrowRight');await roomState(page,"playing");
     await noControls(page);
@@ -345,7 +374,7 @@ async function fastVoting(page){
     await page.waitForTimeout(500); await page.screenshot({path:path.join(output,"01-room-reveal.png")});
     await page.keyboard.down("Space"); await page.keyboard.down("Space");
     // Let the supplied video finish naturally, without synthetic end events.
-    await cue(page,"bright"); await page.waitForTimeout(400);
+    await cue(page,"bright"); await page.waitForTimeout(540);
     await page.keyboard.down("Space");
     await matchesStill(page,"assets/backgrounds/IMG_0165.png");
     assert.equal(await page.locator('#openingAudio').evaluate(a=>a.currentTime),0);
@@ -356,7 +385,7 @@ async function fastVoting(page){
     await checkAiScreen(page,{centered:true,large:true});
     await page.keyboard.press('Space');await state(page,'narration');
   await page.waitForFunction(()=>document.querySelector('#subtitleText').textContent.includes('Welcome to HUMAN VERIFICATION'));
-  assert.equal(await page.locator('#subtitleSpeaker').textContent(),'AI VOICE','Scene mode shows the recording speech as captions');
+  assert.equal(await page.locator('#subtitleSpeaker').textContent(),'AI VOICE','Scene mode shows the first recording caption automatically');
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Welcome precedes any door sound');
     await page.waitForTimeout(2200);
     const playing=await page.locator('#openingAudio').evaluate(a=>({time:a.currentTime,paused:a.paused}));
@@ -367,6 +396,17 @@ async function fastVoting(page){
     await page.screenshot({path:path.join(output,"04-welcome.png")});
     for(let frame=0;frame<4;frame++){
       await checkAiScreen(page,{front:true});await page.waitForTimeout(80);
+    }
+    // Subsequent AI voice lines advance only when the operator presses.
+    const captionCount=await page.evaluate(()=>SceneAiSubtitles.groupedAiLines(SHOW_SCRIPT.entries).opening.length);
+    assert.equal(captionCount,7);
+    const firstCaption=await page.locator('#subtitleText').textContent();
+    await page.waitForTimeout(350);
+    assert.equal(await page.locator('#subtitleText').textContent(),firstCaption,'AI subtitle must not follow audio time');
+    for(let line=1;line<captionCount;line++){
+      await page.keyboard.press('Space');
+      assert.equal(await page.evaluate(()=>stage.state),'welcome','Caption inputs must not skip the cue');
+      assert.equal(await page.evaluate(()=>sceneVoiceSubtitles.index),line);
     }
     await page.keyboard.down("Space"); await cue(page,"clock");
     assert.equal(await page.locator('#doorKickAudio').evaluate(a=>a.currentTime),0,'Speech blocks the door cue');
@@ -423,7 +463,7 @@ async function fastVoting(page){
     await matchesStill(page,"assets/backgrounds/IMG_0165.png",[0,.55,1,1]);
     await page.screenshot({path:path.join(output,"08-card-hidden.png")});
     await page.keyboard.press("Space"); await cue(page,"door-open");
-    assert.equal(await page.locator('#memoryDoorOpenAudio').getAttribute('src'),'assets/audio/effects/door-open.mp3');
+    assert.equal(await page.locator('#memoryDoorOpenAudio').getAttribute('src'),'assets/audio/effects/heavy-auto-door.mp3');
     await flag(page,'doorOpenState','playing');
     assert.equal(await page.locator('#memoryDoorOpenAudio').evaluate(m=>m.paused),false);
     await page.keyboard.press("Space");await cue(page,"door-open");
@@ -582,6 +622,7 @@ async function fastVoting(page){
     await page.locator('#endingCompleteAudio').evaluate(a=>{a.currentTime=a.duration-.12;});
     await flag(page,'endingCompleteState','finished');
     await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
+    await advanceRemainingSceneCaptions(page,'complete');
     await page.keyboard.press('Space');await cue(page,'ending-question');
     await page.keyboard.press('Space');await cue(page,'ending-reveal');
     await flag(page,'endingRevealState','playing');
@@ -590,6 +631,7 @@ async function fastVoting(page){
     await page.locator('#endingRevealAudio').evaluate(a=>{a.currentTime=a.duration-.12;});
     await flag(page,'endingRevealState','finished');
     await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
+    await advanceRemainingSceneCaptions(page,'revealTruth');
     await page.keyboard.press('Space');await cue(page,'ending-blackout');
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     assert.equal(await page.locator('#visualizer').evaluate(c=>{
@@ -663,7 +705,7 @@ async function fastVoting(page){
     const trackSelect=review.locator('#timelineTrack');
     const track=review.locator('#audioTimeline');
     assert.equal(await trackSelect.inputValue(),'音效');
-    const doorClip=track.getByRole('button',{name:'音效 door-open.mp3，第 08 步'});
+    const doorClip=track.getByRole('button',{name:'音效 heavy-auto-door.mp3，第 08 步'});
     const doorRow=review.locator('[data-preview="door-open"]').locator('..');
     const [rail,clip,row]=await Promise.all([track.boundingBox(),doorClip.boundingBox(),doorRow.boundingBox()]);
     assert.ok(rail.width<=112&&rail.x>=row.x+row.width,'The narrow media track sits to the right of the steps');
@@ -724,7 +766,7 @@ async function fastVoting(page){
     await review.locator('[data-preview="vote-two"]').click();await settlePreview(review);await fixedFrame(review);
     await review.screenshot({path:path.join(output,'22-voting-step-review.png')});
     await review.locator('#pageViewButton').click();await flag(review,'view','page');await review.waitForTimeout(100);
-    await matchesStill(review,"assets/backgrounds/Start_dark.PNG");await fixedFrame(review);
+    await matchesDimmedCueZero(review);await fixedFrame(review);
     await review.locator('#stepsViewButton').click();await review.locator('[data-preview="vote-blackout"]').click();
     await flag(review,'previewCue','vote-blackout');
     // The selected third-act blackout stays selectable without replaying earlier scenes.
@@ -934,7 +976,7 @@ async function fastVoting(page){
     await ready(videoRetry,url); await videoRetry.locator('#startButton').click();await cue(videoRetry,"dark");
     await videoRetry.keyboard.press('Space');await flag(videoRetry,"videoError","true");
     await cue(videoRetry,"dark");
-    await matchesStill(videoRetry,"assets/backgrounds/Start_dark.PNG");
+    await matchesDimmedCueZero(videoRetry);
     await videoRetry.mouse.dblclick(30,30); await roomState(videoRetry,"playing");
     await videoRetry.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
     await cue(videoRetry,"bright"); await videoRetry.waitForTimeout(400);
@@ -1119,7 +1161,7 @@ async function fastVoting(page){
     const touch=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
     await ready(touch,url); await fixedFrame(touch);
     await touch.locator('#stepsViewButton').click();await touch.waitForTimeout(100);await fixedFrame(touch);
-    await touch.getByRole('button',{name:'音效 door-open.mp3，第 08 步'}).tap();await flag(touch,'previewCue','door-open');
+    await touch.getByRole('button',{name:'音效 heavy-auto-door.mp3，第 08 步'}).tap();await flag(touch,'previewCue','door-open');
     assert.equal(await touch.locator('[data-preview="door-open"]').getAttribute('aria-pressed'),'true');
     assert.ok((await touch.locator('#audioTimeline').boundingBox()).width<=88,'The phone media track remains narrow');
     const timelineScrollBox=await touch.locator('#stepReviewScroll').boundingBox();

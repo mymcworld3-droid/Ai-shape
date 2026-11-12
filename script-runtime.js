@@ -82,8 +82,8 @@ if(scriptMode){
    values.clock=0;values.card=0;values.vote=0;values.voteCorner=0;
   }
   if(entry.act==='III')values.clock=0;
-  // Step 0 displays the original blue-tinted Start_dark.PNG room, without a
-  // subtitle, timer, music or any sound. The first live reveal comes later.
+  // Step 0 keeps the blue room image but reduces projector output to 5%.
+  // There is no subtitle, timer, music or sound until the first real cue.
   if(entry.id==='pre-show'){
    values.room=false;values.blackout=0;values.ai=0;values.clock=0;
   }
@@ -106,15 +106,20 @@ if(scriptMode){
    if(state==='playing')completeAudioRecovery(group);
    if(state==='starting'&&voices[group])prepareAudio(voices[group]);
    if(transcript?.entry?.group===group)applyEntry(transcript.entry);},
-  onVideo(playing){scriptVideoPlaying=playing;},
+  onVideo(playing){
+   if(playing){scriptRevealHandoffAt=null;revealFreezeReady=false;}
+   else if(scriptVideoPlaying&&revealVideo.ended)scriptRevealHandoffAt=performance.now();
+   scriptVideoPlaying=playing;
+  },
   onError(kind,error){document.body.dataset.scriptMediaError=kind;
    scheduleAudioRecovery(kind,error);console.error('[Script]',kind,error);}
  });
  window.scriptShow=transcript;
  window.scriptProjectionFrame=()=>{
   const entry=startGate.started?transcript.entry:previewEntry;
-  if(!entry)return {...StageLayout.previewFrame("dark"),script:true,preview:true,caption:null};
+  if(!entry)return {...StageLayout.previewFrame("dark"),script:true,preview:true,caption:null,cueZero:true};
   return {...entry.look,voiceGroup:entry.group,preview:!startGate.started,caption:null,script:true,
+   cueZero:entry.id==='pre-show',
    hideBackground:votingState(entry).hideBackground,
    backgroundOnly:votingState(entry).backgroundOnly,
    finalShape:votingState(entry).finalShape,
@@ -126,8 +131,9 @@ if(scriptMode){
   else subtitleRenderer.render(null);};
 }
 
-// Scene-mode narration shows the exact AI VOICE lines from the same script.
-// Captions advance along the recording; operator-controlled script captions do not change.
+// Scene-mode narration uses the same original AI VOICE sentences, but only
+// the operator's Next/Previous input changes the displayed line.
+// The recording continues uninterrupted while the text is switched manually.
 if(!scriptMode){
  const renderer=new SubtitleMotion.Renderer({element:document.getElementById("subtitles")});
  window.sceneVoiceSubtitles=SceneAiSubtitles.mount({

@@ -6,7 +6,8 @@ window.OPENING_CONFIG = Object.freeze({
   roomReveal: "assets/videos/Start_animation.mp4",
   // Optional: upload this after the rest of the show has been deployed.
   behindScenes: "assets/videos/behind-the-scenes.mp4",
-  revealFadeMs: 240,
+  cueZeroDim: 0.95, // Leave just 5% of the original blue room while stagehands move props.
+  revealFadeMs: 420, // Smooth the video-to-still-room handoff without a bright flash.
   // Updated from 2026-11-11 user-supplied music ZIP; cues remain anchored to Word paragraph IDs.
   // Keep the historic actOneMusic key so existing mixer and controls continue
   // working; later acts can use the same fade/crossfade music player.
@@ -75,7 +76,7 @@ window.OPENING_CONFIG = Object.freeze({
     complete: "assets/audio/404-406ai.m4a",
     revealTruth: "assets/audio/411-415ai.m4a"
   }),
-  scriptEffects: Object.freeze({doorOpen: "assets/audio/effects/door-open.mp3", timerClick: "assets/audio/effects/timer-click.wav", selectionButton: "assets/audio/Slam-button.m4a"}),
+  scriptEffects: Object.freeze({doorOpen: "assets/audio/effects/heavy-auto-door.mp3", timerClick: "assets/audio/effects/timer-click.wav", selectionButton: "assets/audio/Slam-button.m4a"}),
   countdownMs: 15 * 60 * 1000,
   // Black display interior in IMG_0165.png's source pixels; excludes its bezel.
   roomScreen: Object.freeze({ x: 552, y: 310, width: 430, height: 195, inset: 2 }),

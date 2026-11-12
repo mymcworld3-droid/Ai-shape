@@ -17,52 +17,72 @@
   }
   return groups;
  }
- // The condensed scene mode splits each recording into approximate
- // sentence-sized captions, advanced by the actual audio playback position.
- // The step-by-step script mode retains the operator's manual subtitles.
- function subtitleAtTime(entries,time,duration){
-  if(!entries?.length)return null;
-  if(entries.length===1||!Number.isFinite(duration)||duration<=0)return entries[0];
-  const weights=entries.map(entry=>{
-   const words=entry.text.trim().split(/\s+/).length;
-   return Math.max(1,words*.92+.65+(/[.!?…]$/.test(entry.text.trim())?.15:0));
-  });
-  const total=weights.reduce((a,b)=>a+b,0);
-  const progress=Math.max(0,Math.min(.999999,Number.isFinite(time)?time/duration:0));
-  let accumulated=0;
-  for(let i=0;i<entries.length;i++){
-   accumulated+=weights[i]/total;
-   if(progress<accumulated)return entries[i];
-  }
-  return entries.at(-1);
- }
+ // A recording starts the first caption. The operator, not elapsed audio
+ // time, decides when to advance or rewind all subsequent sentences.
+ // When a recording finishes, keep its last selected caption visible until
+ // the operator moves to another cue.
  function mount({entries,media,renderer,isStarted=()=>true}){
   const groups=groupedAiLines(entries);
   const subscriptions=[];
-  let current=null;
-  const active=()=>{
+  let currentGroup=null,index=0,current=null;
+  function display(){
+   const entry=currentGroup?groups[currentGroup]?.[index]??null:null;
+   if((entry?.id??null)!==current){
+    current=entry?.id??null;
+    renderer.render(entry);
+   }
+   return entry;
+  }
+  function clear(){
+   currentGroup=null;index=0;display();
+  }
+  function findPlaying(){
    if(!isStarted())return null;
    for(const [group,audio] of Object.entries(media)){
     if(!groups[group]?.length||!audio||audio.paused||audio.ended)continue;
-    return {group,audio};
+    return group;
    }
    return null;
-  };
-  const sync=()=>{
-   const playing=active();
-   const entry=playing?subtitleAtTime(groups[playing.group],playing.audio.currentTime,playing.audio.duration):null;
-   if((entry?.id??null)!==current){current=entry?.id??null;renderer.render(entry);}
-   return entry;
-  };
+  }
+  function sync(){
+   if(!isStarted()){clear();return null;}
+   const playing=findPlaying();
+   if(playing&&currentGroup!==playing){currentGroup=playing;index=0;}
+   else if(currentGroup){
+    const audio=media[currentGroup];
+    // A deliberate pause/rewind removes the caption; a normal "ended" event
+    // does not discard text while the operator is still on this cue.
+    if(!audio||audio.paused&&!audio.ended)clear();
+   }
+   return display();
+  }
+  function next(){
+   sync();
+   if(!currentGroup)return false;
+   const lines=groups[currentGroup];
+   if(index>=lines.length-1)return false;
+   index++;display();return true;
+  }
+  function previous(){
+   sync();
+   if(!currentGroup||index<=0)return false;
+   index--;display();return true;
+  }
+  function clearCompleted(){
+   if(currentGroup&&media[currentGroup]?.ended)clear();
+  }
   for(const audio of Object.values(media))if(audio){
-   for(const event of ["play","playing","timeupdate","seeked","pause","ended","loadedmetadata","durationchange","emptied"]){
-    audio.addEventListener(event,sync);subscriptions.push([audio,event]);
+   for(const event of ["play","playing","pause","ended","emptied"]){
+    audio.addEventListener(event,sync);subscriptions.push([audio,event,sync]);
    }
   }
-  return {sync,destroy(){
-   for(const [audio,event] of subscriptions)audio.removeEventListener(event,sync);
-   current=null;renderer.render(null);
-  }};
+  return {sync,next,previous,clear,clearCompleted,
+   get group(){return currentGroup;},
+   get index(){return index;},
+   destroy(){
+    for(const [audio,event,listener] of subscriptions)audio.removeEventListener(event,listener);
+    clear();
+   }};
  }
- return {GROUPS,groupedAiLines,subtitleAtTime,mount};
+ return {GROUPS,groupedAiLines,mount};
 });

@@ -22,7 +22,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   await trackSelect.selectOption('配樂');
   assert.equal(await track.getByRole('button',{name:/^配樂 Ending\.m4a/}).count(),1);
   await trackSelect.selectOption('音效');
-  await track.getByRole('button',{name:/^音效 door-open\.mp3/}).click();
+  await track.getByRole('button',{name:/^音效 heavy-auto-door\.mp3/}).click();
   assert.equal(await page.locator('#startLabel').textContent(),`從第 ${indexOf(87)} 步開始`);
   await page.locator('[data-script="0"]').click();
   assert.equal(await track.locator('.timeline-cursor').isVisible(),true);
@@ -123,9 +123,14 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
   });
   await page.waitForFunction(()=>{
     const c=document.getElementById('visualizer'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
-    return d.some((v,i)=>i%4!==3&&v>15);
+    let hasDimRoom=false;
+    for(let i=0;i<d.length;i+=4){
+     if(d[i]>15||d[i+1]>15||d[i+2]>15)return false;
+     if(d[i]||d[i+1]||d[i+2])hasDimRoom=true;
+    }
+    return hasDimRoom;
   });
-  assert.equal(await canvasIsBlack(),false,'Step zero must show the blue room, not a black screen');
+  assert.equal(await canvasIsBlack(),false,'Step zero must retain a faint, nonblack room image');
   assert.equal(await page.evaluate(()=>scriptProjectionFrame().room),false);
   assert.equal(await page.evaluate(()=>scriptProjectionFrame().blackout),0);
   assert.equal(await page.locator('#actOneBgm').getAttribute('src'),null);
@@ -217,7 +222,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>x.paragraph===p&&(!text||x.
     }
    }
    const expectedEffects={
-    doorOpen:['scriptEffect-doorOpen','assets/audio/effects/door-open.mp3'],
+    doorOpen:['scriptEffect-doorOpen','assets/audio/effects/heavy-auto-door.mp3'],
     timerClick:['scriptEffect-timerClick','assets/audio/effects/timer-click.wav'],
     memoryClick:['scriptEffect-memoryClick','assets/audio/effects/light-click.wav'],
     officeBang:['scriptEffect-officeBang','assets/audio/door-kick.wav'],
