@@ -27,12 +27,9 @@
    <button type="button" id="openStepList" aria-haspopup="dialog" aria-controls="stepDialog" disabled>☷ 步驟清單</button>
   </nav>
   <section class="next-prompt" id="nextScenePrompt" aria-labelledby="nextPromptHeading" hidden>
-   <h2 id="nextPromptHeading">下一步預告</h2>
-   <p id="nextPromptStep" class="prompt-step"></p>
-   <p class="prompt-label">切換前，留意前兩句台詞</p>
-   <ol id="nextPromptLeads" class="prompt-lines prompt-leads"></ol>
-   <p class="prompt-label">下一步與接續台詞</p>
-   <ol id="nextPromptLines" class="prompt-lines"></ol>
+   <h2 id="nextPromptHeading">步驟前後預覽</h2>
+   <p id="nextPromptStep" class="prompt-step">前兩步 · 目前步驟 · 後兩步</p>
+   <ol id="stepContextList" class="step-context-list" aria-label="目前步驟及前後各兩步"></ol>
   </section>
   <section class="mixer" aria-labelledby="mixerHeading">
    <h2 id="mixerHeading">投影音量控制</h2>
