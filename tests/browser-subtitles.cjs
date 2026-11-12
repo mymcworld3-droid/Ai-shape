@@ -216,7 +216,9 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.ok(fourthActStart>votingCountdown,'Fourth act follows voting');
   // Verify the original screenplay through blackout; the bonus clip follows
   // only after an additional manual Right/Space operator action.
-  for(let i=clock+1;i<data.entries.length-1;i++){
+  const endBlackoutIndex=data.entries.findIndex(entry=>entry.action==='end-blackout');
+  assert.ok(endBlackoutIndex>clock);
+  for(let i=clock+1;i<=endBlackoutIndex;i++){
    const from=data.entries[i-1],to=data.entries[i];
    if(from.group!==to.group&&from.group){await page.waitForFunction(()=>!['starting','playing'].includes(scriptShow.active?.state),null,{timeout:60000});}
    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i,'entry '+i);
@@ -390,12 +392,31 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.ok(await page.locator('#visualizer').evaluate(c=>{const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.every((v,i)=>i%4===3||v===0);}));
   assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true,
     'The final blackout must not automatically start the bonus film');
-  const last=data.entries.length-1;
-  assert.equal(data.entries[last].action,'behind-the-scenes');
-  await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),last);
+  const bonus=endBlackoutIndex+1,last=data.entries.length-1;
+  assert.equal(data.entries[bonus].action,'behind-the-scenes');
+  assert.equal(data.entries[last].action,'credit-title');
+  await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),bonus);
   assert.equal(await page.locator('body').getAttribute('data-script-action'),'behind-the-scenes');
   assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden),true,
-    'Missing optional MP4 leaves the stage black');
+    'Missing optional MP4 leaves the bonus stage black');
+  const creditIds=EndCredits.cards.map(card=>card.id);
+  for(let i=bonus+1;i<=last;i++){
+   await page.keyboard.press('ArrowRight');
+   assert.equal(await page.evaluate(()=>scriptShow.index),i);
+   assert.equal(await page.locator('body').getAttribute('data-script-action'),creditIds[i-bonus-1]);
+   assert.equal(await page.locator('#endCreditsLayer').isVisible(),true);
+   const active=await page.evaluate(()=>endCredits.activeId);
+   assert.equal(active,creditIds[i-bonus-1]);
+   if(data.entries[i].action==='credit-pause')
+    assert.equal(await page.locator('#endCreditsLayer .end-credit-pause').count(),1);
+  }
+  assert.equal(await page.locator('#endCreditsLayer .end-credit-film-title').count(),1);
+  await page.waitForTimeout(4800);
+  const titleScale=await page.locator('#endCreditsLayer .end-credit-title').evaluate(element=>
+   new DOMMatrixReadOnly(getComputedStyle(element).transform).a);
+  assert.ok(titleScale>.98&&titleScale<1.02,'The Button zoom finishes at exact stage size');
+  await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),last,
+   'The final title is terminal');
   const deadlines=await page.evaluate(()=>({...scriptShow.deadlines}));
   for(let i=last-1;i>=0;i--){await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>scriptShow.index),i);assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);}
   assert.deepEqual(await page.evaluate(()=>({...scriptShow.deadlines})),deadlines);assert.equal(await page.locator('button:visible').count(),0);
