@@ -81,9 +81,9 @@ test("all 41 scene cues cover Act IV, photo turnover and six closing credit card
  assert.equal(trackForStep(cueSteps['discussion'],config.actOneMusic).src,
   'assets/audio/background/act-3/after-chris-transition.mp3');
  assert.equal(trackForStep(cueSteps['ending-light'],config.actOneMusic).src,
-  'assets/audio/background/act-4/Ending.m4a');
+  'assets/audio/background/act-4/Act4.m4a');
  assert.equal(trackForStep(cueSteps['ending-reveal'],config.actOneMusic).src,
-  'assets/audio/background/act-4/Ending.m4a');
+  'assets/audio/background/act-4/Act4.m4a');
  assert.equal(config.closingTheme.startDelayMs,1000);
  assert.equal(config.closingTheme.sceneStartCue,'ending-blackout');
  assert.equal(config.closingTheme.subtitleStartAction,'end-blackout');
