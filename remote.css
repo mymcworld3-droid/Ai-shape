@@ -78,6 +78,8 @@ button:disabled,input:disabled{opacity:.4;cursor:default}
  align-items:start;padding:4px 6px;border:1px solid transparent;
  border-radius:7px;overflow-wrap:anywhere}
 .step-context-list li.is-current{background:#27415c;border-color:#6d9dc8}
+.step-context-list li.is-next{background:#274e57;border-color:#78c6ba}
+.step-context-list li.is-next .step-context-index{color:#b9fff3}
 .step-context-index{color:#a7c7e8;font-size:10px;line-height:1.3;
  font-variant-numeric:tabular-nums;font-weight:700}
 .step-context-list li.is-current .step-context-index{color:#f7fcff}
