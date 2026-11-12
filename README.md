@@ -92,11 +92,10 @@
 | 104–178 | `assets/audio/background/act-1/94-174.mp3` |
 | 179–184 | `assets/audio/background/act-1/174-175(轉場).mp3` |
 | 第 186 段起 | 第一幕配樂漸弱結束 |
-| 290–402（第三幕） | `assets/audio/background/act-3/after-chris-transition.mp3`；進入字幕第 263 步前沿用原曲 |
-| **字幕模式第 263 步起**（直到第 403 段全暗） | 進入第 263 步後 **1 秒**，以 1.4 秒交叉淡入 `assets/audio/background/Ending.mp3`；跨下一句不重新播 |
+| 290–402（第三幕） | `assets/audio/background/act-3/after-chris-transition.mp3` |
 | 403（第三幕全暗） | 第三幕配樂約 1.1 秒漸弱結束 |
 | 407–415（第四幕，第 380～392 步） | `assets/audio/background/act-4/Ending.m4a`（純音訊） |
-| 416（第四幕最終全暗） | 第四幕配樂約 1.1 秒淡出 |
+| **416（第四幕最終全暗；字幕模式第 263 步）至片名** | 第 263 步進場 **1 秒後**，從頭播放 `assets/audio/background/Ending.mp3`，配樂接續至六張片尾字幕的〈The Button〉 |
 | **場景模式第 35 步「幕後花絮」至第 41 步〈The Button〉** | 第 35 步進場 **1 秒後**從頭播放 `assets/audio/background/Ending.mp3`，背景音樂持續跨越五張自動片尾字幕與片名 |
 
 重要音效對應：第 46 段時鐘 click ➝ `assets/audio/effects/timer-click.wav`；第 87 段左門開啟 ➝ `assets/audio/effects/heavy-auto-door.mp3`；第 110 段記憶室 click ➝ `assets/audio/effects/light-click.wav`；第 213 段辦公室 BANG ➝ `assets/audio/door-kick.wav`。
