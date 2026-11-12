@@ -114,7 +114,7 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   // The controller can browse the entire scene catalog and jump across acts
   // without expanding the compact mixer or playing intermediate effects.
   await guestA.locator("#openStepList").click();
-  await guestA.waitForFunction(()=>document.querySelectorAll('#remoteStepList [data-jump]').length===36);
+  await guestA.waitForFunction(()=>document.querySelectorAll('#remoteStepList [data-jump]').length===43);
   assert.equal(await guestA.locator('#remoteStepList [aria-current="step"]').count(),1);
   assert.equal(await guestA.locator('#remoteStepList [aria-current="step"]').getAttribute("data-jump"),"1");
   await guestA.locator("#stepSearch").fill("辦公室回憶");
