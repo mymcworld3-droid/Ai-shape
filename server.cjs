@@ -7,7 +7,7 @@ const {actions,validRoom}=require("./remote-link.js");
 
 const publicFiles=new Set([
  "/","/index.html","/stage.css","/opening-config.js","/stage-layout.js",
- "/opening-controller.js","/act-one-audio.js","/script-data.js","/script-controller.js",
+ "/frame-photo-motion.js","/opening-controller.js","/act-one-audio.js","/script-data.js","/script-controller.js",
  "/visualizer.js","/subtitle-motion.js","/scene-ai-subtitles.js","/script-runtime.js","/audio-timeline.js",
  "/stage-review.js","/remote.html","/remote.css","/remote-link.js","/remote-stage.js","/remote-control.js"
 ]);
