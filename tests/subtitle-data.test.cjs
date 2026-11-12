@@ -115,7 +115,9 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p363-0","Like he should change his personality just because."],
   ["p363-1","Talk about consistency, you are the one that always says everything is so “INTERESTING”."],
   ["p375-0","I…, I’m just like this! I wasn’t comfortable, too."],
-  ["p375-2","There is just no means to do the unnecessary! And this is just unnecessary."]
+  ["p375-2","There is just no means to do the unnecessary! And this is just unnecessary."],
+  ["p383-0","You were the one who said to always choose the option with minimal damage."],
+  ["p383-1","And so the answer is obvious."]
  ];
  for(const [id,text] of screens){
   const matches=entries.filter(e=>e.parts?.some(p=>p.id===id));
@@ -135,7 +137,8 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p351-0","p353-0"],
   ["p358-1","p358-2"],
   ["p363-0","p363-1"],
-  ["p375-0","p375-2"]
+  ["p375-0","p375-2"],
+  ["p383-0","p383-1"]
  ];
  for(const group of consecutiveGroups){
   const indices=group.map(id=>entries.findIndex(e=>e.parts?.some(p=>p.id===id)));
@@ -157,6 +160,6 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.deepEqual(card?.parts.map(part=>part.id),["p83-1"]);
  assert.equal(entries.filter(e=>e.paragraph===83).length,1,
   "flip-card cue and reading are one navigable step");
- assert.equal(entries.length,294,
-  "splitting Rachel and Ethan dialogue adds two operator-controlled steps");
+ assert.equal(entries.length,295,
+  "splitting Christopher’s minimal-damage conclusion adds one operator-controlled step");
 });
