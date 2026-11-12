@@ -66,6 +66,11 @@ const cardImage=new Image();
 const memoryBackgroundImage=new Image();
 const officeBackgroundImage=new Image();
 let backgroundReady=false,darkBackgroundReady=false,cardReady=false,memoryBackgroundReady=false,officeBackgroundReady=false,roomReadyAt=null;
+// Keep the last *decoded* reveal frame when the video element ends. Without
+// this, browsers may drop its texture before the next still-room frame paints.
+const revealFreezeFrame=document.createElement("canvas");
+const revealFreezeCtx=revealFreezeFrame.getContext("2d");
+let revealFreezeReady=false,scriptRevealHandoffAt=null;
 let previewCue=null,previewAiStartedAt=null;
 let audioCtx=null,analyser=null,source=null,dataArray=null,smooth=new Float32Array(512);
 const audioSources=new Map();
@@ -137,6 +142,7 @@ const stage=new StageOpening.StageCueController({
  onCue(cue){
   document.body.dataset.cue=cue;
   syncBehindScenes(cue==="behind-the-scenes");
+  window.sceneVoiceSubtitles?.clearCompleted();
   // All live scene transitions (including rewind and a direct rehearsal jump)
   // update BGM. Stage previews never emit onCue and remain fully silent.
   if(!scriptMode&&startGate.started){
@@ -622,6 +628,9 @@ document.getElementById("audioUnlockButton").addEventListener("click",retryVoice
 function advanceStage(fullscreen=true){
  if(!startGate.started)return;
  if(scriptMode){transcript.next();if(fullscreen)requestStageFullscreen();return;}
+ // The same Next button first advances an AI caption, not the whole scene.
+ // Caption navigation is allowed during fade/voice locks and never seeks audio.
+ if(window.sceneVoiceSubtitles?.next()){if(fullscreen)requestStageFullscreen();return;}
  if(!backgroundReady||!darkBackgroundReady)return;
  if(stage.state==="door-kick"&&!cardReady)return;
  if(performance.now()<stage.busyUntil)return;
@@ -686,7 +695,7 @@ function toggleVolumeDisplay(){volumeDisplay.hidden=!volumeDisplay.hidden;}
 applyVolumes();
 const stageActions={
  start:()=>startGate.start(),next:advanceStage,
- previous:()=>{if(startGate.started){if(scriptMode)transcript.previous();else stage.previous();}},
+ previous:()=>{if(startGate.started){if(scriptMode)transcript.previous();else if(!window.sceneVoiceSubtitles?.previous())stage.previous();}},
  voiceUp:()=>changeVoiceVolume(5),voiceDown:()=>changeVoiceVolume(-5),
  effectUp:()=>changeEffectVolume(5),effectDown:()=>changeEffectVolume(-5),
  otherUp:()=>changeOtherVolume(5),otherDown:()=>changeOtherVolume(-5),
@@ -700,12 +709,23 @@ document.addEventListener("fullscreenchange",resizeCanvas);
 window.addEventListener("resize",resizeCanvas);
 
 function drawRevealVideo(alpha){
- if(alpha<=0||revealVideo.readyState<2||!revealVideo.videoWidth)return;
- const b=StageLayout.coverLayout(w,h,revealVideo.videoWidth,revealVideo.videoHeight);
+ if(alpha<=0)return;
+ const decoded=revealVideo.readyState>=2&&revealVideo.videoWidth>0;
+ // Save the most recent live frame before video.ended can invalidate it.
+ if(decoded&&!revealVideo.ended&&(roomReveal.state==="playing"||scriptVideoPlaying)){
+  const vw=revealVideo.videoWidth,vh=revealVideo.videoHeight;
+  if(revealFreezeFrame.width!==vw||revealFreezeFrame.height!==vh){
+   revealFreezeFrame.width=vw;revealFreezeFrame.height=vh;
+  }
+  try{revealFreezeCtx.drawImage(revealVideo,0,0,vw,vh);revealFreezeReady=true;}catch(_){}
+ }
+ const frozen=(revealVideo.ended||roomReveal.state==="ready"||scriptRevealHandoffAt!==null)&&revealFreezeReady;
+ const source=frozen?revealFreezeFrame:decoded?revealVideo:revealFreezeReady?revealFreezeFrame:null;
+ if(!source)return;
+ const b=StageLayout.coverLayout(w,h,source.videoWidth||source.width,source.videoHeight||source.height);
  ctx.save();ctx.globalAlpha=alpha;
- // Fill the fixed 16:9 frame without distortion, cropping excess equally.
  ctx.fillStyle="#050505";ctx.fillRect(0,0,w,h);
- ctx.drawImage(revealVideo,b.x,b.y,b.width,b.height);ctx.restore();
+ ctx.drawImage(source,b.x,b.y,b.width,b.height);ctx.restore();
 }
 function roomHandoffProgress(now){
  if(roomReveal.state!=="ready"||!backgroundReady)return 0;
@@ -720,8 +740,18 @@ function drawBackground(now,frame){
  if(frame.room?ready:openingRoom&&darkBackgroundReady){
   const b=StageLayout.coverLayout(w,h,image.naturalWidth,image.naturalHeight);ctx.drawImage(image,b.x,b.y,b.width,b.height);
  }
+ // Only the step-zero backdrop is extremely dim: the next real video fades
+ // over the same dim backdrop, never revealing an intervening bright photo.
+ if(openingRoom&&!frame.room&&(!frame.script||frame.cueZero)){
+  ctx.fillStyle=`rgba(0,0,0,${config.cueZeroDim})`;
+  ctx.fillRect(0,0,w,h);
+ }
  if(frame.script&&scriptVideoPlaying){
   drawRevealVideo(1);
+ }else if(frame.script&&scriptRevealHandoffAt!==null){
+  const p=Math.max(0,Math.min(1,(now-scriptRevealHandoffAt)/config.revealFadeMs));
+  if(p<1)drawRevealVideo(1-easeInOutCubic(p));
+  else scriptRevealHandoffAt=null;
  }else if(!frame.script&&openingRoom&&!frame.preview&&roomReveal.state==="playing"){
   drawRevealVideo(easeInOutCubic(Math.min(1,revealVideo.currentTime*1000/config.revealFadeMs)));
  }else if(!frame.script&&openingRoom&&!frame.preview&&roomReveal.state==="ready"){
