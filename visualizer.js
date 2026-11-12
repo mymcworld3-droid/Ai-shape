@@ -22,7 +22,14 @@ const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
 const visualizerWrap=document.getElementById("visualizerWrap");
-const endCredits=EndCredits.mount(visualizerWrap);
+const endCredits=EndCredits.mount(visualizerWrap,{
+ onAdvance(){
+  if(!startGate.started)return;
+  if(scriptMode){
+   if(EndCredits.get(transcript.entry?.action))transcript.next();
+  }else if(EndCredits.get(stage.state))stage.advance();
+ }
+});
 const behindScenesVideo=document.getElementById("behindScenesVideo");
 let behindScenesRun=0;
 // Never load or play this optional file until the separate post-show step.
