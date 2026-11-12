@@ -668,6 +668,36 @@
       }
     }
 
+    // Move directly between scene cues without running skipped effects.
+    // Invalidate every media completion/pending promise before rebuilding
+    // the target through the same path used by a fresh rehearsal start.
+    seekTo(cue) {
+      if(this.destroyed||!this.initialized||!STAGE_START_CUES.includes(cue))return false;
+      if(cue===this.state||cue==="bright"&&this.state==="room-reveal")return true;
+      ++this.room.run; ++this.opening.run;
+      ++this.effectRun; ++this.doorOpenRun; ++this.selectionButtonRun;
+      for(const media of [this.room.video,this.opening.audio,this.effect,this.doorOpen,this.selectionButton])
+       media?.pause();
+      for(const scene of [this.memory,this.voting,this.ending]){
+       if(!scene)continue;
+       for(const kind of Object.keys(scene.runs))++scene.runs[kind];
+       for(const media of Object.values(scene.media))media?.pause();
+       for(const kind of Object.keys(scene.mediaStates))scene.mediaStates[kind]="idle";
+       scene.state="waiting";scene.busyUntil=0;
+      }
+      if(this.office){
+       ++this.office.run;
+       this.office.bang?.pause();
+       this.office.bangState="idle";
+       this.office.state="waiting";this.office.busyUntil=0;
+      }
+      this.room.state="dark";
+      this.opening.state="ready";this.opening.deadline=null;
+      this.effectState="idle";this.doorOpenState="idle";this.selectionButtonState="idle";
+      this.state="dark";this.initialized=false;this.busyUntil=0;this.history=[];
+      return this.startAt(cue);
+    }
+
     checkpoint() {
       return {
         state: this.state, room: this.room.state, opening: this.opening.state,
