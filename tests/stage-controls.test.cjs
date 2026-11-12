@@ -147,10 +147,10 @@ test('every one of the 43 scene cues can be selected as the first live cue',asyn
  }
 });
 
-test('seven reference end cards follow the optional bonus and preserve manual steps',async()=>{
+test('six credit cues follow bonus without a black pause and preserve manual controls',async()=>{
  const c=setup();
  const creditIds=['credit-directed','credit-conversation','credit-produced',
-  'credit-executive','credit-backgrounds','credit-pause','credit-title'];
+  'credit-executive','credit-backgrounds','credit-title'];
  assert.equal(c.stage.startAt('behind-the-scenes'),true);
  for(const id of creditIds){
   await c.stage.advance();
@@ -335,7 +335,7 @@ test('Act IV continues after third-act blackout, plays both original AI recordin
  await c.next();assert.equal(c.stage.state,'behind-the-scenes',
   'post-show video is a separate operator-controlled step');
  await c.next();assert.equal(c.stage.state,'credit-directed',
-  'The manual post-show cue now leads into seven separate credit cards');
+  'The manual post-show cue now leads into six separate credit cards');
  assert.equal(c.stage.opening.deadline,openingDeadline);
  assert.equal(c.stage.voting.deadline,selectionDeadline);
  assert.equal(c.stage.previous(),true);
