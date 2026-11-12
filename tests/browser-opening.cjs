@@ -696,7 +696,7 @@ async function fastVoting(page){
     await page.waitForFunction(()=>document.body.dataset.behindScenesState==='playing');
     assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.currentTime<1),true,
       'Re-entering the bonus cue restarts the film');
-    const endCards=EndCredits.cards.map(card=>card.id);
+    const endCards=require('../end-credits').cards.map(card=>card.id);
     for(const id of endCards){
       await page.keyboard.press('Space');await cue(page,id);
       assert.equal(await page.locator('#endCreditsLayer').isVisible(),true,id);
