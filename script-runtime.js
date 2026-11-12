@@ -114,6 +114,7 @@ if(scriptMode){
    // Other direct rehearsal jumps continue to render without a transition.
    if(starting&&entry.action==='ai')animate('ai',0,0);
    applyEntry(entry,starting&&index>0&&entry.action!=='ai'?0:direction);
+   endCredits.show(entry.action);
    syncBehindScenes(entry.action==='behind-the-scenes');
    if(entry.action==='selection-button'&&direction>0&&startGate.started)flashUntil=performance.now()+280;
   },
@@ -153,7 +154,8 @@ if(scriptMode){
  window.previewScriptEntry=index=>{if(startGate.started)return;previewEntry=SUBTITLE_SCRIPT.entries[index]||null;
   scriptPreviewAiStartedAt=null;
   if(previewEntry)applyEntry(previewEntry,0);
-  else subtitleRenderer.render(null);};
+  else subtitleRenderer.render(null);
+  endCredits.show(previewEntry?.action||null,{isPreview:true});};
 }
 
 // Scene-mode narration uses the same original AI VOICE sentences, but only
