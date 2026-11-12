@@ -399,7 +399,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(await page.locator('body').getAttribute('data-script-action'),'behind-the-scenes');
   assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden),true,
     'Missing optional MP4 leaves the bonus stage black');
-  const creditIds=EndCredits.cards.map(card=>card.id);
+  const creditIds=require('../end-credits').cards.map(card=>card.id);
   for(let i=bonus+1;i<=last;i++){
    await page.keyboard.press('ArrowRight');
    assert.equal(await page.evaluate(()=>scriptShow.index),i);
