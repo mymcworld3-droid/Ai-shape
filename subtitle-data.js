@@ -105,7 +105,8 @@
   "p209-2","p209-3", // Liam's denial and accusation: three screens
   "p222-2","p222-3","p222-4", // CEO's four separate subtitle screens
   "p272-0","p274-0","p277-0","p281-0", // Christopher's five separate confession screens
-  "p341-1" // Rachel's parallelism quip in two operator-controlled screens
+  "p341-1", // Rachel's parallelism quip in two operator-controlled screens
+  "p353-0" // Ethan's two separate observations about Chris and Rachel
  ]);
  const result=[];
  function sameLook(a,b){
