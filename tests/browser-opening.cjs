@@ -196,6 +196,10 @@ async function matchesStill(page, sourcePath, region=null) {
   const comparison=await expectedDifference(page,sourcePath,region);
   assert.ok(comparison.mean<1,`Projection must match ${sourcePath}; mean pixel error ${comparison.mean}`);
 }
+async function selectedStartText(page,cue){
+ const number=await page.locator('[data-preview="'+cue+'"] .step-number').textContent();
+ return '從第 '+number.trim()+' 步開始';
+}
 async function matchesDimmedCueZero(page) {
   const comparison=await expectedDifference(page,"assets/backgrounds/Start_dark.PNG",null,15,OPENING_DARK_DIM);
   assert.ok(comparison.mean<1.5,"Step 0 must retain its blue room at 5% brightness; mean error "+comparison.mean);
@@ -779,7 +783,7 @@ async function fastVoting(page){
     assert.equal(await track.getByRole('button').count(),1,'Only the media for visible bookmarked steps remains');
     await doorClip.click();
     assert.equal(await review.locator('[data-preview="door-open"]').getAttribute('aria-pressed'),'true');
-    assert.equal(await review.locator('#startLabel').textContent(),'從第 8 步開始');
+    assert.equal(await review.locator('#startLabel').textContent(),await selectedStartText(review,'door-open'));
     await markedFilter.click();
     await markDoor.click();
     await review.locator('[data-preview="bright"]').click();
@@ -826,7 +830,7 @@ async function fastVoting(page){
     await review.locator('#stepsViewButton').click();await review.locator('[data-preview="vote-blackout"]').click();
     await flag(review,'previewCue','vote-blackout');
     // The selected third-act blackout stays selectable without replaying earlier scenes.
-    assert.equal(await review.locator('#startLabel').textContent(),'從第 25 步開始');
+    assert.equal(await review.locator('#startLabel').textContent(),await selectedStartText(review,'vote-blackout'));
     await review.locator('#startButton').click();await cue(review,'vote-blackout');await noControls(review);
     await flag(review,'view','page');
     assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.paused),true);
@@ -1339,7 +1343,7 @@ async function fastVoting(page){
     const doorJump=await browser.newPage();
     await ready(doorJump,url);await doorJump.locator('#stepsViewButton').click();
     await doorJump.locator('[data-preview="door-open"]').click();
-    assert.equal(await doorJump.locator('#startLabel').textContent(),'從第 8 步開始');
+    assert.equal(await doorJump.locator('#startLabel').textContent(),await selectedStartText(doorJump,'door-open'));
     assert.equal(await doorJump.locator('#memoryDoorOpenAudio').evaluate(a=>a.paused&&a.currentTime===0),true);
     await doorJump.locator('#startButton').click();await cue(doorJump,'door-open');
     await flag(doorJump,'doorOpenState','playing');
@@ -1359,7 +1363,7 @@ async function fastVoting(page){
     });
     await ready(buttonJump,url);await buttonJump.locator('#stepsViewButton').click();
     await buttonJump.locator('[data-preview="vote-prompt"]').click();
-    assert.equal(await buttonJump.locator('#startLabel').textContent(),'從第 21 步開始');
+    assert.equal(await buttonJump.locator('#startLabel').textContent(),await selectedStartText(buttonJump,'vote-prompt'));
     assert.equal(await buttonJump.evaluate(()=>window.selectionButtonPlayCount),0,'preview cannot trigger button audio');
     assert.equal(await buttonJump.locator('#selectionButtonAudio').evaluate(a=>a.paused&&a.currentTime===0),true);
     await buttonJump.locator('#startButton').click();await cue(buttonJump,'vote-prompt');
@@ -1373,7 +1377,7 @@ async function fastVoting(page){
     await ready(endingJump,url);
     await endingJump.locator('#stepsViewButton').click();
     await endingJump.locator('[data-preview="ending-reveal"]').click();
-    assert.equal(await endingJump.locator('#startLabel').textContent(),'從第 30 步開始');
+    assert.equal(await endingJump.locator('#startLabel').textContent(),await selectedStartText(endingJump,'ending-reveal'));
     assert.equal(await endingJump.locator('#endingRevealAudio').evaluate(m=>m.paused&&m.currentTime===0),true);
     await endingJump.locator('#startButton').click();await cue(endingJump,'ending-reveal');
     await flag(endingJump,'endingRevealState','playing');
@@ -1390,7 +1394,7 @@ async function fastVoting(page){
     const jump=await browser.newPage();
     await ready(jump,url);await jump.locator('#stepsViewButton').click();
     await jump.locator('[data-preview="office-light"]').click();
-    assert.equal(await jump.locator('#startLabel').textContent(),'從第 16 步開始');
+    assert.equal(await jump.locator('#startLabel').textContent(),await selectedStartText(jump,'office-light'));
     assert.equal(await jump.locator('#resetStartStep').isVisible(),true);
     // Preview never loads or plays a music track.
     assert.equal(await jump.evaluate(()=>window.actOneBackgroundMusic?.current),null);
@@ -1409,7 +1413,7 @@ async function fastVoting(page){
     const resetJump=await browser.newPage();
     await ready(resetJump,url);await resetJump.locator('#stepsViewButton').click();
     await resetJump.locator('[data-preview="vote-one"]').click();
-    assert.equal(await resetJump.locator('#startLabel').textContent(),'從第 22 步開始');
+    assert.equal(await resetJump.locator('#startLabel').textContent(),await selectedStartText(resetJump,'vote-one'));
     await resetJump.locator('#resetStartStep').click();
     assert.equal(await resetJump.locator('#startLabel').textContent(),'開始');
     assert.equal(await resetJump.locator('#resetStartStep').isHidden(),true);
