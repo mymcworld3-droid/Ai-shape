@@ -701,6 +701,7 @@ async function fastVoting(page){
     assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>!v.hidden&&!v.paused),true);
     // A direct cue seek cancels the previous song clock and the bonus movie.
     await page.evaluate(()=>stage.seekTo('ending-blackout'));await cue(page,'ending-blackout');
+    const creditsOpeningDeadline=await page.evaluate(()=>opening.deadline);
     assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true);
     // Capture transition times *inside* onCue, not after Playwright observes
     // them, so CI scheduling delays don't corrupt the measured cue lengths.
@@ -751,7 +752,8 @@ async function fastVoting(page){
     await page.keyboard.press('ArrowLeft');await cue(page,'credit-backgrounds');
     assert.equal(await page.evaluate(()=>endCredits.activeId),'credit-backgrounds');
     assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
-    assert.equal(await page.evaluate(()=>opening.deadline),deadline);
+    assert.equal(await page.evaluate(()=>opening.deadline),creditsOpeningDeadline,
+      'A rehearsal seek resets the prior countdown once; timed credits do not alter it');
     assert.equal(errors.length,0,errors.join("\n"));
     assert.ok(requests.every(request=>request.startsWith(url)),"Show assets must be local");
     await page.close();
