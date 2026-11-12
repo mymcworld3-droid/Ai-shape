@@ -122,9 +122,9 @@ test('all third-act scene cues rewind and replay without starting any voting dea
  for(const m of [c.audio,c.doorOpen,c.memoryVoice,c.bang,c.prompt,c.button])assert.equal(m.calls,2);
 });
 
-test('every one of the 36 scene cues can be selected as the first live cue',async()=>{
+test('every one of the 43 scene cues can be selected as the first live cue',async()=>{
  const {STAGE_START_CUES}=require('../opening-controller.js');
- assert.equal(STAGE_START_CUES.length,36);
+ assert.equal(STAGE_START_CUES.length,43);
  const mediaFor={"bright":"video","welcome":"audio","door-kick":"effect","door-open":"doorOpen",
   "memory-welcome":"memoryVoice","office-bang":"bang","vote-prompt":"prompt",
   "ending-complete":"complete","ending-reveal":"reveal"};
@@ -147,6 +147,26 @@ test('every one of the 36 scene cues can be selected as the first live cue',asyn
  }
 });
 
+test('seven reference end cards follow the optional bonus and preserve manual steps',async()=>{
+ const c=setup();
+ const creditIds=['credit-directed','credit-conversation','credit-produced',
+  'credit-executive','credit-backgrounds','credit-pause','credit-title'];
+ assert.equal(c.stage.startAt('behind-the-scenes'),true);
+ for(const id of creditIds){
+  await c.stage.advance();
+  assert.equal(c.stage.state,id);
+  assert.equal(c.stage.voting.deadline,null);
+ }
+ assert.equal(await c.stage.advance(),false);
+ assert.equal(c.stage.state,'credit-title');
+ for(let i=creditIds.length-2;i>=0;i--){
+  assert.equal(c.stage.previous(),true);
+  assert.equal(c.stage.state,creditIds[i]);
+ }
+ assert.equal(c.stage.previous(),true);
+ assert.equal(c.stage.state,'behind-the-scenes');
+ c.stage.destroy();
+});
 test('scene seek cancels old effects, clears cue locks and reconstructs later and earlier scenes',async()=>{
  const c=setup();
  assert.equal(c.stage.seekTo('vote-prompt'),false,'Start required');
