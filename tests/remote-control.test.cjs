@@ -86,6 +86,9 @@ test("the public server supports media ranges and rejects foreign origins and fi
  const health=await fetch(origin+"/remote/health");
  assert.equal(health.headers.get("x-ai-shape-remote"),"1");
  assert.equal((await fetch(origin+"/remote.html")).status,200);
+ const photoMotion=await fetch(origin+"/frame-photo-motion.js");
+ assert.equal(photoMotion.status,200,"The projection must serve the animation module used on every frame");
+ assert.match(await photoMotion.text(),/FramePhotoMotion/);
  const video=await fetch(origin+"/assets/videos/Start_animation.mp4",{headers:{Range:"bytes=0-1"}});
  assert.equal(video.status,206);
  assert.equal((await video.arrayBuffer()).byteLength,2);
