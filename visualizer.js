@@ -1034,6 +1034,48 @@ function clockPlacement(frame){
  return {x:lerp(rest.x,cx),y:lerp(rest.y,cy),scale:lerp(rest.scale,unit),
   clip:{x:lerp(rest.clip.x,0),y:lerp(rest.clip.y,0),width:lerp(rest.clip.width,w),height:lerp(rest.clip.height,h)}};
 }
+// A single photo overlay is used by both manually paced scene cues and the
+// transcript's automatic photo ranges. The animation state is based on actual
+// desired sides, so repeated dialogue steps cannot restart an entrance.
+const framePhotoMotion=new FramePhotoMotion.Controller();
+const framePhotoReduceMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)")||null;
+function drawFramePhoto(frame,now){
+ const side=frame.script?frame.photoSide:
+  frame.caption==="memory-photo-front"?"front":
+  frame.caption==="memory-photo-back"?"back":null;
+ const wanted=frame.room&&frame.background==="memory"?side:null;
+ const pose=framePhotoMotion.update(wanted,now,Boolean(framePhotoReduceMotion?.matches));
+ if(frame.background!=="memory"||!frame.room||pose.opacity<=.001)return false;
+ const photo=pose.side&&framePhotoImages[pose.side];
+ if(!photo?.complete||!photo.naturalWidth||!photo.naturalHeight)return false;
+
+ // Let the room darken gradually behind the photo, rather than cutting black.
+ ctx.save();
+ ctx.fillStyle=`rgba(0,0,0,${(.82*pose.opacity).toFixed(4)})`;
+ ctx.fillRect(0,0,w,h);
+ ctx.globalAlpha=pose.opacity;
+
+ // Side-to-side turnover closes to a narrow edge, switches to the back,
+ // then expands. The image itself is never mirrored (readable handwriting).
+ const width=Math.min(w*.76,h*.86*photo.naturalWidth/photo.naturalHeight);
+ const height=width*photo.naturalHeight/photo.naturalWidth;
+ const squash=Math.max(.004,pose.widthRatio);
+ ctx.translate(cx,cy+pose.offsetY*Math.max(.6,h/850));
+ ctx.scale(pose.scale*squash,pose.scale);
+ ctx.shadowColor="rgba(0,0,0,.65)";
+ ctx.shadowBlur=Math.min(w,h)*.04;
+ ctx.shadowOffsetY=Math.min(w,h)*.012;
+ ctx.drawImage(photo,-width/2,-height/2,width,height);
+ ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+ if(pose.turning){
+  // Subtle edge reflection emphasizes the turn without obscuring the words.
+  ctx.fillStyle=`rgba(222,233,245,${(.10*(1-pose.widthRatio)).toFixed(4)})`;
+  ctx.fillRect(-width/2,-height/2,width,height);
+ }
+ ctx.restore();
+ return true;
+}
+
 function draw(){
  requestAnimationFrame(draw);
  const now=performance.now();opening.getRemainingMs();updateTransitions(now);
@@ -1050,18 +1092,13 @@ function draw(){
  midEnergy+=(a.mid-midEnergy)*.16;highEnergy+=(a.high-highEnergy)*.25;
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
  updateHexRotation(now);drawBackground(now,frame);
- // Script mode follows the exact prop reveal; scene mode exposes independent operator cues.
- // Subtitles are a separate overlay and remain controlled by the operator.
- const photoSide=frame.script?frame.photoSide:
-  (frame.caption==="memory-photo-front"?"front":frame.caption==="memory-photo-back"?"back":null);
- const photo=photoSide&&frame.background==="memory"?framePhotoImages[photoSide]:null;
- if(photo?.complete&&photo.naturalWidth&&photo.naturalHeight&&frame.room){
-  ctx.save();ctx.fillStyle="rgba(0,0,0,.82)";ctx.fillRect(0,0,w,h);
-  const width=Math.min(w*.76,h*.86*photo.naturalWidth/photo.naturalHeight);
-  const height=width*photo.naturalHeight/photo.naturalWidth;
-  ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=Math.min(w,h)*.035;
-  ctx.drawImage(photo,(w-width)/2,(h-height)/2,width,height);
-  ctx.restore();
+ // Keep the subtitle element separate from the canvas; cue changes alone
+ // drive the photo motion in either scene mode or script mode.
+ if(drawFramePhoto(frame,now)){
+  if(frame.blackout>0){
+   ctx.fillStyle=`rgba(0,0,0,${frame.blackout})`;
+   ctx.fillRect(0,0,w,h);
+  }
   return;
  }
  // The bright room also remains empty until the separate AI fade-in cue.
