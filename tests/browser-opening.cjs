@@ -317,7 +317,8 @@ async function fastMemory(page){
 }
 async function fastOffice(page){
  await fastMemory(page);
- for(const next of ['memory-welcome','memory-room','memory-blackout','past-intro','past-isolate','office-light']){
+ for(const next of ['memory-welcome','memory-room','memory-photo-front','memory-photo-back',
+  'memory-photo-hide','memory-blackout','past-intro','past-isolate','office-light']){
   await page.keyboard.press('Space');await cue(page,next);
   await page.waitForFunction(()=>performance.now()>=stage.busyUntil);
   if(next==='memory-welcome'){
@@ -544,6 +545,11 @@ async function fastVoting(page){
     assert.equal(await page.evaluate(()=>opening.deadline),deadline);
     assert.equal(await page.locator('#roomRevealVideo').evaluate(v=>v.ended),true);
     assert.equal(await page.locator('#openingAudio').evaluate(a=>a.ended),true);
+    // A photo enters, turns over, and exits before the Memory Room blackout.
+    for(const photo of ['memory-photo-front','memory-photo-back','memory-photo-hide']){
+      await page.keyboard.press('Space');await cue(page,photo);
+      await page.waitForTimeout(900);
+    }
     await page.keyboard.press('Space');await cue(page,'memory-blackout');await page.waitForTimeout(1300);
     assert.equal(await page.locator('#visualizer').evaluate(c=>{
       const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
@@ -694,7 +700,7 @@ async function fastVoting(page){
     results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; shrunk opening clock fills the original TV center without overflowing, card show/hide and exact blackout pixels");
     results.push("natural opening continues into Memory Room with the original 3.7-second M4A; AI enlarges over black, real audio reaches the analyser, genuine end fades and shrinks it, held Space never skips and the original deadline never resets");
     results.push('all eighteen cues follow Act II monologue, office flashback, BANG, reflection and Memory Room return; independent pixels verify dim room, exact blackouts and clean backgrounds at three ratios; held cues never skip fades or reset the deadline');
-    results.push('all 32 scene cues continue through Act IV: real final voices are gated by their natural ends, the existing Act IV soundtrack begins at the room reveal, and the last blackout is solid black');
+    results.push('all 36 scene cues continue through Act IV: real final voices are gated by their natural ends, the existing Act IV soundtrack begins at the room reveal, and the last blackout is solid black');
 
     const fadePage=await browser.newPage({viewport:{width:1280,height:720}});
     const fadeErrors=[];fadePage.on('pageerror',error=>fadeErrors.push(String(error)));
@@ -758,10 +764,11 @@ async function fastVoting(page){
     await markDoor.click();
     await review.locator('[data-preview="bright"]').click();
     await review.waitForTimeout(100);await fixedFrame(review);
-    assert.equal(await review.locator('#stepList [data-preview]').count(),33);
+    assert.equal(await review.locator('#stepList [data-preview]').count(),36);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
     for(const preview of ['dark','welcome','clock','door-kick','card','card-hidden','door-open','blackout','ai','bright',
-      'memory-light','memory-welcome','memory-room','memory-blackout',
+      'memory-light','memory-welcome','memory-room','memory-photo-front',
+      'memory-photo-back','memory-photo-hide','memory-blackout',
       'past-intro','past-isolate','office-light','office-bang','past-reflection','memory-return',
       'discussion','vote-prompt','vote-one','vote-two','vote-final','vote-blackout',
       'ending-light','ending-dialogue','ending-complete','ending-question','ending-reveal','ending-blackout','behind-the-scenes']){
@@ -1294,7 +1301,8 @@ async function fastVoting(page){
     await rewind.keyboard.press('ArrowRight');await cue(rewind,'vote-one');await rewind.waitForTimeout(700);
     const rewindOpening=await rewind.evaluate(()=>opening.deadline),rewindSelection=await rewind.evaluate(()=>stage.voting.deadline);
     const preceding=['vote-prompt','discussion','memory-return','past-reflection','office-bang','office-light','past-isolate','past-intro',
-      'memory-blackout','memory-room','memory-welcome','memory-light','blackout','door-open','card-hidden','card','door-kick','clock','welcome','ai','bright','dark'];
+      'memory-blackout','memory-photo-hide','memory-photo-back','memory-photo-front',
+      'memory-room','memory-welcome','memory-light','blackout','door-open','card-hidden','card','door-kick','clock','welcome','ai','bright','dark'];
     for(const previous of preceding){
       await rewind.keyboard.press('ArrowLeft');await cue(rewind,previous);
       assert.ok(await rewind.locator('audio,video').evaluateAll(items=>items.filter(m=>!['actOneBgm','actOneBgmAlt'].includes(m.id)).every(m=>m.paused)));
