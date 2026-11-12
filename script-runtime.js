@@ -160,6 +160,8 @@ if(scriptMode){
 // the operator's Next/Previous input changes the displayed line.
 // The recording continues uninterrupted while the text is switched manually.
 if(!scriptMode){
+ const activeSceneNarrationCues=new Set(["welcome","clock","memory-welcome",
+  "vote-prompt","vote-one","vote-two","vote-final","ending-complete","ending-reveal"]);
  const renderer=new SubtitleMotion.Renderer({element:document.getElementById("subtitles")});
  window.sceneVoiceSubtitles=SceneAiSubtitles.mount({
   entries:SHOW_SCRIPT.entries,
@@ -169,9 +171,6 @@ if(!scriptMode){
    complete:endingCompleteAudio,revealTruth:endingRevealAudio},
   // Silent narration priming at Start is not an AI scene. The projector's
   // first Next must reveal the room, never consume an invisible AI caption.
-  renderer,isStarted:()=>startGate.started&&!remoteAudioPreparing&&new Set([
-   "welcome","clock","memory-welcome","vote-prompt","vote-one",
-   "vote-two","vote-final","ending-complete","ending-reveal"
-  ]).has(stage.state)
+  renderer,isStarted:()=>startGate.started&&!remoteAudioPreparing&&activeSceneNarrationCues.has(stage.state)
  });
 }
