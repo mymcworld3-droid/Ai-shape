@@ -33,14 +33,14 @@ function setup(){
 const flush=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
 const close=(a,b)=>assert.ok(Math.abs(a-b)<.01,`${a} != ${b}`);
 
-test("all 36 scene cues cover Act IV, the photo turnover, and the optional post-show film",()=>{
+test("all 43 scene cues cover Act IV, the photo turnover, bonus film and seven silent credit cards",()=>{
  const fs=require('node:fs'),vm=require('node:vm');
  const source=fs.readFileSync(require.resolve('../opening-config.js'),'utf8');
  const context={window:{}};vm.runInNewContext(source,context);
  const config=context.window.OPENING_CONFIG;
  const {STAGE_START_CUES}=require('../opening-controller.js');
  const cueSteps=config.sceneMusicSteps;
- assert.equal(Object.keys(cueSteps).length,37);
+ assert.equal(Object.keys(cueSteps).length,44);
  assert.equal(cueSteps.dark,20);
  assert.equal(trackForStep(cueSteps.dark,config.actOneMusic),null);
  assert.equal(trackForStep(cueSteps['room-reveal'],config.actOneMusic).src,
@@ -48,7 +48,8 @@ test("all 36 scene cues cover Act IV, the photo turnover, and the optional post-
  for(const cue of STAGE_START_CUES){
   assert.equal(Number.isInteger(cueSteps[cue]),true,'missing paragraph for '+cue);
   const track=trackForStep(cueSteps[cue],config.actOneMusic);
-  if(['dark','vote-blackout','ending-blackout','behind-the-scenes'].includes(cue))assert.equal(track,null,'pre-show, blackout and bonus film do not trigger background music');
+  if(['dark','vote-blackout','ending-blackout','behind-the-scenes'].includes(cue)||cue.startsWith('credit-'))
+   assert.equal(track,null,'pre-show, blackout, bonus and end credits do not trigger background music');
   else assert.ok(track,'no music for '+cue);
  }
  assert.equal(trackForStep(cueSteps.card,config.actOneMusic).src,
