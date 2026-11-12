@@ -28,7 +28,8 @@
       active.end=index;
      }else{
       if(active){result.push(active);active=null;}
-      active={kind:lane.kind,src:media.src,start:index,end:index,delayMs:media.delayMs||0};
+      active={kind:lane.kind,src:media.src,start:index,end:index,
+       ...(media.delayMs?{delayMs:media.delayMs}:{})};
      }
      if(lane.kind==="音效"||lane.kind==="影片"){result.push(active);active=null;}
     }
