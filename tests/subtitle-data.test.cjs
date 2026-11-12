@@ -15,7 +15,7 @@ test("subtitle mode keeps all scripted media cues, but scene-mode AI sentences a
  assert.equal(original.entries.filter(e=>e.group==="opening").length,7);
  assert.equal(original.entries.filter(e=>e.group==="revealTruth").length,5);
  const ai=subtitles.entries.filter(e=>e.group==="opening");
- assert.equal(ai.length,2,"Opening speech joins adjacent lines until clock cue");
+ assert.equal(ai.length,6,"Opening speech uses five operator-selected screens plus timer cue");
  assert.equal(ai.at(-1).action,"opening-clock");
  assert.equal(subtitles.entries.at(-7).action,"end-blackout");
  assert.equal(subtitles.entries.some(e=>e.action==="behind-the-scenes"),false);
@@ -72,6 +72,12 @@ test("uninterrupted same-speaker words are grouped, but stage/photo/voice bounda
 test("requested subtitle breaks remain separate navigable steps",()=>{
  const entries=subtitles.entries;
  const screens=[
+  ["p28-0","Welcome to HUMAN VERIFICATION TEST NUMBER #67."],
+  ["p28-1","Please remain calm. There is no escape."],
+  ["p28-3","You have one mission."],
+  ["p28-4","There is one robot in this room, find out who, when you have decided, press the button."],
+  ["p28-5","Or else, everyone will be executed."],
+  ["p28-6","You have 15 minutes."],
   ["p62-0","Wait. Cut it, everyone, check your pocket."],
   ["p62-1","Oh… I don’t have a pocket."],
   ["p72-0","Let me think. What are some human things? Reflexes... Heads up!"],
@@ -93,6 +99,7 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   assert.equal(matches[0].text,text,"subtitle text for "+id);
  }
  const consecutiveGroups=[
+  ["p28-0","p28-1","p28-3","p28-4","p28-5","p28-6"],
   ["p62-0","p62-1"],["p72-0","p75-0"],["p137-0","p139-0"],
   ["p207-0","p207-1","p207-2","p207-3"],
   ["p222-0","p222-2","p222-3","p222-4"]
@@ -102,5 +109,5 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   for(let i=1;i<indices.length;i++)assert.equal(indices[i],indices[i-1]+1,
    "adjacent operator subtitle lines: "+group.join(", "));
  }
- assert.equal(entries.length,279,"270 original steps plus nine manual splits");
+ assert.equal(entries.length,283,"270 original steps plus thirteen manual splits");
 });
