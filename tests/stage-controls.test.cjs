@@ -122,9 +122,9 @@ test('all third-act scene cues rewind and replay without starting any voting dea
  for(const m of [c.audio,c.doorOpen,c.memoryVoice,c.bang,c.prompt,c.button])assert.equal(m.calls,2);
 });
 
-test('every one of the 42 scene cues can be selected as the first live cue',async()=>{
+test('every one of the 41 scene cues can be selected as the first live cue',async()=>{
  const {STAGE_START_CUES}=require('../opening-controller.js');
- assert.equal(STAGE_START_CUES.length,42);
+ assert.equal(STAGE_START_CUES.length,41);
  const mediaFor={"bright":"video","welcome":"audio","door-kick":"effect","door-open":"doorOpen",
   "memory-welcome":"memoryVoice","office-bang":"bang","vote-prompt":"prompt",
   "ending-complete":"complete","ending-reveal":"reveal"};
@@ -147,11 +147,11 @@ test('every one of the 42 scene cues can be selected as the first live cue',asyn
  }
 });
 
-test('six credit cues follow bonus without a black pause and preserve manual controls',async()=>{
+test('six credit cues follow final blackout directly without a bonus step',async()=>{
  const c=setup();
  const creditIds=['credit-directed','credit-conversation','credit-produced',
   'credit-executive','credit-backgrounds','credit-title'];
- assert.equal(c.stage.startAt('behind-the-scenes'),true);
+ assert.equal(c.stage.startAt('ending-blackout'),true);
  for(const id of creditIds){
   await c.stage.advance();
   assert.equal(c.stage.state,id);
@@ -164,7 +164,7 @@ test('six credit cues follow bonus without a black pause and preserve manual con
   assert.equal(c.stage.state,creditIds[i]);
  }
  assert.equal(c.stage.previous(),true);
- assert.equal(c.stage.state,'behind-the-scenes');
+ assert.equal(c.stage.state,'ending-blackout');
  c.stage.destroy();
 });
 test('scene seek cancels old effects, clears cue locks and reconstructs later and earlier scenes',async()=>{
@@ -332,14 +332,10 @@ test('Act IV continues after third-act blackout, plays both original AI recordin
  await c.next();assert.equal(c.stage.state,'ending-reveal','Cannot skip truth reveal');
  c.reveal.end();
  await c.next();assert.equal(c.stage.state,'ending-blackout');
- await c.next();assert.equal(c.stage.state,'behind-the-scenes',
-  'post-show video is a separate operator-controlled step');
  await c.next();assert.equal(c.stage.state,'credit-directed',
-  'The manual post-show cue now leads into six separate credit cards');
+  'The final blackout now leads directly to the first credit');
  assert.equal(c.stage.opening.deadline,openingDeadline);
  assert.equal(c.stage.voting.deadline,selectionDeadline);
- assert.equal(c.stage.previous(),true);
- assert.equal(c.stage.state,'behind-the-scenes');
  assert.equal(c.stage.previous(),true);
  assert.equal(c.stage.state,'ending-blackout');
  assert.equal(c.stage.previous(),true);
