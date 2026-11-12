@@ -60,6 +60,17 @@
   kickCue.parts=kickLines.flatMap(e=>e.parts);
   for(const line of kickLines)entries.splice(entries.indexOf(line),1);
  }
+ // The card flip and Ethan's reading are one cue. Keep the original
+ // "card" action on p83-0 so the card appears together with its subtitle.
+ const cardCue=entries.find(e=>e.id==="p83-0");
+ const cardLine=entries.find(e=>e.id==="p83-1");
+ if(cardCue&&cardLine){
+  cardCue.kind="dialogue";
+  cardCue.speaker=cardLine.speaker;
+  cardCue.text=cardLine.text;
+  cardCue.parts=[...cardLine.parts];
+  entries.splice(entries.indexOf(cardLine),1);
+ }
  // The latest Google Doc explicitly says "among the four of you".
  const finalFirst=entries.find(e=>e.id==="p414-0");
  if(finalFirst){
