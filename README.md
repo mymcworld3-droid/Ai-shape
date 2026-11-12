@@ -28,7 +28,7 @@
 3. **Produced by** — SOPHIA CHOU：由略大、失焦狀態凝聚，離開時向中心縮小淡出。
 4. **Executive producers** — CURRY CHEN / RICKY LIU：立體翻入，離開時旋轉退場。
 5. **Backgrounds** — MUSICS — SHIU-CHEN JOU / IMAGE — RAY CHEN：橫向展開，離開時字距散開並下移。
-6. **The Button** — 黑底，白色 The + 暗紅色高窄字 Button；以 `scale(160)` 模擬從極遠大處壓入，前段快速、第二段明顯減速、最後 28% 以線性速度縮至正常大小。此步是最後一步，不會自行跳轉。
+6. **The Button** — 黑底，白色 The + 暗紅色高窄字 Button；以 `scale(160)` 模擬從極遠大處壓入，**最初 0.5 秒由極快速縮小連續減速**，接著從 `scale(2.3)` **改成固定速度**，直至整段 4.7 秒結束時定格為 `scale(1)`。僅此一次速度切換，不會再二次減速。
 
 前五步的進場與退場動畫各有不同的參數與軌跡，並在各自 2.5 秒的時段內完成，隨後自動換頁。使用「減少動態效果」設定時即時呈現最終文字版面。片尾以 DOM 字型在 16:9 投影內繪製，尺寸可跟隨全螢幕及行動裝置縮放，不依賴 PDF 截圖。
 
@@ -92,10 +92,12 @@
 | 104–178 | `assets/audio/background/act-1/94-174.mp3` |
 | 179–184 | `assets/audio/background/act-1/174-175(轉場).mp3` |
 | 第 186 段起 | 第一幕配樂漸弱結束 |
-| 290–402（第三幕） | `assets/audio/background/act-3/after-chris-transition.mp3` |
+| 290–402（第三幕） | `assets/audio/background/act-3/after-chris-transition.mp3`；進入字幕第 263 步前沿用原曲 |
+| **字幕模式第 263 步起**（直到第 403 段全暗） | 進入第 263 步後 **1 秒**，以 1.4 秒交叉淡入 `assets/audio/background/Ending.mp3`；跨下一句不重新播 |
 | 403（第三幕全暗） | 第三幕配樂約 1.1 秒漸弱結束 |
 | 407–415（第四幕，第 380～392 步） | `assets/audio/background/act-4/Ending.m4a`（純音訊） |
 | 416（第四幕最終全暗） | 第四幕配樂約 1.1 秒淡出 |
+| **場景模式第 35 步「幕後花絮」至第 41 步〈The Button〉** | 第 35 步進場 **1 秒後**從頭播放 `assets/audio/background/Ending.mp3`，背景音樂持續跨越五張自動片尾字幕與片名 |
 
 重要音效對應：第 46 段時鐘 click ➝ `assets/audio/effects/timer-click.wav`；第 87 段左門開啟 ➝ `assets/audio/effects/heavy-auto-door.mp3`；第 110 段記憶室 click ➝ `assets/audio/effects/light-click.wav`；第 213 段辦公室 BANG ➝ `assets/audio/door-kick.wav`。
 
