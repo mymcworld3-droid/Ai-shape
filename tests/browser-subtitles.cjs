@@ -446,14 +446,16 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
    const id=creditIds[i];
    await page.waitForFunction(({id,index})=>
     scriptShow.index===index&&endCredits.activeId===id,
-    {id,index:bonus+i+1},{timeout:6500});
+    {id,index:bonus+i+1},{timeout:10500});
    assert.equal(await page.locator('body').getAttribute('data-script-action'),id);
    assert.equal(await page.locator('#endCreditsLayer').isVisible(),true);
    if(i)transitionsAt.push(await page.evaluate(()=>performance.now()));
   }
+  const durations=[3000,2800,2800,2700,7000];
   for(let i=1;i<transitionsAt.length;i++){
    const delta=transitionsAt[i]-transitionsAt[i-1];
-   assert.ok(delta>2050&&delta<3250,'Subtitle credit cue did not auto-advance in 2.5s: '+delta);
+   assert.ok(Math.abs(delta-durations[i-1])<600,
+    'Subtitle credit cue '+creditIds[i-1]+' should last '+durations[i-1]+'ms; actual '+delta);
   }
   assert.equal(await page.locator('#remotePairButton').isVisible(),false);
   assert.equal(await page.locator('#endCreditsLayer .end-credit-film-title').count(),1);
