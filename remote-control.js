@@ -6,8 +6,7 @@
  const voiceStatusElement=document.getElementById("remoteVoiceStatus");
  const prompt=document.getElementById("nextScenePrompt");
  const promptStep=document.getElementById("nextPromptStep");
- const promptLeads=document.getElementById("nextPromptLeads");
- const promptLines=document.getElementById("nextPromptLines");
+ const contextList=document.getElementById("stepContextList");
  const buttons=Array.from(document.querySelectorAll("[data-action]"));
  const openStepList=document.getElementById("openStepList");
  const closeStepList=document.getElementById("closeStepList");
@@ -146,37 +145,43 @@
   }
  }
  function renderPrompt(){
-  const next=state?.started?state.nextPreview:null;
-  prompt.hidden=!next;
-  if(!next)return;
-  promptStep.textContent=`第 ${next.step} 步 · ${next.label}`;
-  promptLeads.replaceChildren();
-  const preceding=next.leadIns||[];
-  for(const line of preceding){
-   const li=document.createElement("li"),speaker=document.createElement("strong");
-   speaker.textContent=line.speaker+"：";
-   li.append(speaker,document.createTextNode(" "+line.text));
-   promptLeads.append(li);
-  }
-  if(!preceding.length){
+  const context=state?.started?state.stepContext:null;
+  const items=context?.items;
+  prompt.hidden=!Array.isArray(items)||!items.length;
+  if(prompt.hidden){contextList.replaceChildren();return;}
+  promptStep.textContent=`第 ${context.step} 步 · 前後各兩步`;
+  const fragment=document.createDocumentFragment();
+  for(const entry of items){
+   const current=entry.step===context.step;
+   const offset=entry.step-context.step;
+   const caption=offset===0?"目前":offset<0?"前"+(-offset)+"步":"後"+offset+"步";
    const li=document.createElement("li");
-   li.className="no-dialogue";
-   li.textContent="（尚無前面的台詞）";
-   promptLeads.append(li);
+   li.className=current?"is-current":"";
+   li.dataset.step=String(entry.step);
+   if(current)li.setAttribute("aria-current","step");
+   const index=document.createElement("span");
+   index.className="step-context-index";
+   index.textContent=`第 ${entry.step} 步 · ${caption}`;
+   const copy=document.createElement("span");
+   copy.className="step-context-copy";
+   if(entry.label&&entry.label!==entry.text){
+    const title=document.createElement("span");
+    title.className="step-context-label";
+    title.textContent=entry.label;
+    copy.append(title);
+   }
+   const line=document.createElement("span");
+   line.className="step-context-line";
+   if(entry.speaker){
+    const speaker=document.createElement("strong");
+    speaker.textContent=entry.speaker+"：";
+    line.append(speaker,document.createTextNode(" "+entry.text));
+   }else line.textContent=entry.text||entry.label||"舞台提示";
+   copy.append(line);
+   li.append(index,copy);
+   fragment.append(li);
   }
-  promptLines.replaceChildren();
-  for(const line of next.lines){
-   const li=document.createElement("li"),speaker=document.createElement("strong");
-   speaker.textContent=line.speaker+"：";
-   li.append(speaker,document.createTextNode(" "+line.text));
-   promptLines.append(li);
-  }
-  if(!next.lines.length){
-   const li=document.createElement("li");
-   li.className="no-dialogue";
-   li.textContent="這一步主要是畫面／音效轉換，沒有獨立台詞。";
-   promptLines.append(li);
-  }
+  contextList.replaceChildren(fragment);
  }
  function render(){
   document.body.classList.toggle("is-connected",
