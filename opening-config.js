@@ -5,7 +5,6 @@ window.OPENING_CONFIG = Object.freeze({
   darkBackground: "assets/backgrounds/Start_dark.PNG",
   roomReveal: "assets/videos/Start_animation.mp4",
   // Optional: upload this after the rest of the show has been deployed.
-  behindScenes: "assets/videos/behind-the-scenes.mp4",
   cueZeroDim: 0.95, // Leave just 5% of the original blue room while stagehands move props.
   revealFadeMs: 420, // Smooth the video-to-still-room handoff without a bright flash.
   // Updated from 2026-11-11 user-supplied music ZIP; cues remain anchored to Word paragraph IDs.
@@ -22,14 +21,13 @@ window.OPENING_CONFIG = Object.freeze({
     Object.freeze({ from: 269, to: 283, src: "assets/audio/background/act-2/265-278.mp3" }),
     Object.freeze({ from: 284, to: 402, src: "assets/audio/background/act-3/after-chris-transition.mp3" }),
     Object.freeze({ from: 407, to: 415, src: "assets/audio/background/act-4/Ending.m4a" }),
-    // The separately supplied ending theme starts at scene cue 35 and
-    // remains audible through the five credit cards and final title.
-    Object.freeze({ from: 417, to: 424, src: "assets/audio/background/Ending.mp3" })
+    // Last blackout now starts this song, leading into all six end cards.
+    Object.freeze({ from: 416, to: 424, src: "assets/audio/background/Ending.mp3" })
   ]),
   closingTheme: Object.freeze({
     src: "assets/audio/background/Ending.mp3",
     startDelayMs: 1000,
-    sceneStartCue: "behind-the-scenes",
+    sceneStartCue: "ending-blackout",
     subtitleStartStep: 263,
     subtitleEndParagraph: 425
   }),
@@ -49,7 +47,6 @@ window.OPENING_CONFIG = Object.freeze({
     "vote-final": 402, "vote-blackout": 403,
     "ending-light": 407, "ending-dialogue": 408, "ending-complete": 409,
     "ending-question": 410, "ending-reveal": 414, "ending-blackout": 416,
-    "behind-the-scenes": 417,
     "credit-directed": 418, "credit-conversation": 419,
     "credit-produced": 420, "credit-executive": 421,
     "credit-backgrounds": 422, "credit-title": 424
