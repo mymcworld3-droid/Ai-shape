@@ -135,6 +135,19 @@ test("leaving a pending delayed cue cancels its scheduled music start",async()=>
  assert.ok(a.paused&&b.paused);
  assert.deepEqual([a.src,b.src],["",""]);
 });
+test("audible-start callback fires after silent pre-roll and at song time zero",async()=>{
+ const {music,a,tick}=setup(),events=[],theme={from:417,to:424,src:"assets/audio/background/Ending.mp3"};
+ music.onAudibleStart=(track,media)=>events.push({src:track.src,time:media.currentTime});
+ music.setStep(417,{track:theme,delayMs:1000});await flush();
+ a.currentTime=.72;
+ tick(999);
+ assert.equal(events.length,0,"No audible-start event during the one-second delay");
+ tick(1);
+ assert.deepEqual(events,[{src:theme.src,time:0}],
+  "Music timing starts at zero immediately after silent pre-roll");
+ music.setStep(418,{track:theme});await flush();
+ assert.equal(events.length,1,"Following credit cue must not restart or re-trigger the song");
+});
 test("opening first three steps are pure silence; cue 4 fades the first track in",async()=>{
  const {music,a,b,tick}=setup();
  for(let step=20;step<=22;step++)music.setStep(step);
