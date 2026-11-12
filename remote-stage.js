@@ -66,7 +66,8 @@
  // collecting nearby dialogue lines that might belong to other steps.
  function stepContextForMode(step){
   const entries=scriptMode?SUBTITLE_SCRIPT.entries:stepButtons;
-  const first=Math.max(0,step-2),last=Math.min(entries.length-1,step+2);
+  const focus=Math.min(entries.length-1,step+1);
+  const first=Math.max(0,focus-2),last=Math.min(entries.length-1,focus+2);
   const speaking=SHOW_SCRIPT.entries.filter(entry=>
    entry.kind==="dialogue"&&entry.text?.trim());
   const items=[];
@@ -94,7 +95,7 @@
       dialogue?.text||label).slice(0,500)});
    }
   }
-  return {step,items};
+  return {step,focus,items};
  }
  function applyRemoteCommand(message){
   if(!StageRemoteLink.actions.includes(message.action))return;
