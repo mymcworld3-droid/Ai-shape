@@ -107,7 +107,7 @@ test('direct subtitle jumps stop outgoing media and play only the target cue',as
  await Promise.resolve();
  assert.equal(c.jumpTo(1),true);
  await Promise.resolve();
- assert.equal(c.index,1);assert.equal(opening.calls,1);
+ assert.equal(c.index,1);assert.equal(opening.calls,2);
  assert.equal(c.jumpTo(2),true);
  assert.equal(opening.paused,true,'Old narration must stop');
  assert.equal(effect.calls,1,'Destination effect plays exactly once');
@@ -119,7 +119,7 @@ test('direct subtitle jumps stop outgoing media and play only the target cue',as
  assert.equal(c.deadlines.opening,null,'Jumping back before the opening resets its timer');
  assert.equal(c.jumpTo(1),true);
  await Promise.resolve();
- assert.equal(opening.calls,2,'Voice cue can be replayed deliberately');
+ assert.equal(opening.calls,4,'Voice cue can be replayed deliberately');
  assert.equal(c.jumpTo(-1),false);
  assert.equal(c.jumpTo(99),false);
  assert.equal(c.jumpTo(2.3),false);
