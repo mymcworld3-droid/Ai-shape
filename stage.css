@@ -77,17 +77,17 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
 #subtitleText,.subtitle-text{font-size:clamp(11px,1.9vw,32px);font-weight:500;white-space:normal;overflow-wrap:break-word}
 #subtitleSpeaker,.subtitle-speaker{font-size:clamp(9px,.95vw,16px);font-weight:400;margin-bottom:.35em;opacity:.72;letter-spacing:.07em}
 
-/* Caption mist: a softly arched top rising from a consistently dark
-   bottom. Extend past the stage's bottom edge so the blur cannot fade
-   toward the bottom; caption ghosts inherit the same treatment. */
+/* Caption fog: darkest at the bottom-center and fading radially
+   toward every edge. Its low elliptical center keeps the curved upper
+   contour and stays dark through the projection's bottom edge. */
 #subtitles,.subtitle-ghost{isolation:isolate}
 #subtitles::before,.subtitle-ghost::before{
  content:"";position:absolute;z-index:-1;pointer-events:none;
  inset:-6cqh -5cqw -7cqh;
- border-radius:50% 50% 0 0 / 68% 68% 0 0;
- background:linear-gradient(to bottom,
-  rgba(0,0,0,.22) 0%,rgba(0,0,0,.64) 38%,
-  rgba(0,0,0,.88) 65%,rgba(0,0,0,.88) 100%);
+ background:radial-gradient(ellipse 64% 115% at 50% 100%,
+  rgba(0,0,0,.9) 0%,rgba(0,0,0,.88) 34%,
+  rgba(0,0,0,.67) 56%,rgba(0,0,0,.35) 76%,
+  rgba(0,0,0,.12) 90%,transparent 100%);
  filter:blur(clamp(7px,1.15cqw,17px));
 }
 
