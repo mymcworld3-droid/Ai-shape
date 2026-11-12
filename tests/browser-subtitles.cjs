@@ -400,16 +400,25 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden),true,
     'Missing optional MP4 leaves the bonus stage black');
   const creditIds=require('../end-credits').cards.map(card=>card.id);
-  for(let i=bonus+1;i<=last;i++){
-   await page.keyboard.press('ArrowRight');
-   assert.equal(await page.evaluate(()=>scriptShow.index),i);
-   assert.equal(await page.locator('body').getAttribute('data-script-action'),creditIds[i-bonus-1]);
+  assert.equal(creditIds.length,6);
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await page.evaluate(()=>scriptShow.index),bonus+1);
+  const startedAt=await page.evaluate(()=>performance.now());
+  const transitionsAt=[startedAt];
+  for(let i=0;i<creditIds.length;i++){
+   const id=creditIds[i];
+   await page.waitForFunction(({id,index})=>
+    scriptShow.index===index&&endCredits.activeId===id,
+    {id,index:bonus+i+1},{timeout:6500});
+   assert.equal(await page.locator('body').getAttribute('data-script-action'),id);
    assert.equal(await page.locator('#endCreditsLayer').isVisible(),true);
-   const active=await page.evaluate(()=>endCredits.activeId);
-   assert.equal(active,creditIds[i-bonus-1]);
-   if(data.entries[i].action==='credit-pause')
-    assert.equal(await page.locator('#endCreditsLayer [data-credit="credit-pause"]').count(),1);
+   if(i)transitionsAt.push(await page.evaluate(()=>performance.now()));
   }
+  for(let i=1;i<transitionsAt.length;i++){
+   const delta=transitionsAt[i]-transitionsAt[i-1];
+   assert.ok(delta>2050&&delta<3250,'Subtitle credit cue did not auto-advance in 2.5s: '+delta);
+  }
+  assert.equal(await page.locator('#remotePairButton').isVisible(),false);
   assert.equal(await page.locator('#endCreditsLayer .end-credit-film-title').count(),1);
   await page.waitForTimeout(4800);
   const titleScale=await page.locator('#endCreditsLayer [data-credit="credit-title"]').evaluate(element=>
