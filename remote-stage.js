@@ -92,7 +92,7 @@
    if(entry?.group&&active?.group===entry.group){
     media=active.media;
     status=active.state;
-    const next=SHOW_SCRIPT.entries[transcript.index+1];
+    const next=SUBTITLE_SCRIPT.entries[transcript.index+1];
     holdNext=Boolean(next&&next.group!==entry.group&&
      ["starting","playing"].includes(status));
    }
@@ -134,8 +134,8 @@
   let step,total,label;
   if(scriptMode){
    step=started?transcript.index:window.selectedScriptStartIndex??0;
-   total=SHOW_SCRIPT.entries.length;
-   const entry=SHOW_SCRIPT.entries[step];
+   total=SUBTITLE_SCRIPT.entries.length;
+   const entry=SUBTITLE_SCRIPT.entries[step];
    label=step===0?"藍色房間":entry?.text||entry?.note||"舞台提示";
   }else{
    const cue=started?stage.state:window.selectedSceneStartCue||"dark";
