@@ -8,7 +8,7 @@ test("subtitle mode keeps all scripted media cues, but scene-mode AI sentences a
  assert.ok(subtitles.entries.length<original.entries.length);
  for(const action of ["reveal","ai","opening-clock","doorKick","timerClick",
   "card","card-hide","doorOpen","memory-light","memoryClick","officeBang",
-  "selection-button","ending-light","end-blackout","behind-the-scenes"]){
+  "selection-button","ending-light","end-blackout"]){
   assert.equal(subtitles.entries.filter(e=>e.action===action).length,
    original.entries.filter(e=>e.action===action).length,"media action "+action);
  }
@@ -17,8 +17,8 @@ test("subtitle mode keeps all scripted media cues, but scene-mode AI sentences a
  const ai=subtitles.entries.filter(e=>e.group==="opening");
  assert.equal(ai.length,2,"Opening speech joins adjacent lines until clock cue");
  assert.equal(ai.at(-1).action,"opening-clock");
- assert.equal(subtitles.entries.at(-8).action,"end-blackout");
- assert.equal(subtitles.entries.at(-7).action,"behind-the-scenes");
+ assert.equal(subtitles.entries.at(-7).action,"end-blackout");
+ assert.equal(subtitles.entries.some(e=>e.action==="behind-the-scenes"),false);
  assert.equal(subtitles.entries.at(-1).action,"credit-title");
 });
 
@@ -64,8 +64,7 @@ test("uninterrupted same-speaker words are grouped, but stage/photo/voice bounda
   assert.ok(!soundOnly.test(e.text.trim()),
    "sound-only line should have no subtitle "+e.id);
  }
- assert.ok(entries.every((e,i)=>i===0||e.paragraph>=entries[i-1].paragraph||
-  e.id==="post-show-behind-the-scenes"));
+ assert.ok(entries.every((e,i)=>i===0||e.paragraph>=entries[i-1].paragraph));
  assert.equal(source.paragraphs[414].includes("There is no robot in the room"),true,
   "archived Word source stays intact; new subtitle text follows Google Doc");
 });
