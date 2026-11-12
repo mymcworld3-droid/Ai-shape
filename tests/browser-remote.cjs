@@ -134,6 +134,18 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   // A remote command must start real AI narration without another
   // interaction on the projector. The same media continues across sentences.
   await start("/",`[data-script="${openingIndex-1}"]`,openingIndex-1);
+  await remote.waitForFunction(index=>
+   document.querySelector("#nextPromptStep")?.textContent.includes("第 "+index+" 步"),
+   openingIndex);
+  assert.equal(await remote.locator("#nextScenePrompt").isVisible(),true,
+   "Subtitle mode must show the next operator cue before advancing");
+  assert.match(await remote.locator("#nextPromptLines").textContent(),
+   new RegExp(subtitle.entries[openingIndex].text.slice(0,14).replace(/[.*+?^${}()|[\]\\]/g,'\\  await next.tap();
+  await waitForStep(openingIndex);
+  await stage.waitForFunction(()=>!document.getElementById("openingAudio").paused &&
+   scriptShow.active?.state==="playing");')));
+  assert.ok(await remote.locator("#nextPromptLeads li").count()>=1,
+   "Subtitle pre-cue panel shows preceding dialogue");
   await next.tap();
   await waitForStep(openingIndex);
   await stage.waitForFunction(()=>!document.getElementById("openingAudio").paused &&
@@ -142,7 +154,17 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   assert.equal(await next.isDisabled(),false,"During an AI paragraph, the next subtitle remains controllable");
   await next.tap();
   await waitForStep(openingIndex+1);
+  await remote.waitForFunction(index=>
+   document.getElementById("nextPromptStep").textContent.includes("第 "+index+" 步"),
+   openingIndex+2);
   assert.equal(await stage.locator("#openingAudio").evaluate(media=>media.paused),false);
+  // All remote controls, including the quick navigation button, stay usable
+  // while the scripted subtitle hint is visible on small mobile screens.
+  await remote.waitForFunction(()=>{
+   const screen=document.querySelector("main").getBoundingClientRect();
+   return screen.top>=-1&&screen.bottom<=innerHeight+1;
+  });
+  assert.equal(await remote.locator("#openStepList").isDisabled(),false);
   // Script-mode jump also uses the exact full manuscript list and must stop
   // the previous AI recording while activating the requested visual cue.
   await remote.locator("#openStepList").click();
@@ -156,6 +178,9 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   assert.equal(await stage.evaluate(()=>scriptShow.index),doorIndex);
   assert.equal(await stage.locator("#openingAudio").evaluate(media=>media.paused),true);
   assert.equal(await stage.evaluate(()=>scriptShow.entry.action),"doorOpen");
+  assert.equal(await remote.locator("#nextScenePrompt").isVisible(),true);
+  assert.match(await remote.locator("#nextPromptStep").textContent(),
+   new RegExp("第 "+(doorIndex+1)+" 步"));
 
   // Scene mode permits the clock cue during narration, then gates the next
   // scene until the actual recording finishes. The remote must explain it.
@@ -267,7 +292,10 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   }
   await remote.reload();
   await waitForStep(doorIndex);
-  assert.equal(await remote.locator("#nextScenePrompt").isVisible(),false);
+  assert.equal(await remote.locator("#nextScenePrompt").isVisible(),true,
+   "Subtitle next-step prompt must survive reconnect/reload");
+  assert.match(await remote.locator("#nextPromptStep").textContent(),
+   new RegExp("第 "+(doorIndex+1)+" 步"));
   await remote.locator("#sliderEffect").evaluate(slider=>{
    slider.value="95";
    slider.dispatchEvent(new Event("input",{bubbles:true}));
