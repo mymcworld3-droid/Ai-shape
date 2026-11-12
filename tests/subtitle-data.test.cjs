@@ -100,7 +100,12 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p222-0","You know what I want to hear, don’t you? Explanation?"],
   ["p222-2","Ben showed me clear evidence that they came up with the proposal of building a psychological test."],
   ["p222-3","Detailed meeting minutes, thought processes, clearly something other groups can't put their hands on."],
-  ["p222-4","So how come it was submitted by your group? There is only one explanation."]
+  ["p222-4","So how come it was submitted by your group? There is only one explanation."],
+  ["p270-0","What was I supposed to do? Take the blame for something I didn't do?"],
+  ["p272-0","Lose my position? Lose everything my father had given me?"],
+  ["p274-0","For what? So Liam could feel like I was a good friend?"],
+  ["p277-0","He told me to tell the truth. I told the truth. I didn't lie."],
+  ["p281-0","I just... ...chose which truth mattered."]
  ];
  for(const [id,text] of screens){
   const matches=entries.filter(e=>e.parts?.some(p=>p.id===id));
@@ -114,7 +119,8 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p62-0","p62-1"],["p72-0","p75-0"],["p137-0","p139-0"],
   ["p207-0","p207-1","p207-2","p207-3"],
   ["p209-0","p209-2","p209-3"],
-  ["p222-0","p222-2","p222-3","p222-4"]
+  ["p222-0","p222-2","p222-3","p222-4"],
+  ["p270-0","p272-0","p274-0","p277-0","p281-0"]
  ];
  for(const group of consecutiveGroups){
   const indices=group.map(id=>entries.findIndex(e=>e.parts?.some(p=>p.id===id)));
@@ -136,6 +142,6 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.deepEqual(card?.parts.map(part=>part.id),["p83-1"]);
  assert.equal(entries.filter(e=>e.paragraph===83).length,1,
   "flip-card cue and reading are one navigable step");
- assert.equal(entries.length,285,
-  "two additional Liam subtitle boundaries increase the previous 283-step total by two");
+ assert.equal(entries.length,289,
+  "four Christopher confession breaks increase the previous 285-step total by four");
 });
