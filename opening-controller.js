@@ -511,7 +511,9 @@
     "memory-return", "discussion", "vote-prompt", "vote-one",
     "vote-two", "vote-final", "vote-blackout",
     "ending-light", "ending-dialogue", "ending-complete", "ending-question",
-    "ending-reveal", "ending-blackout", "behind-the-scenes"
+    "ending-reveal", "ending-blackout", "behind-the-scenes",
+    "credit-directed", "credit-conversation", "credit-produced",
+    "credit-executive", "credit-backgrounds", "credit-pause", "credit-title"
   ]);
 
   // Operator cues and media completion are separate. The clock may replace the
@@ -898,7 +900,14 @@
         case "ending-reveal": return this.ending ? this.ending.advance() : false;
         // An additional operator input is required after final blackout.
         case "ending-blackout": this.setCue("behind-the-scenes"); return true;
-        case "behind-the-scenes": return false;
+        case "behind-the-scenes": this.setCue("credit-directed"); return true;
+        case "credit-directed": this.setCue("credit-conversation"); return true;
+        case "credit-conversation": this.setCue("credit-produced"); return true;
+        case "credit-produced": this.setCue("credit-executive"); return true;
+        case "credit-executive": this.setCue("credit-backgrounds"); return true;
+        case "credit-backgrounds": this.setCue("credit-pause"); return true;
+        case "credit-pause": this.setCue("credit-title"); return true;
+        case "credit-title": return false;
         default: return false;
       }
     }
