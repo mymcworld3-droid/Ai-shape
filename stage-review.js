@@ -162,8 +162,19 @@ updateStartButton();
 // Stable cue IDs keep bookmarks attached to the same sentence after edits.
 function setupStepMarks(){
  const storageKey='ai-shape-step-marks-v1';
+ // A previously marked spoken sentence may now be part of an uninterrupted
+ // merged subtitle. Keep its bookmark by mapping every original fragment ID
+ // to the visible merged step, without affecting scene-mode bookmarks.
+ const bookmarkAliases=new Map();
+ if(scriptMode)for(const entry of SUBTITLE_SCRIPT.entries)
+  for(const part of entry.parts||[])
+   bookmarkAliases.set('script:'+part.id,'script:'+entry.id);
  let saved=[];
- try{const value=JSON.parse(localStorage.getItem(storageKey)||'[]');if(Array.isArray(value))saved=value.filter(id=>typeof id==='string');}catch{}
+ try{
+  const value=JSON.parse(localStorage.getItem(storageKey)||'[]');
+  if(Array.isArray(value))saved=value.filter(id=>typeof id==='string')
+   .map(id=>bookmarkAliases.get(id)||id);
+ }catch{}
  const marked=new Set(saved),rows=[];
  let onlyMarked=false;
  const toolbar=document.createElement('div');toolbar.className='step-mark-tools';
