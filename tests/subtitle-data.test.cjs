@@ -94,6 +94,9 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p207-1","They were the ones snatching other’s proposal and claiming it’s theirs!"],
   ["p207-2","What I'm doing is purely what they are doing."],
   ["p207-3","An eye for an eye."],
+  ["p209-0","He wouldn’t know! Nobody’s gonna know!"],
+  ["p209-2","And even if so, they had already overlooked Ben’s team so many times, just because he’s the chairman’s son."],
+  ["p209-3","And you, you're the CEO’s son! Of course he is going to forgive you, like what could he possibly do."],
   ["p222-0","You know what I want to hear, don’t you? Explanation?"],
   ["p222-2","Ben showed me clear evidence that they came up with the proposal of building a psychological test."],
   ["p222-3","Detailed meeting minutes, thought processes, clearly something other groups can't put their hands on."],
@@ -110,6 +113,7 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
   ["p43-0","p43-2"],
   ["p62-0","p62-1"],["p72-0","p75-0"],["p137-0","p139-0"],
   ["p207-0","p207-1","p207-2","p207-3"],
+  ["p209-0","p209-2","p209-3"],
   ["p222-0","p222-2","p222-3","p222-4"]
  ];
  for(const group of consecutiveGroups){
@@ -132,6 +136,6 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.deepEqual(card?.parts.map(part=>part.id),["p83-1"]);
  assert.equal(entries.filter(e=>e.paragraph===83).length,1,
   "flip-card cue and reading are one navigable step");
- assert.equal(entries.length,283,
-  "the card flip and reading merge reduces the previous total by one");
+ assert.equal(entries.length,285,
+  "two additional Liam subtitle boundaries increase the previous 283-step total by two");
 });
