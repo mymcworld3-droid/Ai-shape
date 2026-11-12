@@ -64,6 +64,9 @@ const backgroundImage=new Image();
 const darkBackgroundImage=new Image();
 const cardImage=new Image();
 const memoryBackgroundImage=new Image();
+const framePhotoImages={front:new Image(),back:new Image()};
+framePhotoImages.front.src=config.memory.frameFront;
+framePhotoImages.back.src=config.memory.frameBack;
 const officeBackgroundImage=new Image();
 let backgroundReady=false,darkBackgroundReady=false,cardReady=false,memoryBackgroundReady=false,officeBackgroundReady=false,roomReadyAt=null;
 // Keep the last *decoded* reveal frame when the video element ends. Without
@@ -1047,6 +1050,20 @@ function draw(){
  midEnergy+=(a.mid-midEnergy)*.16;highEnergy+=(a.high-highEnergy)*.25;
  const beat=Math.max(0,target-energy);pulse+=(beat*58+energy*20+(bassEnergy/255)**2*10-pulse)*.22;
  updateHexRotation(now);drawBackground(now,frame);
+ // Script mode follows the exact prop reveal; scene mode exposes independent operator cues.
+ // Subtitles are a separate overlay and remain controlled by the operator.
+ const photoSide=frame.script?frame.photoSide:
+  (frame.caption==="memory-photo-front"?"front":frame.caption==="memory-photo-back"?"back":null);
+ const photo=photoSide&&frame.background==="memory"?framePhotoImages[photoSide]:null;
+ if(photo?.complete&&photo.naturalWidth&&photo.naturalHeight&&frame.room){
+  ctx.save();ctx.fillStyle="rgba(0,0,0,.82)";ctx.fillRect(0,0,w,h);
+  const width=Math.min(w*.76,h*.86*photo.naturalWidth/photo.naturalHeight);
+  const height=width*photo.naturalHeight/photo.naturalWidth;
+  ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=Math.min(w,h)*.035;
+  ctx.drawImage(photo,(w-width)/2,(h-height)/2,width,height);
+  ctx.restore();
+  return;
+ }
  // The bright room also remains empty until the separate AI fade-in cue.
  if(!frame.room||(!frame.script&&!frame.preview&&frame.background==="opening"&&roomHandoffProgress(now)<1))return;
  const hexR=Math.min(w,h)*.105+energy*10*scale;
