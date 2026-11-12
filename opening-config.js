@@ -31,7 +31,7 @@ window.OPENING_CONFIG = Object.freeze({
     startDelayMs: 1000,
     sceneStartCue: "behind-the-scenes",
     subtitleStartStep: 263,
-    subtitleEndParagraph: 403
+    subtitleEndParagraph: 425
   }),
   // The scene mode follows the same revised soundtrack timeline, including Act IV.
   // Each cue points to a representative Word paragraph, not its UI step number.
