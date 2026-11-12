@@ -747,7 +747,11 @@ function drawBackground(now,frame){
   ctx.fillRect(0,0,w,h);
  }
  if(frame.script&&scriptVideoPlaying){
-  drawRevealVideo(1);
+  // While the browser decodes the first reveal frame, never expose the full
+  // bright still underneath. This prevents a one-frame flash on slow devices.
+  if(revealVideo.readyState<2&&!revealFreezeReady){
+   ctx.fillStyle="#000";ctx.fillRect(0,0,w,h);
+  }else drawRevealVideo(1);
  }else if(frame.script&&scriptRevealHandoffAt!==null){
   const p=Math.max(0,Math.min(1,(now-scriptRevealHandoffAt)/config.revealFadeMs));
   if(p<1)drawRevealVideo(1-easeInOutCubic(p));
