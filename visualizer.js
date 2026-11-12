@@ -22,6 +22,7 @@ const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
 const visualizerWrap=document.getElementById("visualizerWrap");
+const endCredits=EndCredits.mount(visualizerWrap);
 const behindScenesVideo=document.getElementById("behindScenesVideo");
 let behindScenesRun=0;
 // Never load or play this optional file until the separate post-show step.
@@ -145,6 +146,7 @@ const stage=new StageOpening.StageCueController({
  onCue(cue){
   document.body.dataset.cue=cue;
   syncBehindScenes(cue==="behind-the-scenes");
+  if(!scriptMode)endCredits.show(cue);
   window.sceneVoiceSubtitles?.clearCompleted();
   // All live scene transitions (including rewind and a direct rehearsal jump)
   // update BGM. Stage previews never emit onCue and remain fully silent.
@@ -274,6 +276,9 @@ const startGate=new StageOpening.StartGate({
  isReady:showAssetsReady,
  onStart(){
   previewCue=null;previewAiStartedAt=null;
+  // A rehearsal preview is still; the real selected card restarts its entry
+  // animation only when the Start click activates that cue.
+  endCredits.show(null,{isPreview:true});
   // Register and authorize the voice elements while the trusted Start
   // gesture is still active. Remote commands arrive without that gesture.
   for(const media of document.querySelectorAll("audio"))prepareAudio(media);
@@ -363,6 +368,7 @@ function setProjectionPreview(cue){
  previewCue=StageLayout.previewFrame(cue)?cue:null;
  previewAiStartedAt=null;
  document.body.dataset.previewCue=previewCue||"dark";
+ if(!scriptMode)endCredits.show(previewCue,{isPreview:true});
 }
 function projectionFrame(){
  if(scriptMode){const frame=window.scriptProjectionFrame?.();if(frame)return frame;}
