@@ -114,7 +114,7 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   // The controller can browse the entire scene catalog and jump across acts
   // without expanding the compact mixer or playing intermediate effects.
   await guestA.locator("#openStepList").click();
-  await guestA.waitForFunction(()=>document.querySelectorAll('#remoteStepList [data-jump]').length===42);
+  await guestA.waitForFunction(()=>document.querySelectorAll('#remoteStepList [data-jump]').length===41);
   assert.equal(await guestA.locator('#remoteStepList [aria-current="step"]').count(),1);
   assert.equal(await guestA.locator('#remoteStepList [aria-current="step"]').getAttribute("data-jump"),"1");
   await guestA.locator("#stepSearch").fill("辦公室回憶");
@@ -128,12 +128,12 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   await guestA.locator("#openStepList").click();
   await guestA.locator("#stepSearch").fill("The Button");
   assert.equal(await guestA.locator("#remoteStepList [data-jump]").count(),1);
-  await guestA.locator('#remoteStepList [data-jump="41"]').click();
-  await guestB.waitForFunction(()=>document.getElementById("remoteStep").textContent.includes("第 41 步"));
+  await guestA.locator('#remoteStepList [data-jump="40"]').click();
+  await guestB.waitForFunction(()=>document.getElementById("remoteStep").textContent.includes("第 40 步"));
   assert.equal(await stage.locator("body").getAttribute("data-cue"),"credit-title");
   assert.equal(await stage.evaluate(()=>endCredits.activeId),"credit-title");
   await guestB.locator('[data-action="previous"]').click();
-  await guestA.waitForFunction(()=>document.getElementById("remoteStep").textContent.includes("第 40 步"));
+  await guestA.waitForFunction(()=>document.getElementById("remoteStep").textContent.includes("第 39 步"));
   assert.equal(await stage.evaluate(()=>endCredits.activeId),"credit-backgrounds");
   await stage.reload();
   await guestA.waitForFunction(()=>document.querySelector('[data-action="next"]').disabled);
