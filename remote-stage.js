@@ -62,6 +62,40 @@
    label:(target.text||target.note||target.action||"舞台提示").slice(0,120),
    leadIns:previous.map(asLine),lines:upcoming.map(asLine)};
  }
+ // A stable five-step window follows actual operator cues rather than
+ // collecting nearby dialogue lines that might belong to other steps.
+ function stepContextForMode(step){
+  const entries=scriptMode?SUBTITLE_SCRIPT.entries:stepButtons;
+  const first=Math.max(0,step-2),last=Math.min(entries.length-1,step+2);
+  const speaking=SHOW_SCRIPT.entries.filter(entry=>
+   entry.kind==="dialogue"&&entry.text?.trim());
+  const items=[];
+  for(let i=first;i<=last;i++){
+   if(scriptMode){
+    const entry=entries[i],credit=EndCredits.get(entry.action);
+    const creditLines=credit?EndCredits.displayLines(entry.action):[];
+    const spoken=entry.text?.trim();
+    const text=spoken||creditLines.map(line=>line.text).join(" · ")||entry.note||entry.action||"舞台提示";
+    items.push({step:i,label:(spoken||credit?.label||entry.note||entry.action||"舞台提示").slice(0,120),
+     speaker:(spoken?entry.speaker:credit?"片尾字幕":"").slice(0,60),
+     text:text.slice(0,500)});
+   }else{
+    const button=entries[i],cue=button.dataset.preview,credit=EndCredits.get(cue);
+    const paragraph=config.sceneMusicSteps[cue],nextCue=entries[i+1]?.dataset.preview;
+    const nextParagraph=config.sceneMusicSteps[nextCue]??Infinity;
+    const dialogue=speaking.find(entry=>
+     Number.isInteger(paragraph)&&entry.paragraph>=paragraph&&
+     entry.paragraph<Math.max(paragraph+1,nextParagraph));
+    const label=button.children[1].firstChild.textContent.trim();
+    const creditLines=credit?EndCredits.displayLines(cue):[];
+    items.push({step:i,label:label.slice(0,120),
+     speaker:(credit?"片尾字幕":dialogue?.speaker||"").slice(0,60),
+     text:(credit?creditLines.map(line=>line.text).join(" · "):
+      dialogue?.text||label).slice(0,500)});
+   }
+  }
+  return {step,items};
+ }
  function applyRemoteCommand(message){
   if(!StageRemoteLink.actions.includes(message.action))return;
   if(message.action==="setVolume")stageActions.setVolume(message.channel,message.value);
@@ -180,6 +214,7 @@
    audioRecovery:window.stageAudioRecoveryStatus?.()??null,
    voiceStatus:voiceStatus(),
    nextPreview:scriptMode?nextScriptPrompt(step):nextScenePrompt(step),
+   stepContext:stepContextForMode(step),
    volumes:{voice:voiceVolume,effect:effectVolume,music:otherVolume},
    volumeVisible:!volumeDisplay.hidden};
  }
