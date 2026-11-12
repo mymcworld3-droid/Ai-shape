@@ -87,7 +87,7 @@ test("all 42 scene cues cover Act IV, photo turnover, bonus film and six silent 
  assert.equal(config.closingTheme.startDelayMs,1000);
  assert.equal(config.closingTheme.sceneStartCue,'behind-the-scenes');
  assert.equal(config.closingTheme.subtitleStartStep,263);
- assert.equal(config.closingTheme.subtitleEndParagraph,403);
+ assert.equal(config.closingTheme.subtitleEndParagraph,425);
  assert.equal(trackForStep(417,config.actOneMusic).src,
   'assets/audio/background/Ending.mp3');
 });
