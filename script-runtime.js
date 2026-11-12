@@ -29,15 +29,15 @@ if(scriptMode){
  applyVolumes(); // Include ending voices and newly constructed scripted effects.
  let previewEntry=null,flashUntil=0;
  // Immutable script IDs avoid coupling the visual effect to mutable step counts.
- const cornerStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p389-0');
- const backgroundStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p407-0');
- const backgroundEnd=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p408-0');
- const finalShapeStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p409-0');
- const finalShapeEnd=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p414-4');
+ const cornerStart=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p389-0');
+ const backgroundStart=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p407-0');
+ const backgroundEnd=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p408-0');
+ const finalShapeStart=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p409-0');
+ const finalShapeEnd=SUBTITLE_SCRIPT.entries.findLastIndex(e=>e.group==='revealTruth');
  if([cornerStart,backgroundStart,backgroundEnd,finalShapeStart,finalShapeEnd].some(i=>i<0))
   throw Error('Voting cue boundaries unavailable');
  const votingState=entry=>{
-  const index=SHOW_SCRIPT.entries.indexOf(entry);
+  const index=SUBTITLE_SCRIPT.entries.indexOf(entry);
   // Stages 380–381 are the background-only reveal; after 381, return to black.
   const backgroundOnly=index>=backgroundStart&&index<=backgroundEnd;
   const finalShape=index>=finalShapeStart&&index<=finalShapeEnd;
@@ -45,12 +45,12 @@ if(scriptMode){
    backgroundOnly,finalShape,
    corner:index>=cornerStart&&index<backgroundStart&&entry.action!=='blackout'};
  };
- const frontStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p122-2');
- const backStart=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p137-0');
- const frontReturn=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p143-0');
- const photoEnd=SHOW_SCRIPT.entries.findIndex(e=>e.id==='p149-0');
+ const frontStart=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p122-2');
+ const backStart=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p137-0');
+ const frontReturn=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p143-0');
+ const photoEnd=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p149-0');
  const photoForEntry=entry=>{
-  const i=SHOW_SCRIPT.entries.indexOf(entry);
+  const i=SUBTITLE_SCRIPT.entries.indexOf(entry);
   if(frontStart<0||backStart<0||frontReturn<0||photoEnd<0)return null;
   if(i>=frontStart&&i<backStart)return 'front';
   if(i>=backStart&&i<frontReturn)return 'back';
@@ -106,7 +106,7 @@ if(scriptMode){
   subtitleRenderer.render(entry);
   // The flash is triggered only on operator input; AI callbacks do not replay it.
  };
- transcript=new ScriptShow.Controller({entries:SHOW_SCRIPT.entries,voices,effects,video:revealVideo,
+ transcript=new ScriptShow.Controller({entries:SUBTITLE_SCRIPT.entries,voices,effects,video:revealVideo,
   onEntry(entry,{direction,index,starting}){
    document.body.dataset.musicError='false';
    actOneMusic.setStep(entry.paragraph);
@@ -139,7 +139,7 @@ if(scriptMode){
    ...Object.fromEntries(Object.entries(transitions).map(([name,t])=>[name,t.value])),
    flash:Math.max(0,(flashUntil-performance.now())/280)};
  };
- window.previewScriptEntry=index=>{if(startGate.started)return;previewEntry=SHOW_SCRIPT.entries[index]||null;
+ window.previewScriptEntry=index=>{if(startGate.started)return;previewEntry=SUBTITLE_SCRIPT.entries[index]||null;
   if(previewEntry)applyEntry(previewEntry,0);
   else subtitleRenderer.render(null);};
 }
