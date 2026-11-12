@@ -122,9 +122,9 @@ test('all third-act scene cues rewind and replay without starting any voting dea
  for(const m of [c.audio,c.doorOpen,c.memoryVoice,c.bang,c.prompt,c.button])assert.equal(m.calls,2);
 });
 
-test('every one of the 43 scene cues can be selected as the first live cue',async()=>{
+test('every one of the 42 scene cues can be selected as the first live cue',async()=>{
  const {STAGE_START_CUES}=require('../opening-controller.js');
- assert.equal(STAGE_START_CUES.length,43);
+ assert.equal(STAGE_START_CUES.length,42);
  const mediaFor={"bright":"video","welcome":"audio","door-kick":"effect","door-open":"doorOpen",
   "memory-welcome":"memoryVoice","office-bang":"bang","vote-prompt":"prompt",
   "ending-complete":"complete","ending-reveal":"reveal"};
