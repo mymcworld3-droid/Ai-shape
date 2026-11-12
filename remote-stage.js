@@ -15,6 +15,15 @@
   const button=stepButtons[step+1];
   if(!button)return null;
   const cue=button.dataset.preview;
+  const credit=EndCredits.get(cue);
+  if(credit){
+   const previous=EndCredits.displayLines(stepButtons[step]?.dataset.preview);
+   const lastWords=SHOW_SCRIPT.entries.filter(e=>e.kind==="dialogue"&&e.text?.trim())
+    .slice(-2).map(e=>({speaker:e.speaker||"舞台",text:e.text}));
+   return {step:step+1,label:credit.label,
+    leadIns:(previous.length?previous:lastWords).slice(-2),
+    lines:EndCredits.displayLines(cue).slice(0,3)};
+  }
   const paragraph=config.sceneMusicSteps[cue];
   if(!Number.isInteger(paragraph))return null;
   const nextParagraph=config.sceneMusicSteps[stepButtons[step+2]?.dataset.preview]??Infinity;
@@ -41,6 +50,13 @@
   const asLine=entry=>({speaker:(entry.speaker||"舞台").slice(0,60),
    text:entry.text.trim().slice(0,500)});
   const previous=entries.slice(0,step+1).filter(isSpoken).slice(-2);
+  const credit=EndCredits.get(target.action);
+  if(credit){
+   const earlier=EndCredits.displayLines(entries[step]?.action);
+   return {step:step+1,label:credit.label,
+    leadIns:(earlier.length?earlier:previous.map(asLine)).slice(-2),
+    lines:EndCredits.displayLines(target.action).slice(0,3)};
+  }
   const upcoming=entries.slice(step+1,step+4).filter(isSpoken);
   return {step:step+1,
    label:(target.text||target.note||target.action||"舞台提示").slice(0,120),
