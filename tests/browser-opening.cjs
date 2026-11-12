@@ -762,7 +762,7 @@ async function fastVoting(page){
     await review.locator('[data-preview="vote-two"]').click();await settlePreview(review);await fixedFrame(review);
     await review.screenshot({path:path.join(output,'22-voting-step-review.png')});
     await review.locator('#pageViewButton').click();await flag(review,'view','page');await review.waitForTimeout(100);
-    await matchesStill(review,"assets/backgrounds/Start_dark.PNG");await fixedFrame(review);
+    await matchesDimmedCueZero(review);await fixedFrame(review);
     await review.locator('#stepsViewButton').click();await review.locator('[data-preview="vote-blackout"]').click();
     await flag(review,'previewCue','vote-blackout');
     // The selected third-act blackout stays selectable without replaying earlier scenes.
@@ -972,7 +972,7 @@ async function fastVoting(page){
     await ready(videoRetry,url); await videoRetry.locator('#startButton').click();await cue(videoRetry,"dark");
     await videoRetry.keyboard.press('Space');await flag(videoRetry,"videoError","true");
     await cue(videoRetry,"dark");
-    await matchesStill(videoRetry,"assets/backgrounds/Start_dark.PNG");
+    await matchesDimmedCueZero(videoRetry);
     await videoRetry.mouse.dblclick(30,30); await roomState(videoRetry,"playing");
     await videoRetry.locator('#roomRevealVideo').evaluate(v=>{v.currentTime=v.duration-.1;});
     await cue(videoRetry,"bright"); await videoRetry.waitForTimeout(400);
