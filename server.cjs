@@ -80,6 +80,10 @@ function validateCommand(message){
   if(!["voice","effect","music"].includes(channel)||!Number.isInteger(value)||value<0||value>100)return null;
   return {type:"command",action:"setVolume",channel,value};
  }
+ if(message.action==="jump"){
+  if(!Number.isInteger(message.step)||message.step<0||message.step>=10000)return null;
+  return {type:"command",action:"jump",step:message.step};
+ }
  return {type:"command",action:message.action};
 }
 function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
@@ -198,7 +202,7 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
     if(!liveControls.has(socket))return;
     if(message.type==="command"&&isOpen(liveStage)&&liveState?.started){
      const command=validateCommand(message);
-     if(!command)return;
+     if(!command||command.action==="jump"&&command.step>=liveState.total)return;
      // Each WebSocket command comes from a distinct click/tap. Do not
      // discard consecutive "next" presses: one press = one subtitle,
      // including several quick lines inside a single AI narration.
@@ -221,7 +225,7 @@ function createServer({publicOrigin=process.env.PUBLIC_ORIGIN}={}){
     if(state){room.state=state;send(room.control,{type:"state",state});}
    }else if(message.type==="command"&&isOpen(room.stage)){
     const command=validateCommand(message);
-    if(!command)return;
+    if(!command||command.action==="jump"&&room.state&&command.step>=room.state.total)return;
     send(room.stage,command);
    }
   });
