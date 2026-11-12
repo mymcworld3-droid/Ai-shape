@@ -47,8 +47,7 @@ const timelineSteps=[];
 function sceneStepAudio(cue){
  const paragraph=config.sceneMusicSteps[cue];
  return stepAudioFiles({paragraph,voice:sceneVoices[cue],
-  effect:sceneEffects[cue],video:cue==="bright"?config.roomReveal:
-   cue==="behind-the-scenes"?config.behindScenes:null,
+  effect:sceneEffects[cue],video:cue==="bright"?config.roomReveal:null,
   musicDelayMs:cue===config.closingTheme.sceneStartCue?config.closingTheme.startDelayMs:0});
 }
 if(scriptMode){
@@ -64,8 +63,7 @@ if(scriptMode){
    e.paragraph<config.closingTheme.subtitleEndParagraph;
   timelineSteps.push({label:index,media:stepAudioFiles({paragraph:e.paragraph,
    voice:stepVoiceFiles[e.group],effect:stepEffectFiles[e.action],
-   video:e.action==="reveal"?config.roomReveal:
-    e.action==="behind-the-scenes"?config.behindScenes:null,
+   video:e.action==="reveal"?config.roomReveal:null,
    musicTrack:themeActive?config.actOneMusic.at(-1):null,
    musicDelayMs:index===config.closingTheme.subtitleStartStep?config.closingTheme.startDelayMs:0})});
   li.append(button);stepList.append(li);
