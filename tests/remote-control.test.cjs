@@ -120,6 +120,8 @@ test("shared live show allows multiple independent controllers without pairing",
  assert.deepEqual((await second.next("state")).state,state);
  first.send({type:"command",action:"next"});
  assert.deepEqual(await projection.next("command"),{type:"command",action:"next"});
+ first.send({type:"command",action:"jump",step:27});
+ assert.deepEqual(await projection.next("command"),{type:"command",action:"jump",step:27});
  second.send({type:"command",action:"effectDown"});
  assert.deepEqual(await projection.next("command"),{type:"command",action:"effectDown"});
 
@@ -192,6 +194,9 @@ test("remote sliders accept exact levels and forward real meters to all devices"
  remote.send({type:"command",action:"setVolume",channel:"voice",value:48});
  assert.deepEqual(await pairedStage.next("command"),
   {type:"command",action:"setVolume",channel:"voice",value:48});
+ remote.send({type:"command",action:"jump",step:5});
+ assert.deepEqual(await pairedStage.next("command"),
+  {type:"command",action:"jump",step:5});
  pairedStage.send({type:"meter",levels});
  assert.deepEqual((await remote.next("meter")).levels,levels);
 });
