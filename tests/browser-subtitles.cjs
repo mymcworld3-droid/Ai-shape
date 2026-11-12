@@ -170,7 +170,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   }
   assert.equal(await after366.evaluate(()=>scriptShow.entry.action),'end-blackout');
   await after366.close();
-  checks.push('All renumbered Act IV cues remain operable and retain the bonus cue');
+  checks.push('All renumbered Act IV cues remain operable before the closing credits');
 
   // Clearing the selection explicitly restores starting at the first cue.
   await page.locator('#resetStartStep').click();
@@ -251,8 +251,8 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   const fourthActStart=data.entries.findIndex(e=>e.id==='p408-0');
   assert.ok(votingCountdown>0,'Voting entries are present');
   assert.ok(fourthActStart>votingCountdown,'Fourth act follows voting');
-  // Verify the original screenplay through blackout; the bonus clip follows
-  // only after an additional manual Right/Space operator action.
+  // Verify the original screenplay through final blackout. Credits follow
+  // automatically once Ending.mp3 reaches 1.6 seconds, without bonus cues.
   const endBlackoutIndex=data.entries.findIndex(entry=>entry.action==='end-blackout');
   assert.ok(endBlackoutIndex>clock);
   for(let i=clock+1;i<=endBlackoutIndex;i++){
@@ -425,28 +425,32 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
     if(to.paragraph===414&&to.text.includes('There is no robot among the four of you.'))await page.screenshot({path:path.join(out,'script-ending.png')});
    }
   }
-  assert.equal(await page.locator('body').getAttribute('data-script-action'),'end-blackout');await page.waitForTimeout(1300);
-  assert.ok(await page.locator('#visualizer').evaluate(c=>{const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.every((v,i)=>i%4===3||v===0);}));
-  assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true,
-    'The final blackout must not automatically start the bonus film');
-  const bonus=endBlackoutIndex+1,last=data.entries.length-1;
-  assert.equal(data.entries[bonus].action,'behind-the-scenes');
+  assert.equal(await page.locator('body').getAttribute('data-script-action'),'end-blackout');
+  assert.equal(await page.locator('#behindScenesVideo').count(),0,
+    'The behind-the-scenes video is removed from subtitle mode');
+  assert.equal(data.entries[endBlackoutIndex+1].action,'credit-directed',
+    'The next step after blackout must be the first credit');
+  const last=data.entries.length-1;
   assert.equal(data.entries[last].action,'credit-title');
-  await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),bonus);
-  assert.equal(await page.locator('body').getAttribute('data-script-action'),'behind-the-scenes');
-  assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden),true,
-    'Missing optional MP4 leaves the bonus stage black');
+  await page.waitForTimeout(1100);
+  assert.ok(await page.locator('#visualizer').evaluate(c=>{
+   const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+   return d.every((v,i)=>i%4===3||v===0);
+  }), 'Final blackout remains entirely black while music begins');
   const creditIds=require('../end-credits').cards.map(card=>card.id);
   assert.equal(creditIds.length,6);
-  await page.keyboard.press('ArrowRight');
-  assert.equal(await page.evaluate(()=>scriptShow.index),bonus+1);
+  // Without the bonus step, the 1.6-second audio lead auto-advances
+  // directly from blackout index 263 to the first credit.
+  await page.waitForFunction(({index,id})=>scriptShow.index===index&&
+   endCredits.activeId===id,
+   {index:endBlackoutIndex+1,id:creditIds[0]},{timeout:6000});
   const startedAt=await page.evaluate(()=>performance.now());
   const transitionsAt=[startedAt];
   for(let i=0;i<creditIds.length;i++){
    const id=creditIds[i];
    await page.waitForFunction(({id,index})=>
     scriptShow.index===index&&endCredits.activeId===id,
-    {id,index:bonus+i+1},{timeout:10500});
+    {id,index:endBlackoutIndex+i+1},{timeout:10500});
    assert.equal(await page.locator('body').getAttribute('data-script-action'),id);
    assert.equal(await page.locator('#endCreditsLayer').isVisible(),true);
    if(i)transitionsAt.push(await page.evaluate(()=>performance.now()));
@@ -468,7 +472,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   const deadlines=await page.evaluate(()=>({...scriptShow.deadlines}));
   for(let i=last-1;i>=0;i--){await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>scriptShow.index),i);assert.equal(await page.locator('#subtitleText').textContent(),data.entries[i].text);}
   assert.deepEqual(await page.evaluate(()=>({...scriptShow.deadlines})),deadlines);assert.equal(await page.locator('button:visible').count(),0);
-  checks.push('All merged inputs preserve subtitles and show boundaries; blackout is separate from the optional behind-the-scenes cue');
+  checks.push('All merged subtitles preserve scene boundaries and final blackout leads directly into the six closing credits');
   // Check every subtitle at all ratios, including review pane. No text leaves the fixed projection frame.
   await page.reload();await page.waitForFunction(()=>!document.querySelector('#startButton').disabled);await page.locator('#stepsViewButton').click();
   for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
