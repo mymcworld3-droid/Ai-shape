@@ -9,6 +9,21 @@
  const promptLeads=document.getElementById("nextPromptLeads");
  const promptLines=document.getElementById("nextPromptLines");
  const buttons=Array.from(document.querySelectorAll("[data-action]"));
+ const openStepList=document.getElementById("openStepList");
+ const closeStepList=document.getElementById("closeStepList");
+ const stepDialog=document.getElementById("stepDialog");
+ const stepSearch=document.getElementById("stepSearch");
+ const stepList=document.getElementById("remoteStepList");
+ const stepDialogInfo=document.getElementById("stepDialogInfo");
+ // Use the same subtitle data as the projection: no independent copy of
+ // step numbers or dialogue that could go stale after manuscript edits.
+ const scriptCatalog=(window.SUBTITLE_SCRIPT?.entries||[]).map((entry,index)=>({
+  index,title:entry.text||entry.note||entry.action||"舞台提示",
+  detail:[entry.speaker,entry.act&&"第 "+entry.act+" 幕",
+   entry.scene&&"場景 "+entry.scene].filter(Boolean).join(" · ")
+ }));
+ let sceneCatalog=null,sceneCatalogError=false;
+ let renderedCatalogKey="",renderedCurrent=-1;
  const volumeToggle=buttons.find(button=>button.dataset.action==="toggleVolumeDisplay");
  const channels=["voice","effect","music"];
  const outputs={voice:document.getElementById("remoteVoice"),
@@ -49,6 +64,78 @@
   });
  }
  let connection,connectionState,peer=false,state=null,levels=null;
+ function catalogForMode(){
+  return state?.mode==="script"?scriptCatalog:state?.mode==="cues"?sceneCatalog:null;
+ }
+ function renderStepDialog(){
+  if(!stepDialog.open)return;
+  const catalog=catalogForMode(),query=stepSearch.value.trim().toLocaleLowerCase();
+  const compatible=Array.isArray(catalog)&&catalog.length===state?.total;
+  stepDialogInfo.textContent=compatible?
+   (state.mode==="script"?"逐句字幕":"場景模式")+" · 目前第 "+state.step+
+   " 步 / 共 "+state.total+" 步":
+   sceneCatalogError&&state?.mode==="cues"?"場景步驟載入失敗，請重新整理":
+   "正在取得播放端的步驟清單…";
+  const key=[state?.mode,state?.total,compatible,query].join("|");
+  if(key!==renderedCatalogKey){
+   renderedCatalogKey=key;renderedCurrent=-1;
+   stepList.replaceChildren();
+   if(compatible){
+    const fragment=document.createDocumentFragment();
+    for(const entry of catalog){
+     if(query&&![String(entry.index),entry.title,entry.detail].some(value=>
+      value.toLocaleLowerCase().includes(query)))continue;
+     const item=document.createElement("li"),button=document.createElement("button");
+     const number=document.createElement("span"),copy=document.createElement("span");
+     const name=document.createElement("span"),detail=document.createElement("span");
+     button.type="button";button.dataset.jump=String(entry.index);
+     button.disabled=!active();
+     number.className="step-index";number.textContent=String(entry.index).padStart(2,"0");
+     copy.className="step-copy";name.className="step-title";name.textContent=entry.title;
+     detail.className="step-detail";detail.textContent=entry.detail;
+     copy.append(name,detail);button.append(number,copy);
+     item.append(button);fragment.append(item);
+    }
+    stepList.append(fragment);
+   }
+   if(!stepList.children.length){
+    const empty=document.createElement("li");empty.className="step-empty";
+    empty.textContent=compatible?"沒有符合的步驟":"尚無可顯示的步驟";
+    stepList.append(empty);
+   }
+  }
+  if(renderedCurrent!==state?.step){
+   for(const old of stepList.querySelectorAll('[aria-current="step"]')){
+    old.removeAttribute("aria-current");
+    old.querySelector(".step-current")?.remove();
+   }
+   renderedCurrent=state?.step??-1;
+   const current=stepList.querySelector('[data-jump="'+renderedCurrent+'"]');
+   if(current){
+    current.setAttribute("aria-current","step");
+    const marker=document.createElement("span");marker.className="step-current";
+    marker.textContent="目前";current.append(marker);
+   }
+  }
+  for(const button of stepList.querySelectorAll("button[data-jump]"))button.disabled=!active();
+ }
+ // Read scene names directly from the projection's actual step buttons,
+ // avoiding a duplicated list that drifts when the show is edited.
+ fetch(new URL("index.html",location.href),{cache:"no-store"})
+  .then(response=>{if(!response.ok)throw Error("Stage step catalog unavailable");return response.text();})
+  .then(html=>{
+   const doc=new DOMParser().parseFromString(html,"text/html");
+   sceneCatalog=Array.from(doc.querySelectorAll("#stepList [data-preview]")).map((button,index)=>({
+    index,
+    title:button.querySelector(".step-number")?.nextElementSibling?.firstChild?.textContent?.trim()||"舞台步驟",
+    detail:button.querySelector("small")?.textContent?.trim()||""
+   }));
+   if(!sceneCatalog.length)throw Error("Empty scene step catalog");
+   renderedCatalogKey="";renderStepDialog();render();
+  }).catch(error=>{
+   console.warn("[Remote steps]",error);
+   sceneCatalogError=true;renderStepDialog();
+  });
  function active(){return connectionState==="connected"&&peer&&Boolean(state?.started)&&state.audioReady!==false;}
  function renderMeters(){
   for(const channel of channels){
@@ -134,6 +221,8 @@
    button.disabled=!active()||(action==="previous"&&state.step===0)||
     (action==="next"&&(state.step>=state.total-1||Boolean(speech?.holdNext)));
   }
+  openStepList.disabled=!active()||catalogForMode()?.length!==state?.total;
+  renderStepDialog();
   renderPrompt();
   renderMeters();
   scheduleLayoutFit();
@@ -165,6 +254,23 @@
   slider.addEventListener("pointercancel",()=>editing.delete(channel));
   slider.addEventListener("blur",()=>editing.delete(channel));
  }
+ openStepList.addEventListener("click",()=>{
+  if(openStepList.disabled)return;
+  stepSearch.value="";renderedCatalogKey="";renderedCurrent=-1;
+  stepDialog.showModal();renderStepDialog();
+  stepList.querySelector('[aria-current="step"]')?.scrollIntoView({block:"center"});
+  stepSearch.focus({preventScroll:true});
+ });
+ closeStepList.addEventListener("click",()=>stepDialog.close());
+ stepSearch.addEventListener("input",()=>{renderStepDialog();stepList.scrollTop=0;});
+ stepList.addEventListener("click",event=>{
+  const button=event.target.closest("button[data-jump]");
+  if(!button||button.disabled||!active()||!state)return;
+  const index=Number(button.dataset.jump);
+  if(!Number.isInteger(index)||index<0||index>=state.total)return;
+  if(index===state.step){stepDialog.close();return;}
+  if(connection?.send({type:"command",action:"jump",step:index}))stepDialog.close();
+ });
  function join(){
   connection?.stop();
   connection=null;
