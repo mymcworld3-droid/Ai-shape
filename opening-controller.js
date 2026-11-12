@@ -506,7 +506,7 @@
   // Scene cues include a dedicated memory-door effect between card and blackout.
   const STAGE_START_CUES = Object.freeze([
     "dark", "bright", "ai", "welcome", "clock", "door-kick", "card", "card-hidden", "door-open", "blackout",
-    "memory-light", "memory-welcome", "memory-room", "memory-blackout",
+    "memory-light", "memory-welcome", "memory-room", "memory-photo-front", "memory-photo-back", "memory-photo-hide", "memory-blackout",
     "past-intro", "past-isolate", "office-light", "office-bang", "past-reflection",
     "memory-return", "discussion", "vote-prompt", "vote-one",
     "vote-two", "vote-final", "vote-blackout",
@@ -627,7 +627,7 @@
       if (index >= STAGE_START_CUES.indexOf("card")) this.setEffectState("finished");
       if (index >= STAGE_START_CUES.indexOf("blackout")) this.setDoorOpenState("finished");
       if (this.memory && index >= STAGE_START_CUES.indexOf("memory-light")) {
-        this.memory.state = index <= STAGE_START_CUES.indexOf("memory-blackout") ? cue : "memory-blackout";
+        this.memory.state = index <= STAGE_START_CUES.indexOf("memory-blackout") ? (cue.startsWith("memory-photo-") ? "memory-room" : cue) : "memory-blackout";
         if (index >= STAGE_START_CUES.indexOf("memory-welcome")) this.memory.setMediaState("memoryClick", "finished");
         if (index >= STAGE_START_CUES.indexOf("memory-room")) this.memory.setMediaState("memoryVoice", "finished");
       }
@@ -842,7 +842,10 @@
         case "blackout": return this.memory ? this.memory.enter() : false;
         case "memory-light":
         case "memory-welcome":
-        case "memory-room": return this.memory ? this.memory.advance() : false;
+        case "memory-room": this.setCue("memory-photo-front"); return true;
+        case "memory-photo-front": this.setCue("memory-photo-back"); return true;
+        case "memory-photo-back": this.setCue("memory-photo-hide"); return true;
+        case "memory-photo-hide": return this.memory ? this.memory.advance() : false;
         case "memory-blackout": return this.office ? this.office.enter() : false;
         case "past-intro":
         case "past-isolate":
