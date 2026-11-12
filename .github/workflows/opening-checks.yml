@@ -14,6 +14,10 @@ jobs:
       - run: node --check stage-layout.js
       - run: node --check stage-review.js
       - run: node --check audio-timeline.js
+      - run: node --check remote-stage.js
+      - run: node --check remote-control.js
+      - run: node --check server.cjs
+      - run: node --check tests/browser-remote.cjs
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm test
   opening-browser:
