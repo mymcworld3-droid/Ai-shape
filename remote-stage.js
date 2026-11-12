@@ -77,7 +77,7 @@
     const spoken=entry.text?.trim();
     const text=spoken||creditLines.map(line=>line.text).join(" · ")||entry.note||entry.action||"舞台提示";
     items.push({step:i,label:(spoken||credit?.label||entry.note||entry.action||"舞台提示").slice(0,120),
-     speaker:(spoken?entry.speaker:credit?"片尾字幕":"").slice(0,60),
+     speaker:(spoken?entry.speaker||"舞台":credit?"片尾字幕":"").slice(0,60),
      text:text.slice(0,500)});
    }else{
     const button=entries[i],cue=button.dataset.preview,credit=EndCredits.get(cue);
