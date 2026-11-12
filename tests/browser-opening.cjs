@@ -723,8 +723,9 @@ async function fastVoting(page){
     assert.equal(await page.locator('#endCreditsLayer .end-credit-the').textContent(),'The');
     assert.equal(await page.locator('#endCreditsLayer .end-credit-button').textContent(),'Button');
     const titleFrames=await title.evaluate(el=>el.getAnimations()[0].effect.getKeyframes());
-    assert.deepEqual(titleFrames.map(frame=>frame.offset),[0,.46,.72,1]);
-    assert.equal(titleFrames[2].easing,'linear','The final shrinking interval must be uniform');
+    assert.deepEqual(titleFrames.map(frame=>frame.offset),[0,500/4700,1]);
+    assert.equal(titleFrames[1].easing,'linear',
+      'After 0.5s The Button must shrink at one fixed speed');
     await page.waitForTimeout(4800);
     const finalScale=await title.evaluate(el=>new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
     assert.ok(finalScale>.98&&finalScale<1.02);
