@@ -697,13 +697,27 @@ async function fastVoting(page){
     assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.currentTime<1),true,
       'Re-entering the bonus cue restarts the film');
     const endCards=require('../end-credits').cards.map(card=>card.id);
-    for(const id of endCards){
-      await page.keyboard.press('Space');await cue(page,id);
+    assert.equal(endCards.length,6);
+    await page.keyboard.press('Space');await cue(page,endCards[0]);
+    const cardTimes=[await page.evaluate(()=>performance.now())];
+    for(let i=0;i<endCards.length;i++){
+      const id=endCards[i];
+      await page.waitForFunction(id=>document.body.dataset.cue===id,id,{timeout:6500});
       assert.equal(await page.locator('#endCreditsLayer').isVisible(),true,id);
       assert.equal(await page.evaluate(()=>endCredits.activeId),id);
       assert.equal(await page.locator('#endCreditsLayer .end-credit-card').last().getAttribute('data-credit'),id);
       assert.equal(await page.locator('#behindScenesVideo').evaluate(v=>v.hidden&&v.paused),true,
-        'The bonus video must stop when end credits begin');
+        'The bonus video stops before timed credits begin');
+      if(i>0)cardTimes.push(await page.evaluate(()=>performance.now()));
+      if(i<endCards.length-1){
+       const elapsed=cardTimes[i]-cardTimes[0];
+       assert.ok(elapsed<3000*i+3000,'Timed credit should not be stuck on '+id);
+      }
+    }
+    for(let i=1;i<cardTimes.length;i++){
+      const delta=cardTimes[i]-cardTimes[i-1];
+      assert.ok(delta>2050&&delta<3250,
+       'Each of the first five credit cards must appear and disappear within 2.5s: '+delta);
     }
     const title=page.locator('#endCreditsLayer [data-credit="credit-title"]');
     assert.equal(await page.locator('#endCreditsLayer .end-credit-the').textContent(),'The');
@@ -716,8 +730,8 @@ async function fastVoting(page){
     assert.ok(finalScale>.98&&finalScale<1.02);
     await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>stage.state),'credit-title',
       'The Button title is the final operator step');
-    await page.keyboard.press('ArrowLeft');await cue(page,'credit-pause');
-    assert.equal(await page.evaluate(()=>endCredits.activeId),'credit-pause');
+    await page.keyboard.press('ArrowLeft');await cue(page,'credit-backgrounds');
+    assert.equal(await page.evaluate(()=>endCredits.activeId),'credit-backgrounds');
     assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
     assert.equal(await page.evaluate(()=>opening.deadline),deadline);
     assert.equal(errors.length,0,errors.join("\n"));
@@ -726,7 +740,7 @@ async function fastVoting(page){
     results.push("fixed 16:9 frame and cover-cropped backgrounds at three screen ratios; shrunk opening clock fills the original TV center without overflowing, card show/hide and exact blackout pixels");
     results.push("natural opening continues into Memory Room with the original 3.7-second M4A; AI enlarges over black, real audio reaches the analyser, genuine end fades and shrinks it, held Space never skips and the original deadline never resets");
     results.push('all eighteen cues follow Act II monologue, office flashback, BANG, reflection and Memory Room return; independent pixels verify dim room, exact blackouts and clean backgrounds at three ratios; held cues never skip fades or reset the deadline');
-    results.push('all 43 scene cues continue through Act IV, the separate bonus, and the seven-page closing credits; final voices remain audio-gated, final blackout stays black');
+    results.push('all 42 scene cues continue through Act IV, the separate bonus, then five automatically timed 2.5s credits and The Button; final blackout remains black');
 
     const fadePage=await browser.newPage({viewport:{width:1280,height:720}});
     const fadeErrors=[];fadePage.on('pageerror',error=>fadeErrors.push(String(error)));
@@ -810,7 +824,7 @@ async function fastVoting(page){
     await markDoor.click();
     await review.locator('[data-preview="bright"]').click();
     await review.waitForTimeout(100);await fixedFrame(review);
-    assert.equal(await review.locator('#stepList [data-preview]').count(),43);
+    assert.equal(await review.locator('#stepList [data-preview]').count(),42);
     await matchesStill(review,"assets/backgrounds/IMG_0165.png");
     for(const preview of ['dark','welcome','clock','door-kick','card','card-hidden','door-open','blackout','ai','bright',
       'memory-light','memory-welcome','memory-room','memory-photo-front',
@@ -818,7 +832,7 @@ async function fastVoting(page){
       'past-intro','past-isolate','office-light','office-bang','past-reflection','memory-return',
       'discussion','vote-prompt','vote-one','vote-two','vote-final','vote-blackout',
       'ending-light','ending-dialogue','ending-complete','ending-question','ending-reveal','ending-blackout','behind-the-scenes',
-      'credit-directed','credit-conversation','credit-produced','credit-executive','credit-backgrounds','credit-pause','credit-title']){
+      'credit-directed','credit-conversation','credit-produced','credit-executive','credit-backgrounds','credit-title']){
       await review.locator(`[data-preview="${preview}"]`).click();await flag(review,'previewCue',preview);
       await review.waitForTimeout(60);
       assert.equal(await review.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
