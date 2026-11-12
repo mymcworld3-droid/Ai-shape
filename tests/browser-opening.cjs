@@ -145,7 +145,14 @@ async function state(page, expected) { await flag(page,"openingState",expected);
 async function roomState(page, expected) { await flag(page,"roomState",expected,15000); }
 async function fastReveal(page) {
   await page.locator('#startButton').click(); await cue(page,"dark");
-  await page.keyboard.press('ArrowRight'); await roomState(page,"playing");
+  // Fullscreen transitions may swallow the first synthetic key event on
+  // Chrome's CI runner. Wait for the focus target, then retry only if the
+  // first event never changed the room controller state.
+  await page.waitForFunction(()=>document.activeElement?.id==="visualizerWrap"||document.fullscreenElement?.id==="showShell");
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(250);
+  if(await page.evaluate(()=>roomReveal.state==="dark"))await page.keyboard.press('ArrowRight');
+  await roomState(page,"playing");
   await page.locator('#roomRevealVideo').evaluate(video=>{video.currentTime=video.duration-.1;});
   await cue(page,"bright");
   await page.waitForFunction(()=>roomHandoffProgress(performance.now())>=1);
