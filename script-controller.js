@@ -58,6 +58,24 @@
    if(resume)this.play(to.group,true);
    return true;
   }
+  // Random-access cue navigation is an intentional show edit: stop outgoing
+  // audio/video, invalidate older play promises, and invoke the destination's
+  // actual media action instead of skipping hundreds of intermediate cues.
+  jumpTo(index){
+   if(!this.started||!Number.isInteger(index)||index<0||index>=this.entries.length)return false;
+   if(index===this.index)return true;
+   ++this.token;
+   for(const media of [...Object.values(this.voices),...Object.values(this.effects),this.video])media?.pause();
+   this.onVideo(false);
+   this.active=null;
+   this.index=index;
+   const destination=this.entry,prior=this.entries.slice(0,index);
+   if(destination.group==='opening'||!prior.some(entry=>entry.group==='opening'))
+    this.deadlines.opening=null;
+   else if(this.deadlines.opening===null)this.deadlines.opening=this.now()+900000;
+   this.enter(1,true);
+   return true;
+  }
   previous(){
    if(!this.started||this.index<=0)return false;
    ++this.token;
