@@ -369,6 +369,32 @@ async function fastVoting(page){
     assert.equal(await page.locator('#roomRevealVideo').evaluate(v=>v.currentTime),0);
     await page.keyboard.press('ArrowRight');await roomState(page,"playing");
     await noControls(page);
+    // The FIRST operator step must remove the 95% cue-zero dim once the
+    // real transition frame is decoded. Compare output directly with the
+    // currently decoded MP4: no extra black overlay or alpha fade is allowed.
+    await page.waitForFunction(()=>{
+      const v=document.getElementById("roomRevealVideo");
+      return v.readyState>=2&&v.videoWidth>0&&v.currentTime>.2;
+    });
+    const brightness=await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>{
+      const video=document.getElementById("roomRevealVideo");
+      const screen=document.getElementById("visualizer");
+      const expected=document.createElement("canvas");
+      expected.width=screen.width;expected.height=screen.height;
+      const ctx=expected.getContext("2d");
+      const box=StageLayout.coverLayout(expected.width,expected.height,video.videoWidth,video.videoHeight);
+      ctx.drawImage(video,box.x,box.y,box.width,box.height);
+      let difference=0,pixels=0,videoMean=0;
+      const a=screen.getContext("2d"),b=expected.getContext("2d");
+      for(let y=1;y<=7;y++)for(let x=1;x<=7;x++){
+        const px=Math.floor(screen.width*x/8),py=Math.floor(screen.height*y/8);
+        const actual=a.getImageData(px,py,1,1).data,original=b.getImageData(px,py,1,1).data;
+        for(let c=0;c<3;c++){difference+=Math.abs(actual[c]-original[c]);videoMean+=original[c];pixels++;}
+      }
+      resolve({meanDifference:difference/pixels,videoMean:videoMean/pixels});
+    })));
+    assert.ok(brightness.meanDifference<12,
+     "Step 1 must show full-strength MP4 frames, not the dimmed Step 0 overlay: "+JSON.stringify(brightness));
     const video=await page.locator('#roomRevealVideo').evaluate(v=>({muted:v.muted,inline:v.playsInline,loop:v.loop}));
     assert.deepEqual(video,{muted:true,inline:true,loop:false});
     await page.waitForTimeout(500); await page.screenshot({path:path.join(output,"01-room-reveal.png")});
