@@ -42,7 +42,7 @@ window.OPENING_CONFIG = Object.freeze({
     "behind-the-scenes": 417,
     "credit-directed": 418, "credit-conversation": 419,
     "credit-produced": 420, "credit-executive": 421,
-    "credit-backgrounds": 422, "credit-pause": 423, "credit-title": 424
+    "credit-backgrounds": 422, "credit-title": 424
   }),
   narration: "assets/audio/ai-opening.m4a",
   // Original user-supplied WAV, stored locally for offline playback.
