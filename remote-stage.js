@@ -31,6 +31,21 @@
   return {step:step+1,label:button.children[1].firstChild.textContent.trim(),
    leadIns:before.map(format),lines:upcoming.slice(0,3).map(format)};
  }
+ // In subtitle mode one operator step is a single merged manuscript cue.
+ // Preview only the next three on-screen entries, rather than guessing
+ // audio timing or including dialogue from a later unrelated scene.
+ function nextScriptPrompt(step){
+  const entries=SUBTITLE_SCRIPT.entries,target=entries[step+1];
+  if(!target)return null;
+  const isSpoken=entry=>Boolean(entry?.text?.trim());
+  const asLine=entry=>({speaker:(entry.speaker||"舞台").slice(0,60),
+   text:entry.text.trim().slice(0,500)});
+  const previous=entries.slice(0,step+1).filter(isSpoken).slice(-2);
+  const upcoming=entries.slice(step+1,step+4).filter(isSpoken);
+  return {step:step+1,
+   label:(target.text||target.note||target.action||"舞台提示").slice(0,120),
+   leadIns:previous.map(asLine),lines:upcoming.map(asLine)};
+ }
  function applyRemoteCommand(message){
   if(!StageRemoteLink.actions.includes(message.action))return;
   if(message.action==="setVolume")stageActions.setVolume(message.channel,message.value);
@@ -148,7 +163,7 @@
    audioReady:!remoteAudioPreparing,
    audioRecovery:window.stageAudioRecoveryStatus?.()??null,
    voiceStatus:voiceStatus(),
-   nextPreview:scriptMode?null:nextScenePrompt(step),
+   nextPreview:scriptMode?nextScriptPrompt(step):nextScenePrompt(step),
    volumes:{voice:voiceVolume,effect:effectVolume,music:otherVolume},
    volumeVisible:!volumeDisplay.hidden};
  }
