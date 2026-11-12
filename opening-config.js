@@ -30,7 +30,8 @@ window.OPENING_CONFIG = Object.freeze({
     "dark": 20, "room-reveal": 23, "bright": 23, "ai": 27,
     "welcome": 28, "clock": 28, "door-kick": 33,
     "card": 83, "card-hidden": 85, "door-open": 87, "blackout": 99,
-    "memory-light": 109, "memory-welcome": 115, "memory-room": 150,
+    "memory-light": 109, "memory-welcome": 115, "memory-room": 120,
+    "memory-photo-front": 122, "memory-photo-back": 137, "memory-photo-hide": 149,
     "memory-blackout": 179, "past-intro": 185, "past-isolate": 194,
     "office-light": 199, "office-bang": 213, "past-reflection": 269,
     "memory-return": 283, "discussion": 290, "vote-prompt": 388,
@@ -46,6 +47,8 @@ window.OPENING_CONFIG = Object.freeze({
   card: "assets/cards/memory-access-card.svg",
   memory: Object.freeze({
     background: "assets/backgrounds/memory-room.png",
+    frameFront: "assets/cards/Frame-front.webp",
+    frameBack: "assets/cards/Frame-back.webp",
     // Original uploaded recording; keep its filename and bytes unchanged.
     narration: "assets/audio/Memory-room.m4a",
     lightClick: "assets/audio/effects/light-click.wav",
