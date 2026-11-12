@@ -71,7 +71,8 @@
   "p62-1",  // after "check your pocket."
   "p75-0", // before "Wait, what is that?"
   "p139-0",// keep the photo inscription separate from its introduction
-  "p207-1","p207-2","p207-3" // Liam's four separate sentences
+  "p207-1","p207-2","p207-3", // Liam's four separate sentences
+  "p222-2","p222-3","p222-4" // CEO's four separate subtitle screens
  ]);
  const result=[];
  function sameLook(a,b){
