@@ -3,6 +3,9 @@ const assert=require("node:assert/strict");
 const {once}=require("node:events");
 const {chromium}=require("playwright");
 const {createServer}=require("../server.cjs");
+const subtitle=require("../subtitle-data");
+const openingIndex=subtitle.entries.findIndex(e=>e.group==="opening");
+const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
 
 (async()=>{
  const server=createServer();
@@ -116,15 +119,15 @@ const {createServer}=require("../server.cjs");
 
   // A remote command must start real AI narration without another
   // interaction on the projector. The same media continues across sentences.
-  await start("/",'[data-script="6"]',6);
+  await start("/",`[data-script="${openingIndex-1}"]`,openingIndex-1);
   await next.tap();
-  await waitForStep(7);
+  await waitForStep(openingIndex);
   await stage.waitForFunction(()=>!document.getElementById("openingAudio").paused &&
    scriptShow.active?.state==="playing");
   await remote.waitForFunction(()=>document.getElementById("remoteVoiceStatus").textContent.includes("語音播放中"));
   assert.equal(await next.isDisabled(),false,"During an AI paragraph, the next subtitle remains controllable");
   await next.tap();
-  await waitForStep(8);
+  await waitForStep(openingIndex+1);
   assert.equal(await stage.locator("#openingAudio").evaluate(media=>media.paused),false);
 
   // Scene mode permits the clock cue during narration, then gates the next
@@ -176,7 +179,7 @@ const {createServer}=require("../server.cjs");
 
   // Script-mode narration receives the same hands-free recovery. A
   // successful retry must not advance or repeat subtitle sentences.
-  await start("/",'[data-script="6"]',6);
+  await start("/",`[data-script="${openingIndex-1}"]`,openingIndex-1);
   await stage.evaluate(()=>{
    const nativePlay=HTMLMediaElement.prototype.play;
    let rejected=false;
@@ -189,7 +192,7 @@ const {createServer}=require("../server.cjs");
    };
   });
   await next.tap();
-  await waitForStep(7);
+  await waitForStep(openingIndex);
   await stage.waitForFunction(()=>document.body.dataset.scriptVoice==="opening:playing"&&
    !document.getElementById("openingAudio").paused);
   assert.equal(await stage.evaluate(()=>scriptShow.index),7);
@@ -218,12 +221,12 @@ const {createServer}=require("../server.cjs");
   await stage.waitForFunction(()=>document.body.dataset.openingState==="narration" &&
    !document.getElementById("openingAudio").paused);
   assert.equal(await stage.locator("#audioUnlockDock").isVisible(),false);
-  await start("/",'[data-script="75"]',75);
+  await start("/",`[data-script="${doorIndex-1}"]`,doorIndex-1);
   await next.tap();
-  await stage.waitForFunction(()=>document.body.dataset.scriptIndex==="76"&&
-   document.getElementById("scriptEffect-doorOpen").currentTime>0);
+  await stage.waitForFunction(n=>Number(document.body.dataset.scriptIndex)===n&&
+   document.getElementById("scriptEffect-doorOpen").currentTime>0,doorIndex);
   await remote.reload();
-  await waitForStep(76);
+  await waitForStep(doorIndex);
   assert.equal(await remote.locator("#nextScenePrompt").isVisible(),false);
   await remote.locator("#sliderEffect").evaluate(slider=>{
    slider.value="95";
