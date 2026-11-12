@@ -53,8 +53,8 @@ function sceneStepAudio(cue){
 if(scriptMode){
  stepList.replaceChildren();
  document.querySelector('#stepsPanel h1').firstChild.textContent='劇本字幕';
- document.querySelector('#stepsPanel h1 span').textContent=SHOW_SCRIPT.entries.length;
- SHOW_SCRIPT.entries.forEach((e,index)=>{
+ document.querySelector('#stepsPanel h1 span').textContent=SUBTITLE_SCRIPT.entries.length;
+ SUBTITLE_SCRIPT.entries.forEach((e,index)=>{
   const li=document.createElement('li'),button=document.createElement('button'),number=document.createElement('span'),text=document.createElement('span'),small=document.createElement('small');
   button.type='button';button.dataset.script=index;button.setAttribute('aria-pressed','false');number.className='step-number';number.textContent=index;
   text.textContent=e.text||e.note||e.action;small.textContent=`ACT ${e.act} · SCENE ${e.scene}${e.speaker?' · '+e.speaker:''}`;
@@ -80,7 +80,7 @@ function scrollToReviewStep(button){
 }
 function selectScriptStep(index){
  if(startGate.started||!scriptMode)return;
- selectedScript=Number.isInteger(index)&&index>=0&&index<SHOW_SCRIPT.entries.length?index:null;
+ selectedScript=Number.isInteger(index)&&index>=0&&index<SUBTITLE_SCRIPT.entries.length?index:null;
  window.selectedScriptStartIndex=selectedScript;
  for(const button of sentenceButtons)
   button.setAttribute('aria-pressed',String(Number(button.dataset.script)===selectedScript));
@@ -190,7 +190,7 @@ function setupStepMarks(){
  }
  for(const button of document.querySelectorAll('#stepList [data-script], #stepList [data-preview]')){
   const index=Number(button.dataset.script);
-  const id=button.dataset.script!==undefined?'script:'+SHOW_SCRIPT.entries[index].id:'cue:'+button.dataset.preview;
+  const id=button.dataset.script!==undefined?'script:'+SUBTITLE_SCRIPT.entries[index].id:'cue:'+button.dataset.preview;
   const row=button.closest('li');row.classList.add('markable-step');
   const label=button.querySelector('.step-number')?.textContent||String(index);
   const mark=document.createElement('button');mark.type='button';mark.className='step-mark';
