@@ -202,6 +202,34 @@ test("remote sliders accept exact levels and forward real meters to all devices"
 });
 
 
+test("subtitle-mode next-step preview is relayed and validated like scene previews", {timeout:5000},async t=>{
+ const {client}=await startRelay(t);
+ const projection=await client();
+ projection.send({type:"host"});
+ await projection.next("ready");
+ const remote=await client();
+ remote.send({type:"watch"});
+ await remote.next("ready");
+ await remote.next("peer");
+ const state={
+  started:true,mode:"script",step:7,total:381,label:"Welcome to HUMAN VERIFICATION",
+  nextPreview:{step:8,label:"Please remain calm.",
+   leadIns:[{speaker:"RACHEL",text:"What is going on!"},{speaker:"AI VOICE",text:"Welcome to HUMAN VERIFICATION TEST NUMBER #67."}],
+   lines:[{speaker:"AI VOICE",text:"Please remain calm."},{speaker:"AI VOICE",text:"There is no escape."}]},
+  volumes:{voice:90,effect:100,music:75},volumeVisible:false
+ };
+ projection.send({type:"state",state});
+ assert.deepEqual((await remote.next("state")).state,state);
+ projection.send({type:"state",state:{...state,step:8,label:"Please remain calm.",
+  nextPreview:{...state.nextPreview,step:9,label:"There is no escape."}}});
+ const updated=await remote.next("state");
+ assert.equal(updated.state.nextPreview.step,9,"Advance updates the preview cue");
+ // A forged hint cannot point to a different step or contain oversized text.
+ projection.send({type:"state",state:{...state,
+  nextPreview:{...state.nextPreview,step:100}}});
+ const rejected=await remote.next("state");
+ assert.equal(rejected.state.nextPreview,undefined);
+});
 test("rapid consecutive next taps each advance exactly one subtitle", {timeout:5000},async t=>{
  const {client}=await startRelay(t);
  const projection=await client();
