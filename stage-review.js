@@ -91,6 +91,7 @@ function selectScriptStep(index){
 }
 for(const button of sentenceButtons)button.addEventListener('click',()=>selectScriptStep(Number(button.dataset.script)));
 const stepButtons=Array.from(document.querySelectorAll("[data-preview]"));
+if(!scriptMode)document.querySelector('#stepsPanel h1 span').textContent=stepButtons.length;
 let selectedPreview=null,selectedScene=null;
 window.selectedSceneStartCue=null;
 if(!scriptMode){
