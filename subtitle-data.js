@@ -81,6 +81,9 @@
  // The original script wording remains preserved inside parts for traceability.
  const pocket=entries.find(e=>e.id==="p62-0");
  if(pocket)pocket.text="Wait. Cut it, everyone, check your pocket.";
+ // Show the requested gloss for the rhetorical term; leave source parts intact.
+ const parallelismLine=entries.find(e=>e.id==="p341-0");
+ if(parallelismLine)parallelismLine.text="It would’ve been nice if you continue with it, parallelism（排比）, you know.";
  // Pure nonlexical sounds have no readable subtitle. Keep meaningful
  // interjections and lines that contain other spoken words.
  const soundOnly=/^(?:(?:huh|ugh|ah|aah|haha+|ha(?:[\s-]*ha)+|hehe+|he(?:[\s-]*he)+|hm+|hmm+|uh+|um+|ohh+|gasp|groan|chuckle)[\s.!?…]*)+$/i;
@@ -101,7 +104,8 @@
   "p207-1","p207-2","p207-3", // Liam's four separate sentences
   "p209-2","p209-3", // Liam's denial and accusation: three screens
   "p222-2","p222-3","p222-4", // CEO's four separate subtitle screens
-  "p272-0","p274-0","p277-0","p281-0" // Christopher's five separate confession screens
+  "p272-0","p274-0","p277-0","p281-0", // Christopher's five separate confession screens
+  "p341-1" // Rachel's parallelism quip in two operator-controlled screens
  ]);
  const result=[];
  function sameLook(a,b){
