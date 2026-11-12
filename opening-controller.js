@@ -645,8 +645,8 @@
       }
       if (this.ending && index >= STAGE_START_CUES.indexOf("ending-light")) {
         this.ending.state = cue;
-        if (index >= 29) this.ending.setMediaState("endingComplete", "finished");
-        if (index >= 31) this.ending.setMediaState("endingReveal", "finished");
+        if (index >= STAGE_START_CUES.indexOf("ending-question")) this.ending.setMediaState("endingComplete", "finished");
+        if (index >= STAGE_START_CUES.indexOf("ending-blackout")) this.ending.setMediaState("endingReveal", "finished");
       }
       this.setCue(cue);
       switch (cue) {
