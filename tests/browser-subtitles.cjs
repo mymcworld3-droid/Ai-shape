@@ -536,7 +536,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.ok(await page.locator('#visualizer').evaluate(c=>{
    const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
    return d.every((v,i)=>i%4===3||v===0);
-  }), 'Final blackout remains entirely black while music begins');
+  })===false, 'Step 293 must display the Ending.mp3 reactive AI over black');
   const creditIds=require('../end-credits').cards.map(card=>card.id);
   assert.equal(creditIds.length,6);
   // Without the bonus step, the 1.6-second audio lead auto-advances
