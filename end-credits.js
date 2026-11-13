@@ -26,6 +26,17 @@
    lines:["MUSICS — SHIU-CHEN JOU","IMAGE — RAY CHEN"],motion:"unfold",durationMs:CREDIT_HOLD_MS[4]},
   {id:"credit-title",label:"The Button",role:"",lines:["The Button"],motion:"infinity"}
  ].map(card=>Object.freeze({...card,lines:Object.freeze(card.lines)})));
+
+ // Stable IDs prevent subtitle renumbering from shifting finale positions.
+ const endingAiPositions=Object.freeze({
+  "end-blackout":Object.freeze({x:.85,y:.79,scale:.35}),
+  "ending-blackout":Object.freeze({x:.85,y:.79,scale:.35}),
+  "credit-directed":Object.freeze({x:.16,y:.78,scale:.38}),
+  "credit-conversation":Object.freeze({x:.39,y:.63,scale:.56}),
+  "credit-produced":Object.freeze({x:.82,y:.23,scale:.47}),
+  "credit-executive":Object.freeze({x:.50,y:.50,scale:1.02,mist:true,fadeWithText:true})
+ });
+ function endingAiPose(action){return endingAiPositions[action]||null;}
  const byId=new Map(cards.map(card=>[card.id,card]));
  function get(id){return byId.get(id)||null;}
  function displayLines(id){
@@ -126,6 +137,7 @@
    if(id===normalized&&preview===isPreview)return;
    cancelTimers();
    id=normalized;preview=isPreview;
+   layer.dataset.endingAi=endingAiPose(normalized)?"true":"false";
    const generation=++run,old=current,wasLeaving=alreadyLeaving;
    alreadyLeaving=false;current=null;
    for(const element of [...layer.children])if(element!==old)element.remove();
@@ -171,8 +183,14 @@
     onAdvance();
    },durationMs);
   }
-  return {show,get activeId(){return id;},get preview(){return preview;},layer};
+  return {show,get activeId(){return id;},get preview(){return preview;},
+   get visualOpacity(){
+    if(!current)return 0;
+    // Follow precisely the letters' Web Animation opacity during exit.
+    const value=Number.parseFloat(getComputedStyle(current).opacity);
+    return Number.isFinite(value)?Math.max(0,Math.min(1,value)):1;
+   },layer};
  }
- return {cards,get,displayLines,appendToSubtitle,mount,motion,CREDIT_HOLD_MS,SONG_LEAD_MS,
+ return {cards,get,displayLines,appendToSubtitle,mount,motion,endingAiPose,CREDIT_HOLD_MS,SONG_LEAD_MS,
   TITLE_ZOOM_MS,TITLE_DECEL_MS,TITLE_HANDOFF_SCALE};
 });
