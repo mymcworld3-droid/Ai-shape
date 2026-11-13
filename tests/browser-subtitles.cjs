@@ -36,6 +36,10 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
      'AI narration '+id+' should use the uploaded file');
   }
   assert.ok(!data.entries.some(x=>x.paragraph===405));
+  for(const id of ['p171-0','p173-0','p174-0','p174-1']){
+   const e=data.entries.find(item=>item.id===id);
+   assert.ok(e&&e.parts.length===1,'Separate manual subtitle step: '+id);
+  }
   assert.equal(data.entries.some(x=>x.id==='p134-0'),false,
     "Former subtitle step 90 is deleted");
   for(const p of [42,185,188,195,221,269])assert.ok(!data.entries.some(x=>x.paragraph===p&&x.kind==='cue'));
@@ -272,8 +276,8 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   const votingCountdown=data.entries.findIndex(e=>e.id==='p389-0');
   const fourthActStart=data.entries.findIndex(e=>e.id==='p408-0');
   assert.equal(backgroundCut+1,votingCountdown,'The background cuts on step 273; AI move and voting begin on 274');
-  assert.equal(data.entries[269]?.id,'p388-2');
-  assert.equal(data.entries[270]?.id,'p389-0');
+  assert.equal(data.entries[271]?.id,'p388-2');
+  assert.equal(data.entries[272]?.id,'p389-0');
   assert.ok(votingCountdown>0,'Voting entries are present');
   assert.ok(fourthActStart>votingCountdown,'Fourth act follows voting');
   // Verify the original screenplay through final blackout. Credits follow

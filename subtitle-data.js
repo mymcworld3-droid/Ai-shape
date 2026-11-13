@@ -125,6 +125,8 @@
   "p62-1",  // after "check your pocket."
   "p75-0", // before "Wait, what is that?"
   "p139-0",// keep the photo inscription separate from its introduction
+  "p173-0", // Keep Christopher confession after "You want the whole story?" separate
+  "p174-1", // Keep Megan ex-lover remark separate from the preceding sentence
   "p207-1","p207-2","p207-3", // Liam's four separate sentences
   "p209-2","p209-3", // Liam's denial and accusation: three screens
   "p222-2","p222-3","p222-4", // CEO's four separate subtitle screens
