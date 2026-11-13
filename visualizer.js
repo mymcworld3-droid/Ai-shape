@@ -36,9 +36,6 @@ const backgroundImage=new Image();
 const darkBackgroundImage=new Image();
 const cardImage=new Image();
 const memoryBackgroundImage=new Image();
-const monitorLightImages={opening:new Image(),memory:new Image()};
-const monitorLightMasks={opening:null,memory:null};
-const monitorLightPixels={opening:0,memory:0};
 const framePhotoImages={front:new Image(),back:new Image()};
 framePhotoImages.front.src=config.memory.frameFront;
 framePhotoImages.back.src=config.memory.frameBack;
@@ -394,85 +391,8 @@ function projectionFrame(){
   ...Object.fromEntries(Object.entries(transitions).map(([key,t])=>[key,t.value]))};
 }
 
-// Turn the two user-supplied *whole-room* -light paintings into transparent
-// highlights. Compare pixels once on load and retain only actual changes in
-// the top-left monitor area, so the walls/props never flicker or shift.
-function buildMonitorLightMask(room){
- const base=room==="opening"?backgroundImage:memoryBackgroundImage;
- const lit=monitorLightImages[room];
- if(!base.naturalWidth||!base.naturalHeight||!lit.naturalWidth||!lit.naturalHeight)return;
- try{
-  const width=base.naturalWidth,height=base.naturalHeight;
-  const clip=config.monitorFlicker.region;
-  const regionWidth=Math.min(width,Math.ceil(width*clip.width));
-  const regionHeight=Math.min(height,Math.ceil(height*clip.height));
-  const baseCanvas=document.createElement("canvas"),brightCanvas=document.createElement("canvas");
-  baseCanvas.width=brightCanvas.width=regionWidth;
-  baseCanvas.height=brightCanvas.height=regionHeight;
-  const baseCtx=baseCanvas.getContext("2d",{willReadFrequently:true});
-  const brightCtx=brightCanvas.getContext("2d",{willReadFrequently:true});
-  baseCtx.drawImage(base,0,0,width,height);
-  // Both images use the same background coordinates even if resolutions differ.
-  brightCtx.drawImage(lit,0,0,width,height);
-  const dark=baseCtx.getImageData(0,0,regionWidth,regionHeight).data;
-  const light=brightCtx.getImageData(0,0,regionWidth,regionHeight);
-  let count=0;
-  for(let i=0;i<light.data.length;i+=4){
-   const difference=Math.max(Math.abs(light.data[i]-dark[i]),
-    Math.abs(light.data[i+1]-dark[i+1]),
-    Math.abs(light.data[i+2]-dark[i+2]));
-   // Low differences are likely anti-aliasing/noise. Larger monitor changes
-   // retain their alpha; small light spills get smooth transparency.
-   const alpha=difference<=7?0:Math.min(255,Math.round((difference-7)*22));
-   light.data[i+3]=alpha;
-   if(alpha>0)count++;
-  }
-  const overlay=document.createElement("canvas");
-  overlay.width=width;overlay.height=height;
-  overlay.getContext("2d").putImageData(light,0,0);
-  monitorLightMasks[room]=overlay;
-  monitorLightPixels[room]=count;
-  if(!count)console.warn("[Monitor flicker] No changed upper-left pixels in "+room+" -light image.");
- }catch(error){
-  console.warn("[Monitor flicker] Could not compare "+room+" light painting",error);
-  monitorLightMasks[room]=null;
- }
-}
-for(const [room,src] of Object.entries({
- opening:config.monitorFlicker.opening,memory:config.monitorFlicker.memory
-})){
- const light=monitorLightImages[room];
- light.addEventListener("load",()=>buildMonitorLightMask(room));
- light.addEventListener("error",()=>console.warn("[Monitor flicker] Optional light painting missing: "+src));
- light.src=src;
-}
-function drawMonitorLight(now,frame,openingRoom){
- if(frame.preview||!frame.room)return;
- const room=frame.background==="memory"?"memory":openingRoom?"opening":null;
- const mask=room&&monitorLightMasks[room];
- if(!mask)return;
- // The opening video owns its pixels until the final still-room handoff.
- if(room==="opening"&&(frame.script?
-   scriptVideoPlaying||scriptRevealHandoffAt!==null:
-   roomReveal.state!=="ready"||roomHandoffProgress(now)<1))return;
- const alpha=StageLayout.monitorFlickerLevel(now,room==="memory"?790:0);
- if(alpha<=0)return;
- const base=room==="opening"?backgroundImage:memoryBackgroundImage;
- const b=StageLayout.coverLayout(w,h,base.naturalWidth,base.naturalHeight);
- ctx.save();
- ctx.globalAlpha=alpha;
- ctx.drawImage(mask,b.x,b.y,b.width,b.height);
- ctx.restore();
-}
-// Diagnostics for projection verification; not a visible stage control.
-window.monitorFlickerStatus=()=>({
- opening:{ready:!!monitorLightMasks.opening,changedPixels:monitorLightPixels.opening},
- memory:{ready:!!monitorLightMasks.memory,changedPixels:monitorLightPixels.memory}
-});
-
 backgroundImage.addEventListener("load",()=>{
  backgroundReady=true;document.body.dataset.backgroundReady="true";notifyAssetsChange();
- buildMonitorLightMask("opening");
 });
 backgroundImage.addEventListener("error",()=>{
  document.body.dataset.backgroundReady="false";
@@ -496,7 +416,6 @@ cardImage.addEventListener("error",()=>{
 cardImage.src=config.card;
 memoryBackgroundImage.addEventListener("load",()=>{
  memoryBackgroundReady=true;document.body.dataset.memoryBackgroundReady="true";notifyAssetsChange();
- buildMonitorLightMask("memory");
 });
 memoryBackgroundImage.addEventListener("error",()=>{
  memoryBackgroundReady=false;document.body.dataset.memoryBackgroundReady="false";
@@ -914,7 +833,6 @@ function drawBackground(now,frame){
  }else if(!frame.script&&openingRoom&&!frame.preview&&roomReveal.state==="ready"){
   drawRevealVideo(1-roomHandoffProgress(now));
  }
- drawMonitorLight(now,frame,openingRoom);
  const expansion=openingRoom?frame.scene:frame.aiExpansion||0;
  const dim=openingRoom?config.voiceDim*expansion:frame.scene+(config.voiceDim-frame.scene)*expansion;
  if(dim>0){ctx.fillStyle=`rgba(0,0,0,${dim})`;ctx.fillRect(0,0,w,h);}
