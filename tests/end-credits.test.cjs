@@ -86,20 +86,19 @@ test("closing credits are large and legible in the full 16:9 projector",()=>{
 
 test("Ending.mp3 AI artwork follows fixed finale cues, not mutable subtitle indexes",()=>{
  const targets=[
-  ["end-blackout",.85,.79,.35],
-  ["ending-blackout",.85,.79,.35],
-  ["credit-directed",.16,.78,.38],
-  ["credit-conversation",.39,.63,.56],
-  ["credit-produced",.82,.23,.47],
-  ["credit-executive",.50,.50,1.02]
+  ["credit-directed",.85,.79,.35],
+  ["credit-conversation",.16,.78,.38],
+  ["credit-produced",.39,.63,.56],
+  ["credit-executive",.82,.23,.47],
+  ["credit-backgrounds",.50,.50,1.02]
  ];
  for(const [cue,x,y,scale] of targets){
   const pose=EndCredits.endingAiPose(cue);
   assert.deepEqual([pose.x,pose.y,pose.scale],[x,y,scale],cue);
  }
- assert.equal(EndCredits.endingAiPose("credit-executive").fadeWithText,true);
- assert.equal(EndCredits.endingAiPose("credit-executive").mist,true);
- for(const cue of ["credit-backgrounds","credit-title","vote-blackout"])
+ assert.equal(EndCredits.endingAiPose("credit-backgrounds").fadeWithText,true);
+ assert.equal(EndCredits.endingAiPose("credit-backgrounds").mist,true);
+ for(const cue of ["end-blackout","ending-blackout","credit-title","vote-blackout"])
   assert.equal(EndCredits.endingAiPose(cue),null);
 });
 test("finale audio-responsive AI stays behind DOM text with synced fade and fog",()=>{
@@ -107,7 +106,7 @@ test("finale audio-responsive AI stays behind DOM text with synced fade and fog"
  const css=fs.readFileSync(path.join(__dirname,"..","stage.css"),"utf8");
  const js=fs.readFileSync(path.join(__dirname,"..","visualizer.js"),"utf8");
  assert.match(css,/#endCreditsLayer\[data-ending-ai="true"\]\{background:transparent\}/);
- assert.match(css,/\.end-credit-turn \.end-credit-block::before/);
+ assert.match(css,/\.end-credit-unfold \.end-credit-block::before/);
  assert.match(js,/function paintEndingWave\(cue,now,preview\)/);
  assert.match(js,/const a=analyze\(\),targetEnergy=/);
  assert.match(js,/target.fadeWithText&&!preview\?endCredits.visualOpacity:1/);

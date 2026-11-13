@@ -29,12 +29,12 @@
 
  // Stable IDs prevent subtitle renumbering from shifting finale positions.
  const endingAiPositions=Object.freeze({
-  "end-blackout":Object.freeze({x:.85,y:.79,scale:.35}),
-  "ending-blackout":Object.freeze({x:.85,y:.79,scale:.35}),
-  "credit-directed":Object.freeze({x:.16,y:.78,scale:.38}),
-  "credit-conversation":Object.freeze({x:.39,y:.63,scale:.56}),
-  "credit-produced":Object.freeze({x:.82,y:.23,scale:.47}),
-  "credit-executive":Object.freeze({x:.50,y:.50,scale:1.02,mist:true,fadeWithText:true})
+  // The first credit is subtitle step 293; the preceding blackout stays black.
+  "credit-directed":Object.freeze({x:.85,y:.79,scale:.35}), // 293: lower-right
+  "credit-conversation":Object.freeze({x:.16,y:.78,scale:.38}), // 294: lower-left
+  "credit-produced":Object.freeze({x:.39,y:.63,scale:.56}), // 295: inward and larger
+  "credit-executive":Object.freeze({x:.82,y:.23,scale:.47}), // 296: upper-right
+  "credit-backgrounds":Object.freeze({x:.50,y:.50,scale:1.02,mist:true,fadeWithText:true}) // 297: behind text
  });
  function endingAiPose(action){return endingAiPositions[action]||null;}
  const byId=new Map(cards.map(card=>[card.id,card]));
