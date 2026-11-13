@@ -66,3 +66,40 @@ test("voting animation never advances cues or changes their timing",()=>{
  overlay.draw(canvas,{script:false,caption:"vote-blackout",blackout:1},3100,1280,720);
  assert.equal(calls.length,before,"no artwork appears over a blackout");
 });
+
+test("tally board lists all four candidates and animates only confirmed votes",()=>{
+ const tally=new Controller();
+ const frames=[
+  {script:true,voteParagraph:388,voteCueId:"p388-2"},
+  {script:true,voteParagraph:389,voteCueId:"p389-0"},
+  {script:true,voteParagraph:390,voteCueId:"p390-0"},
+  {script:true,voteParagraph:393,voteCueId:"p393-0"},
+  {script:true,voteParagraph:395,voteCueId:"p395-0"},
+  {script:true,voteParagraph:402,voteCueId:"p402-0"}
+ ];
+ assert.equal(tally.state(frames[0],0),null,"No list before final prompt ends");
+ assert.equal(tally.state(frames[1],100).cue.votes,0);
+ assert.equal(tally.state(frames[2],200).cue.votes,1);
+ assert.equal(tally.state(frames[3],300).cue.votes,1,"Second nomination alone does not add a vote");
+ assert.equal(tally.state(frames[4],400).cue.votes,2);
+ assert.equal(tally.state(frames[5],500).cue.votes,2);
+ const labels=[];
+ const canvas=new Proxy({},{
+  get(target,key){return target[key]||function(...args){
+   if(key==="fillText")labels.push(args[0]);
+  };},
+  set(target,key,value){target[key]=value;return true;}
+ });
+ tally.draw(canvas,frames[5],1600,1280,720);
+ for(const name of ["CHRISTOPHER","ETHAN","MEGAN","RACHEL"]){
+  assert.ok(labels.includes(name),"Candidate must always appear: "+name);
+ }
+ assert.ok(labels.includes("VOTE TALLY"));
+ assert.ok(labels.includes("CONFIRMED 02"));
+ assert.equal(labels.filter(label=>label==="02").length,1,"Only Ethan has two confirmed votes");
+ assert.equal(labels.filter(label=>label==="00").length,3,"Other candidates retain zero votes");
+ tally.draw(canvas,frames[0],1700,1280,720);
+ const before=labels.length;
+ tally.draw(canvas,frames[0],1800,1280,720);
+ assert.equal(labels.length,before,"No tally artwork appears before the trigger");
+});

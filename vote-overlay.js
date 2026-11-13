@@ -34,76 +34,110 @@
  }
  // A visual-only overlay: the play clock, narration, step timers and
  // operator controls remain owned by their existing controllers.
+ // A visual-only tally board. It neither owns nor alters cue/voice timing.
+ // Four candidates are always present; votes are counted only when the
+ // scripted AI explicitly confirms them.
+ const candidates=Object.freeze(["CHRISTOPHER","ETHAN","MEGAN","RACHEL"]);
+ const ballotSlots=4;
+ const ease=t=>{const p=clamp(t);return p*p*(3-2*p);};
  class Controller{
-  constructor(){this.key=null;this.enteredAt=0;}
+  constructor(){
+   this.key=null;this.enteredAt=0;this.panelEnteredAt=0;
+   this.previousVotes=0;this.lastVotes=0;
+  }
   state(frame,now){
    const cue=cueForFrame(frame);
-   if(!cue){this.key=null;return null;}
+   if(!cue){
+    this.key=null;this.previousVotes=0;this.lastVotes=0;
+    return null;
+   }
    if(this.key!==cue.id){
+    const first=this.key===null;
+    if(first)this.panelEnteredAt=frame.preview?now-2000:now;
+    this.previousVotes=first?cue.votes:this.lastVotes;
+    this.lastVotes=cue.votes;
     this.key=cue.id;
     this.enteredAt=frame.preview?now-2000:now;
    }
-   return {cue,elapsed:Math.max(0,now-this.enteredAt)};
+   return {cue,elapsed:Math.max(0,now-this.enteredAt),
+    panelElapsed:Math.max(0,now-this.panelEnteredAt),
+    previousVotes:this.previousVotes};
   }
   draw(ctx,frame,now,width,height,reducedMotion=false){
    const result=this.state(frame,now);
    if(!result||frame.blackout>=.999||width<=0||height<=0)return;
-   const cue=result.cue;
+   const {cue}=result;
    const elapsed=reducedMotion?2000:result.elapsed;
-   const enter=clamp(elapsed/330);
-   const opacity=enter*enter*(3-2*enter)*clamp(1-(frame.blackout||0));
+   const fade=ease((reducedMotion?2000:result.panelElapsed)/180);
+   const opacity=fade*clamp(1-(frame.blackout||0));
    if(opacity<=0)return;
-   const accent=cue.accent==="red"?"#f47480":"#78d5df";
-   const x=72,y=119,w=338,h=215;
-   const shift=(1-enter)*12;
+   const displayedVotes=result.previousVotes+
+    (cue.votes-result.previousVotes)*ease(elapsed/390);
+   const x=64,y=102,panelWidth=452,panelHeight=330;
+   const accent=cue.votes>0?"#ff8995":"#80d9e8";
    ctx.save();
    ctx.scale(width/1280,height/720);
-   ctx.translate(0,shift);
+   ctx.translate(0,(1-fade)*8);
    ctx.globalAlpha=opacity;
-   // Keep the artwork well above the existing lower-third dialogue.
-   ctx.fillStyle="rgba(4,10,19,0.82)";
-   ctx.fillRect(x,y,w,h);
-   ctx.strokeStyle="rgba(104,166,184,0.56)";
+   // A compact upper-left tally board; the lower-third subtitles and
+   // bottom-right AI figure remain completely unobstructed.
+   ctx.fillStyle="rgba(5,13,24,0.87)";
+   ctx.fillRect(x,y,panelWidth,panelHeight);
+   ctx.strokeStyle="rgba(112,166,185,0.62)";
    ctx.lineWidth=1.4;
-   ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+   ctx.strokeRect(x+.5,y+.5,panelWidth-1,panelHeight-1);
    ctx.fillStyle=accent;
-   ctx.fillRect(x,y,5,h);
-   ctx.fillRect(x+18,y+19,42,2);
-   ctx.globalAlpha=opacity*.65;
-   ctx.fillRect(x+64,y+19,Math.min(265,265*clamp(elapsed/650)),1);
-   ctx.globalAlpha=opacity;
-   ctx.fillStyle="#a4c2ce";
+   ctx.fillRect(x,y,4,panelHeight);
    ctx.font="600 13px Arial, sans-serif";
-   ctx.fillText("HUMAN VERIFICATION  /  TEST 67",x+18,y+43);
-   ctx.font="700 20px Arial, sans-serif";
-   ctx.fillStyle="#f2f7fa";
-   ctx.fillText(cue.heading,x+18,y+84);
-   ctx.font="600 13px Arial, sans-serif";
+   ctx.fillStyle="#9db8c9";
+   ctx.fillText("HUMAN VERIFICATION  /  TEST 67",x+21,y+30);
+   ctx.strokeStyle="rgba(126,161,180,0.30)";
+   ctx.beginPath();ctx.moveTo(x+21,y+45);
+   ctx.lineTo(x+panelWidth-21,y+45);ctx.stroke();
+   ctx.font="700 21px Arial, sans-serif";
+   ctx.fillStyle="#eff8ff";
+   ctx.fillText("VOTE TALLY",x+21,y+77);
+   ctx.textAlign="right";
+   ctx.font="700 15px Arial, sans-serif";
+   ctx.fillStyle="#c5d6df";
+   ctx.fillText("CONFIRMED "+String(cue.votes).padStart(2,"0"),x+panelWidth-21,y+77);
+   ctx.textAlign="left";
+   // Each row has four possible ballot markers. The fill animates
+   // 0 -> 1 -> 2 only at an AI-confirmed vote, with no countdown.
+   for(let i=0;i<candidates.length;i++){
+    const name=candidates[i],isEthan=name==="ETHAN";
+    const rowY=y+123+i*41;
+    const confirmed=isEthan?cue.votes:0;
+    const filled=isEthan?displayedVotes:0;
+    ctx.fillStyle=isEthan&&confirmed>0?"#fff0f2":"#bed0db";
+    ctx.font=isEthan?"700 16px Arial, sans-serif":"600 15px Arial, sans-serif";
+    ctx.fillText(name,x+21,rowY);
+    const slotX=x+200,slotW=34,slotGap=5,slotY=rowY-14;
+    for(let n=0;n<ballotSlots;n++){
+     const sx=slotX+n*(slotW+slotGap);
+     ctx.fillStyle="rgba(120,155,170,0.20)";
+     ctx.fillRect(sx,slotY,slotW,14);
+     const strength=clamp(filled-n);
+     if(strength>0){
+      ctx.fillStyle="#ff7586";
+      ctx.fillRect(sx,slotY,slotW*strength,14);
+     }
+    }
+    ctx.textAlign="right";
+    ctx.font=isEthan?"700 22px Arial, sans-serif":"600 19px Arial, sans-serif";
+    ctx.fillStyle=isEthan&&confirmed>0?"#ff9ba6":"#aabcc8";
+    ctx.fillText(String(confirmed).padStart(2,"0"),x+panelWidth-21,rowY+3);
+    ctx.textAlign="left";
+   }
+   ctx.strokeStyle="rgba(126,161,180,0.30)";
+   ctx.beginPath();ctx.moveTo(x+21,y+279);
+   ctx.lineTo(x+panelWidth-21,y+279);ctx.stroke();
+   ctx.font="600 12px Arial, sans-serif";
    ctx.fillStyle=accent;
-   ctx.fillText(cue.detail,x+18,y+111);
-   ctx.strokeStyle="rgba(123,168,182,0.33)";
-   ctx.beginPath();
-   ctx.moveTo(x+18,y+132);
-   ctx.lineTo(x+w-18,y+132);
-   ctx.stroke();
-   ctx.font="600 13px Arial, sans-serif";
-   ctx.fillStyle="#b1c1c9";
-   ctx.fillText(cue.status,x+18,y+163);
-   if(cue.votes){
-    ctx.font="700 46px Arial, sans-serif";
-    ctx.fillStyle=cue.accent==="red"?"#ff929d":"#d6f8ff";
-    ctx.fillText(String(cue.votes).padStart(2,"0"),x+w-78,y+180);
-   }else{
-    ctx.fillStyle="rgba(120,213,223,0.4)";
-    for(let i=0;i<3;i++)ctx.fillRect(x+w-77+i*17,y+159,9,9);
-   }
-   // Short scan on cue entry only. No loop and no delayed step advancement.
-   if(!reducedMotion&&elapsed<760){
-    const p=clamp(elapsed/760);
-    ctx.globalAlpha=opacity*(1-p)*.42;
-    ctx.fillStyle=accent;
-    ctx.fillRect(x+9,y+58+p*140,w-18,2);
-   }
+   ctx.fillText(cue.heading,x+21,y+308);
+   ctx.textAlign="right";
+   ctx.fillStyle="#c5d6df";
+   ctx.fillText(cue.status,x+panelWidth-21,y+308);
    ctx.restore();
   }
  }

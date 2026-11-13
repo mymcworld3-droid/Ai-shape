@@ -620,17 +620,20 @@ async function fastVoting(page){
         return labels;
       });
       const allowed=new Set([
-        'HUMAN VERIFICATION  /  TEST 67','SELECTION REQUESTED',
-        'NOMINATION RECEIVED','VOTE REGISTERED','FINAL SELECTION',
-        'AWAITING NOMINATIONS','CHRISTOPHER  /  ETHAN',
-        'MEGAN  /  ETHAN','SUBJECT  /  ETHAN','AWAITING RESPONSE',
-        'INPUT OPEN','VERIFYING INPUT','ONE VOTE','TWO VOTES',
-        'INPUT REQUIRED','01','02'
+        'HUMAN VERIFICATION  /  TEST 67','VOTE TALLY',
+        'CHRISTOPHER','ETHAN','MEGAN','RACHEL',
+        'CONFIRMED 00','CONFIRMED 01','CONFIRMED 02',
+        'NOMINATION RECEIVED','VOTE REGISTERED','SELECTION REQUESTED',
+        'FINAL SELECTION','INPUT OPEN','VERIFYING INPUT',
+        'ONE VOTE','TWO VOTES','INPUT REQUIRED','00','01','02'
       ]);
       const phase=await page.evaluate(()=>stage.state);
-      const required=phase==='vote-prompt'?'SELECTION REQUESTED':
-        phase==='vote-final'?'FINAL SELECTION':'VOTE REGISTERED';
-      assert.ok(drawn.includes(required),'The cue must show its own cinematic vote overlay');
+      const required=phase==='vote-prompt'?'CONFIRMED 00':
+        phase==='vote-one'?'CONFIRMED 01':'CONFIRMED 02';
+      assert.ok(drawn.includes("VOTE TALLY"),"The vote tally board must be visible");
+      assert.ok(drawn.includes(required),"Only AI-confirmed votes may appear in the tally");
+      for(const name of ['CHRISTOPHER','ETHAN','MEGAN','RACHEL'])
+        assert.ok(drawn.includes(name),"Every candidate must remain on the voting board: "+name);
       assert.ok(drawn.every(text=>allowed.has(text)),'Unexpected legacy vote text appeared');
       assert.ok(await page.locator('#subtitles').evaluate(el=>{
         const top=el.getBoundingClientRect().top;
