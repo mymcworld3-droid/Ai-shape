@@ -58,24 +58,6 @@
     return { x: region.x + region.width / 2, y: region.y + region.height / 2,
       scale: Math.min(clip.width / width, clip.height / height), clip };
   }
-  // Soft CRT/security-camera flicker: two irregular-looking clusters every
-  // ~6 seconds, with a low idle glow rather than rapid full-screen strobes.
-  // Pure elapsed-time math means seeking the show never leaks old timers.
-  function monitorFlickerLevel(timeMs, offsetMs = 0) {
-    if (!Number.isFinite(timeMs) || !Number.isFinite(offsetMs))
-      throw new RangeError("Monitor flicker timing must be finite.");
-    const t = Math.max(0, timeMs + offsetMs), phase = t % 6130;
-    const idle = 0.06 + 0.035 * (1 + Math.sin(t / 480));
-    const burst = phase >= 360 && phase < 1120 ||
-      phase >= 3320 && phase < 3690 ||
-      phase >= 5170 && phase < 5500;
-    if (!burst) return idle;
-    // 195 ms per brightness change avoids harsh high-frequency strobing.
-    const cell = Math.floor(t / 195);
-    const noise = Math.sin((cell + 1) * 12.9898 + offsetMs * 0.013) * 43758.5453;
-    const random = noise - Math.floor(noise);
-    return Math.min(0.90, idle + 0.32 + random * 0.47);
-  }
   function fadeInProgress(elapsed, duration) {
     if (![elapsed, duration].every(Number.isFinite) || duration < 0) {
       throw new RangeError("Fade timing must be finite, with a nonnegative duration.");
@@ -130,5 +112,5 @@
   function previewFrame(cue) {
     return Object.prototype.hasOwnProperty.call(previews, cue) ? previews[cue] : null;
   }
-  return { fitStage, coverLayout, projectImageRegion, fitRadialGraphic, fitRectGraphic, expandGraphicPose, fadeInProgress, monitorFlickerLevel, previewFrame };
+  return { fitStage, coverLayout, projectImageRegion, fitRadialGraphic, fitRectGraphic, expandGraphicPose, fadeInProgress, previewFrame };
 });
