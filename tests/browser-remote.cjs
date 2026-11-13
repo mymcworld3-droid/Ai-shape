@@ -71,8 +71,11 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
     endingVoice:{state:document.getElementById("endingVoiceAudio").readyState,
      error:document.getElementById("endingVoiceAudio").error?.code},
     globals:{config:typeof OPENING_CONFIG,
-     endingVoice:typeof EndingVoice,sceneMusic:typeof sceneBackgroundMusic,
-     stage:typeof stage,assets:typeof showAssetsReady,scriptMode:typeof scriptMode},
+     endingVoiceModule:typeof EndingVoice,
+     sceneMusic:(()=>{try{return typeof sceneBackgroundMusic}catch(e){return e.message}})(),
+     stage:(()=>{try{return typeof stage}catch(e){return e.message}})(),
+     assets:(()=>{try{return typeof showAssetsReady}catch(e){return e.message}})(),
+     scriptMode:(()=>{try{return typeof scriptMode}catch(e){return e.message}})()},
     documentReady:document.readyState
    }));
    throw new Error("Remote test projector assets blocked Start: "+JSON.stringify(status)+
