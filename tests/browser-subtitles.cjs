@@ -590,6 +590,27 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
     {id,index:endBlackoutIndex+i+1},{timeout:10500});
    assert.equal(await page.locator('body').getAttribute('data-script-action'),id);
    assert.equal(await page.locator('#endCreditsLayer').isVisible(),true);
+   if(id==='credit-backgrounds'){
+    const layers=await page.locator('#endCreditsLayer [data-credit="credit-backgrounds"]')
+     .evaluate(card=>{
+      const block=card.querySelector('.end-credit-block');
+      const role=card.querySelector('.end-credit-role');
+      const names=card.querySelector('.end-credit-names');
+      const fog=getComputedStyle(block,'::before');
+      return {
+       fogZ:fog.zIndex,roleZ:getComputedStyle(role).zIndex,
+       namesZ:getComputedStyle(names).zIndex,
+       fogBackground:fog.backgroundImage,
+       layerBackground:getComputedStyle(card.parentElement).backgroundColor
+      };
+     });
+    assert.equal(layers.fogZ,'0','Backgrounds fog must sit above the AI canvas');
+    assert.equal(layers.roleZ,'1','Backgrounds title must sit above fog');
+    assert.equal(layers.namesZ,'1','Backgrounds names must sit above fog');
+    assert.match(layers.fogBackground,/radial-gradient/);
+    assert.equal(layers.layerBackground,'rgba(0, 0, 0, 0)',
+     'Backgrounds credit layer must stay transparent over the AI waveform');
+   }
    if(i)transitionsAt.push(await page.evaluate(()=>performance.now()));
   }
   const durations=[3000,2800,2800,2700,7000];

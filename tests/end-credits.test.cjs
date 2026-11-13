@@ -107,6 +107,10 @@ test("finale audio-responsive AI stays behind DOM text with synced fade and fog"
  const js=fs.readFileSync(path.join(__dirname,"..","visualizer.js"),"utf8");
  assert.match(css,/#endCreditsLayer\[data-ending-ai="true"\]\{background:transparent\}/);
  assert.match(css,/\.end-credit-unfold \.end-credit-block::before/);
+ assert.match(css,/\.end-credit-unfold \.end-credit-block\{[^}]*isolation:isolate;z-index:0\}/);
+ assert.match(css,/\.end-credit-unfold \.end-credit-block::before\{[^}]*z-index:0;pointer-events:none/);
+ assert.match(css,/\.end-credit-unfold \.end-credit-role,\s*\.end-credit-unfold \.end-credit-names\{position:relative;z-index:1\}/);
+ assert.doesNotMatch(css,/\.end-credit-unfold \.end-credit-block::before\{[^}]*z-index:-1/);
  assert.match(js,/function paintEndingWave\(cue,now,preview\)/);
  assert.match(js,/const a=analyze\(\),targetEnergy=/);
  assert.match(js,/target.fadeWithText&&!preview\?endCredits.visualOpacity:1/);

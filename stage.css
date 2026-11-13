@@ -148,15 +148,19 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
 .end-credit-unfold .end-credit-names{font-size:4.4cqh}
 /* The Backgrounds credit mist lives inside its animated lettering: both vanish
    on the same frame and the bright real AI waveform stays BEHIND the text. */
-.end-credit-unfold .end-credit-block{position:relative;isolation:isolate}
+.end-credit-unfold .end-credit-block{position:relative;isolation:isolate;z-index:0}
+/* Backgrounds: real Ending.mp3 AI (canvas) < fog (0) < foreground text (1).
+   Keep the fog inside the animated credit card so both fade together. */
 .end-credit-unfold .end-credit-block::before{
- content:"";position:absolute;z-index:-1;pointer-events:none;
+ content:"";position:absolute;z-index:0;pointer-events:none;
  left:5%;right:5%;top:48%;height:68%;
  background:radial-gradient(ellipse at center,
-  rgba(211,226,243,.22) 0%,rgba(134,158,186,.13) 34%,
-  rgba(79,104,137,.04) 58%,transparent 78%);
+  rgba(211,226,243,.24) 0%,rgba(134,158,186,.15) 34%,
+  rgba(79,104,137,.05) 58%,transparent 78%);
  filter:blur(2.3cqh);transform:translateY(10%)
 }
+.end-credit-unfold .end-credit-role,
+.end-credit-unfold .end-credit-names{position:relative;z-index:1}
 .end-credit-film-title{display:flex;flex-direction:column;align-items:center;
  justify-content:center;line-height:.94;transform-origin:center center}
 .end-credit-the{font-family:Georgia,serif;font-size:3.0cqh;font-weight:500;
