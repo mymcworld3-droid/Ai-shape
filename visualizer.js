@@ -992,7 +992,7 @@ function drawOuterHex(radius,rot,audio){
 
 function drawParticles(audio,coreRadius){
  for(const p of particles){
-  if(!audioElement.paused&&!audioElement.ended)p.a+=p.s*16;
+  if((!audioElement.paused&&!audioElement.ended)||(!endingVoiceAudio.paused&&!endingVoiceAudio.ended))p.a+=p.s*16;
   // Fixed annulus beyond the whole core, with a gap even at maximum dot size.
   const r=coreRadius+6*scale+p.band*Math.min(w,h)*.055;
   const x=cx+Math.cos(p.a)*r,y=cy+Math.sin(p.a)*r;
@@ -1187,6 +1187,14 @@ function draw(){
  requestAnimationFrame(draw);
  const now=performance.now();opening.getRemainingMs();updateTransitions(now);
  const frame=projectionFrame();
+ // Step IDs, not the renumbered dialogue list, select the finale pose.
+ const endCue=frame.script?frame.endingAction:(frame.preview?previewCue:stage.state);
+ if(EndCredits.endingAiPose(endCue)){
+  ctx.fillStyle="#000";ctx.fillRect(0,0,w,h);
+  paintEndingWave(endCue,now,Boolean(frame.preview));
+  return;
+ }
+ endWaveCue=null;endWavePose=null;endWaveFrom=null;
  // Complete blackout includes the room, clock, card and letterbox pixels.
  // The audio-owned deadline continues even while nothing is projected.
  // Cue 0 deliberately shows the supplied blue-tinted Start_dark.PNG room.
