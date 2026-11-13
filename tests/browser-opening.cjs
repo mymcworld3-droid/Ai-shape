@@ -721,7 +721,7 @@ async function fastVoting(page){
     assert.equal(await page.locator('#visualizer').evaluate(c=>{
       const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
       return d.every((v,i)=>i%4===3||v===0);
-    }),true,'Final Act IV blackout remains solid black during the soundtrack lead');
+    }),false,'Final blackout displays the Ending.mp3-driven AI graphic at the lower-right');
     await page.screenshot({path:path.join(output,'27-ending-blackout.png')});
     const endCards=require('../end-credits').cards.map(card=>card.id);
     assert.equal(endCards.length,6);
