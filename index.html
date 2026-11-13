@@ -33,6 +33,7 @@
       <audio id="selectionFinalAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
       <audio id="endingCompleteAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
       <audio id="endingRevealAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
+      <audio id="endingVoiceAudio" preload="auto" aria-hidden="true" tabindex="-1"></audio>
     </div>
   </div>
   <output id="volumeDisplay" aria-label="語音、音效與背景音樂音量" aria-live="off">語音 100%
@@ -87,7 +88,7 @@
         <li><button type="button" data-preview="ending-complete" aria-pressed="false"><span class="step-number">31</span><span>AI 宣布測試完成<small>原稿 p409</small></span></button></li>
         <li><button type="button" data-preview="ending-question" aria-pressed="false"><span class="step-number">32</span><span>眾人追問真相<small>What...? · Then who is the robot?</small></span></button></li>
         <li><button type="button" data-preview="ending-reveal" aria-pressed="false"><span class="step-number">33</span><span>AI 揭露真相<small>原稿 p414</small></span></button></li>
-        <li><button type="button" data-preview="ending-blackout" aria-pressed="false"><span class="step-number">34</span><span>最終全暗<small>You may leave. · Ending.mp3 播放 1.6 秒後自動進入片尾</small></span></button></li>
+        <li><button type="button" data-preview="ending-blackout" aria-pressed="false"><span class="step-number">34</span><span>最終全暗<small>You may leave. · AI 語音 Ending.mp3 播放 1.6 秒後自動進入片尾</small></span></button></li>
         <li class="scene-divider" role="presentation">片尾字幕 · 參照 Directed by.pdf（六張文字畫面）</li>
         <li><button type="button" data-preview="credit-directed" aria-pressed="false"><span class="step-number">35</span><span>Directed by<small>3.0 秒 · Sophia Chou · Curry Chen · Ricky Liu</small></span></button></li>
         <li><button type="button" data-preview="credit-conversation" aria-pressed="false"><span class="step-number">36</span><span>Based on the conversation between<small>2.8 秒 · Chat GPT · Sophia Chou</small></span></button></li>
@@ -137,6 +138,7 @@
 <script src="act-one-audio.js"></script>
 <script src="script-data.js"></script>
 <script src="end-credits.js"></script>
+<script src="ending-voice.js"></script>
 <script src="subtitle-data.js"></script>
 <script src="script-controller.js"></script>
 <script src="vote-overlay.js"></script>
