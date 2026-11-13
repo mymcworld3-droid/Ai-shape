@@ -132,6 +132,12 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
    'Voice cannot sound before the one-second lead-in');
   await timedMusic.waitForFunction(()=>endingVoiceAudio.volume>.03,
    null,{timeout:3500});
+  await timedMusic.evaluate(()=>stageActions.setVolume("music",0));
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.volume),1,
+   "Silencing the background-music channel must not affect Ending.mp3");
+  await timedMusic.evaluate(()=>stageActions.setVolume("voice",35));
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.volume),.35,
+   "Ending.mp3 follows 1/Q voice gain, not 3/E music gain");
   const audioId=await timedMusic.evaluate(()=>endingVoiceAudio.id);
   await timedMusic.waitForFunction(index=>scriptShow.index===index,musicCueIndex+1,
    {timeout:6000});
