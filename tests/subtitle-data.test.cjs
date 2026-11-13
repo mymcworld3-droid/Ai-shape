@@ -29,7 +29,7 @@ test("restore all meaningful omitted lines from screenplay and latest Ben farewe
   "p325-1","p326-0","p327-0","p360-0","p362-0","p257-ben-song","p257-ben-exit"])
   assert.ok(ids.has(id),"missing restored line "+id);
  for(const e of original.entries.filter(e=>e.text)){
-  const changed=["p414-0","p384-0","p134-0"].includes(e.id);
+  const changed=["p414-0","p384-0","p134-0","p212-0"].includes(e.id);
   if(changed)continue;
   if(soundOnly.test(e.text.trim()))continue;
   assert.ok(allParts.some(p=>p.id===e.id&&p.text===e.text),
@@ -67,6 +67,41 @@ test("uninterrupted same-speaker words are grouped, but stage/photo/voice bounda
  assert.ok(entries.every((e,i)=>i===0||e.paragraph>=entries[i-1].paragraph));
  assert.equal(source.paragraphs[414].includes("There is no robot in the room"),true,
   "archived Word source stays intact; new subtitle text follows Google Doc");
+});
+
+test("silent step after the opening AI voice restores the room before Megan, without new audio",()=>{
+ const entries=subtitles.entries;
+ const ai=entries.findIndex(e=>e.id==="p28-6");
+ const returnRoom=entries[ai+1],megan=entries[ai+2];
+ assert.equal(returnRoom?.id,"opening-return-room");
+ assert.equal(returnRoom.paragraph,29);
+ assert.equal(returnRoom.kind,"cue");
+ assert.equal(returnRoom.speaker,"");
+ assert.equal(returnRoom.text,"");
+ assert.equal(returnRoom.action,null);
+ assert.equal(returnRoom.group,null);
+ assert.deepEqual(returnRoom.parts,[]);
+ assert.equal(returnRoom.look.background,"opening");
+ assert.equal(returnRoom.look.room,true);
+ assert.equal(returnRoom.look.scene,0,"The full-screen AI must recede to the room");
+ assert.equal(returnRoom.look.ai,0);
+ assert.equal(returnRoom.look.clock,1,"The running clock remains in the room");
+ assert.equal(returnRoom.look.blackout,0);
+ assert.equal(megan.text,"What?! Is this some kind of prank?! Who set this up?");
+ assert.ok(megan.parts.some(p=>p.id==="p30-1"));
+ assert.equal(original.entries.some(e=>e.id==="opening-return-room"),false,
+  "The original scene-mode cue list remains unchanged");
+});
+
+test("remove only Christopher's isolated Act II Scene II 'I…' cue",()=>{
+ const entries=subtitles.entries;
+ assert.equal(entries.some(e=>e.id==="p212-0"||e.parts?.some(p=>p.id==="p212-0")),false);
+ assert.equal(original.entries.find(e=>e.id==="p212-0")?.speaker,"CHRISTOPHER");
+ assert.equal(original.entries.find(e=>e.id==="p212-0")?.text,"I…");
+ assert.ok(entries.some(e=>e.id==="p213-0"&&e.action==="officeBang"),
+  "The immediately following office bang stays in the original sequence");
+ assert.ok(entries.some(e=>e.id==="p61-0"),
+  "Unrelated Ethan speech must not be removed");
 });
 
 test("delete former step 271; the next step starts voting AI and voice together",()=>{
@@ -201,7 +236,8 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.deepEqual(card?.parts.map(part=>part.id),["p83-1"]);
  assert.equal(entries.filter(e=>e.paragraph===83).length,1,
   "flip-card cue and reading are one navigable step");
- assert.equal(entries.length,298,"Christopher and Megan speeches each split into two manual subtitle steps");
+ assert.equal(entries.length,298,
+  "The silent return-to-room cue replaces the removed Christopher utterance");
  for(const [id,partIds,names] of [
   ["p78-0",["p78-0","p79-0"],["MEGAN","ETHAN"]],
   ["p121-0",["p121-0","p122-0","p122-1"],["MEGAN","ETHAN"]],

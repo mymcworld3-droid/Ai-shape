@@ -71,6 +71,21 @@
   cardCue.parts=[...cardLine.parts];
   entries.splice(entries.indexOf(cardLine),1);
  }
+ // The last AI announcement retains its original clock/voice action.
+ // One new silent manual cue returns the projector to the bright room with
+ // the in-room countdown visible; no audio, narration or subtitle is added.
+ const lastOpening=entries.findIndex(e=>e.id==="p28-6");
+ const firstActor=entries.findIndex(e=>e.id==="p30-0");
+ if(lastOpening<0||firstActor!==lastOpening+1||
+    entries.some(e=>e.id==="opening-return-room"))
+  throw Error("Opening return-to-room boundary unavailable");
+ const roomLook={...entries[firstActor].look,background:"opening",
+  room:true,ai:0,scene:0,clock:1,blackout:0};
+ entries.splice(firstActor,0,{
+  id:"opening-return-room",paragraph:29,act:"I",scene:"I",
+  speaker:"",text:"",action:null,group:null,kind:"cue",
+  note:"回到房間（無字幕）",look:roomLook,parts:[]
+ });
  // The latest Google Doc explicitly says "among the four of you".
  const finalFirst=entries.find(e=>e.id==="p414-0");
  if(finalFirst){
@@ -109,7 +124,7 @@
  // The following AI selection prompt becomes the next operator-controlled step.
  // Also remove Megan's "Who's this?" (former step 90) from subtitle mode.
  // Archived manuscript/scene cues remain untouched.
- const removedDialogueIds=new Set(["p384-0","p134-0"]);
+ const removedDialogueIds=new Set(["p384-0","p134-0","p212-0"]);
  const kept=entries.filter(e=>!removedDialogueIds.has(e.id)&&
   (e.kind!=="dialogue"||!soundOnly.test(e.text.trim())));
  const visualBoundaryIds=new Set([

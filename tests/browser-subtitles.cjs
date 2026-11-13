@@ -40,6 +40,15 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
    const e=data.entries.find(item=>item.id===id);
    assert.ok(e&&e.parts.length===1,'Separate manual subtitle step: '+id);
   }
+  const returnRoomIndex=data.entries.findIndex(e=>e.id==='opening-return-room');
+  assert.ok(returnRoomIndex>0);
+  assert.equal(data.entries[returnRoomIndex-1].id,'p28-6');
+  assert.equal(data.entries[returnRoomIndex+1].text,'What?! Is this some kind of prank?! Who set this up?');
+  assert.equal(data.entries[returnRoomIndex].text,'');
+  assert.equal(data.entries[returnRoomIndex].group,null);
+  assert.equal(data.entries[returnRoomIndex].action,null);
+  assert.equal(data.entries.some(e=>e.id==='p212-0'),false,
+    "The isolated Christopher I… subtitle is deleted");
   assert.equal(data.entries.some(x=>x.id==='p134-0'),false,
     "Former subtitle step 90 is deleted");
   for(const p of [42,185,188,195,221,269])assert.ok(!data.entries.some(x=>x.paragraph===p&&x.kind==='cue'));
@@ -270,6 +279,20 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   await page.keyboard.down('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),clock);
   await page.keyboard.up('ArrowRight');const deadline=await page.evaluate(()=>scriptShow.deadlines.opening);assert.ok(deadline>0);
   await page.waitForTimeout(1100);await page.screenshot({path:path.join(out,'script-clock.png')});
+  // After the AI has finished the original recording, one operator
+  // press enters a silent room-only cue before Megan begins speaking.
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await page.evaluate(()=>scriptShow.index),returnRoomIndex);
+  assert.equal(await page.locator('#subtitleText').textContent(),'');
+  assert.equal(await page.locator('#subtitles').isVisible(),false);
+  const roomFrame=await page.evaluate(()=>scriptProjectionFrame());
+  assert.equal(roomFrame.room,true);
+  assert.equal(roomFrame.background,'opening');
+  assert.equal(await page.evaluate(()=>transitions.scene.target),0);
+  assert.equal(await page.evaluate(()=>transitions.clock.target),1);
+  assert.equal(await page.evaluate(()=>transitions.ai.target),0);
+  assert.equal(await page.locator('#openingAudio').evaluate(a=>a.paused),true);
+  assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening>0),true);
   checks.push('F resets preview to opening; Space advances each AI sentence while real 22.36s audio continues; clock starts only at genuine end, held key never spills to actor line');
   // Subsequent media still run naturally; AI subtitles are manual, never elapsed-time driven.
   const backgroundCut=data.entries.findIndex(e=>e.id==='p388-2');
