@@ -150,7 +150,7 @@ if(scriptMode){
     StageLayout.fadeInProgress(performance.now()-scriptPreviewAiStartedAt,config.aiFadeMs);
   }
   return {...entry.look,voiceGroup:entry.group,preview:!startGate.started,caption:null,script:true,
-   voteParagraph:entry.paragraph,voteCueId:entry.id,
+   voteParagraph:entry.paragraph,voteCueId:entry.id,endingAction:entry.action,
    photoSide:photoForEntry(entry),
    cueZero:entry.id==='pre-show',
    hideBackground:votingState(entry).hideBackground,

@@ -131,6 +131,7 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
    all text is crisp when the projection is resized or opened fullscreen. */
 #endCreditsLayer{position:absolute;inset:0;z-index:6;background:#000;overflow:hidden;
  pointer-events:none;isolation:isolate}
+#endCreditsLayer[data-ending-ai="true"]{background:transparent}
 #endCreditsLayer[hidden]{display:none!important}
 .end-credit-card{position:absolute;inset:0;display:grid;place-items:center;
  transform-origin:50% 50%;will-change:transform,opacity,filter;
@@ -145,6 +146,17 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
  gap:1.8cqh;color:#f1f1f1;font-size:5cqh;font-weight:700;
  letter-spacing:.10em;line-height:1.18;text-transform:uppercase}
 .end-credit-unfold .end-credit-names{font-size:4.4cqh}
+/* The producer credit mist lives inside its animated lettering: both vanish
+   on the same frame and the bright real AI waveform stays BEHIND the text. */
+.end-credit-turn .end-credit-block{position:relative;isolation:isolate}
+.end-credit-turn .end-credit-block::before{
+ content:"";position:absolute;z-index:-1;pointer-events:none;
+ left:5%;right:5%;top:48%;height:68%;
+ background:radial-gradient(ellipse at center,
+  rgba(211,226,243,.22) 0%,rgba(134,158,186,.13) 34%,
+  rgba(79,104,137,.04) 58%,transparent 78%);
+ filter:blur(2.3cqh);transform:translateY(10%)
+}
 .end-credit-film-title{display:flex;flex-direction:column;align-items:center;
  justify-content:center;line-height:.94;transform-origin:center center}
 .end-credit-the{font-family:Georgia,serif;font-size:3.0cqh;font-weight:500;
