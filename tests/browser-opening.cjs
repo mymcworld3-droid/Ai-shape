@@ -674,7 +674,7 @@ async function fastVoting(page){
     }),true);
     await page.keyboard.press('Space');await cue(page,'ending-light');await noControls(page);
     await page.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
-    assert.match(await page.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Ending\.m4a$/);
+    assert.match(await page.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Act4\.m4a$/);
     await page.waitForTimeout(1150);
     await matchesStill(page,'assets/backgrounds/memory-room.png');
     await page.keyboard.press('Space');await cue(page,'ending-dialogue');
@@ -1443,7 +1443,7 @@ async function fastVoting(page){
     assert.equal(await endingJump.locator('#endingCompleteAudio').evaluate(m=>m.paused&&m.currentTime===0),true);
     assert.equal(await endingJump.evaluate(()=>stage.ending.mediaStates.endingComplete),'finished');
     await endingJump.waitForFunction(()=>window.actOneBackgroundMusic?.activeAudio?.paused===false);
-    assert.match(await endingJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Ending\.m4a$/);
+    assert.match(await endingJump.evaluate(()=>window.actOneBackgroundMusic.current?.src),/act-4\/Act4\.m4a$/);
     await endingJump.locator('#endingRevealAudio').evaluate(a=>{a.currentTime=a.duration-.12;});
     await flag(endingJump,'endingRevealState','finished');
     await endingJump.waitForFunction(()=>performance.now()>=stage.busyUntil);
