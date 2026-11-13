@@ -103,3 +103,51 @@ test("tally board lists all four candidates and animates only confirmed votes",(
  tally.draw(canvas,frames[0],1800,1280,720);
  assert.equal(labels.length,before,"No tally artwork appears before the trigger");
 });
+
+test("hologram expands from the fixed top-left corner with reduced-motion fallback",()=>{
+ const {motionFor,board}=require("../vote-overlay.js");
+ const overlay=new Controller(),f={script:true,voteParagraph:389};
+ const first=motionFor(overlay.state(f,1000));
+ assert.equal(first.scale,.38);assert.equal(first.opacity,0);
+ const mid=motionFor(overlay.state(f,1100));
+ assert.ok(mid.scale>.38&&mid.scale<1);
+ assert.ok(mid.opacity>0&&mid.opacity<1);
+ assert.equal(motionFor(overlay.state(f,1275)).scale,1);
+ assert.deepEqual(board,{x:48,y:45,width:720,height:490});
+ assert.equal(motionFor(overlay.state(f,1100),true).scale,1);
+ assert.equal(motionFor(overlay.state(f,1100),true).flash,0);
+ assert.equal(motionFor(new Controller().state({...f,preview:true},1500)).scale,1);
+});
+test("two vote confirmations flash; nominations, rewinds and direct previews do not",()=>{
+ const {motionFor}=require("../vote-overlay.js");
+ const c=new Controller(),f=p=>({script:true,voteParagraph:p});
+ assert.equal(c.state(f(388),0),null);
+ c.state(f(389),100);
+ assert.equal(motionFor(c.state(f(389),190)).flash,0);
+ const first=c.state(f(390),200);
+ assert.equal(first.previousVotes,0);
+ assert.ok(motionFor(c.state(f(390),270)).flash>.15);
+ assert.equal(motionFor(c.state(f(390),700)).flash,0);
+ assert.equal(motionFor(c.state(f(393),800)).flash,0);
+ c.state(f(395),900);
+ assert.ok(motionFor(c.state(f(395),970)).flash>.15);
+ assert.equal(motionFor(c.state(f(395),1400)).displayedVotes,2);
+ assert.equal(motionFor(c.state(f(390),1450)).flash,0);
+ assert.equal(motionFor(new Controller().state(f(395),1600)).flash,0);
+ assert.equal(motionFor(new Controller().state({...f(395),preview:true},1700)).flash,0);
+});
+test("panel is large and uses a true top-left scaling pivot",()=>{
+ const ops=[];
+ const ctx=new Proxy({},{
+  get(t,k){return k in t?t[k]:(...args)=>ops.push({name:k,args});},
+  set(t,k,v){t[k]=v;return true;}
+ });
+ const c=new Controller(),f={script:true,voteParagraph:389};
+ c.draw(ctx,f,1000,1280,720);
+ c.draw(ctx,f,1100,1280,720);
+ assert.ok(ops.some(c=>c.name==="translate"&&c.args[0]===48&&c.args[1]===45));
+ assert.ok(ops.some(c=>c.name==="scale"&&c.args[0]>.38&&c.args[0]<1));
+ assert.ok(ops.some(c=>c.name==="fillText"&&c.args[0]==="VOTE TALLY"));
+ for(const name of ["CHRISTOPHER","ETHAN","MEGAN","RACHEL"])
+  assert.ok(ops.some(c=>c.name==="fillText"&&c.args[0]===name));
+});
