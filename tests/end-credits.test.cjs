@@ -120,3 +120,15 @@ test("finale audio-responsive AI stays behind DOM text with synced fade and fog"
  assert.match(js,/for\(const coil of coils\)drawCoil\(coil\)/);
  assert.match(js,/if\(EndCredits.endingAiPose\(endCue\)\)/);
 });
+
+test("The Button's metallic-red gradient remains Safari compatible",()=>{
+ const fs=require("node:fs"),path=require("node:path");
+ const css=fs.readFileSync(path.join(__dirname,"..","stage.css"),"utf8");
+ assert.match(css,/\.end-credit-button\{[^}]*-webkit-text-stroke:\.11cqh #cbd0d7/);
+ assert.match(css,/background-image:linear-gradient\(180deg,/);
+ assert.match(css,/-webkit-background-clip:text/);
+ assert.match(css,/-webkit-text-fill-color:transparent/);
+ assert.match(css,/drop-shadow/);
+ assert.equal(EndCredits.motion.infinity.enter.at(-1).transform,"scale(1)",
+  "The existing The Button zoom must stay unchanged");
+});
