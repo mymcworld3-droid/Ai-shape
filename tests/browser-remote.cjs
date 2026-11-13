@@ -55,7 +55,24 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
   await guestB.goto(origin+"/remote.html");
   assert.equal(await guestA.locator('[data-action="next"]').isDisabled(),true);
   assert.equal(await guestB.locator('[data-action="next"]').isDisabled(),true);
-  await stage.waitForFunction(()=>!document.getElementById("startButton").disabled,null,{timeout:60000});
+  // Failed readiness should explain which asset is still unavailable
+  // instead of repeatedly timing out on a disabled Start button.
+  try{
+   await stage.waitForFunction(()=>!document.getElementById("startButton").disabled,null,{timeout:18000});
+  }catch(error){
+   const status=await stage.evaluate(()=>({
+    buttonDisabled:document.getElementById("startButton").disabled,
+    status:document.getElementById("startStatus").textContent,
+    dataset:{...document.body.dataset},
+    video:{state:document.getElementById("roomRevealVideo").readyState,
+     error:document.getElementById("roomRevealVideo").error?.code},
+    opening:{state:document.getElementById("openingAudio").readyState,
+     error:document.getElementById("openingAudio").error?.code},
+    endingVoice:{state:document.getElementById("endingVoiceAudio").readyState,
+     error:document.getElementById("endingVoiceAudio").error?.code}
+   }));
+   throw new Error("Remote test projector assets blocked Start: "+JSON.stringify(status)+"; "+error.message);
+  }
   await stage.locator("#startButton").click();
   await guestA.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
   await guestB.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
