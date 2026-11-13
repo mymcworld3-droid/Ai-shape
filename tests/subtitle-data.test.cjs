@@ -93,6 +93,65 @@ test("silent step after the opening AI voice restores the room before Megan, wit
   "The original scene-mode cue list remains unchanged");
 });
 
+test("the AI screen light-up and opening greeting share one operator step",()=>{
+ const entries=subtitles.entries;
+ const greeting=entries.find(e=>e.id==="p28-0");
+ assert.equal(entries.some(e=>e.id==="p27-0"),false,
+  "The standalone screen-lights-up cue is merged away in subtitle mode");
+ assert.equal(greeting?.action,"ai",
+  "The visible welcome step also triggers the original screen-light animation");
+ assert.equal(greeting?.group,"opening","Opening AI narration must start on the same step");
+ assert.equal(greeting?.text,"Welcome to HUMAN VERIFICATION TEST NUMBER #67.");
+ assert.equal(greeting?.speaker,"AI VOICE");
+ assert.deepEqual(greeting?.parts?.map(p=>p.id),["p28-0"]);
+ assert.equal(original.entries.find(e=>e.id==="p27-0")?.action,"ai",
+  "The original scene-mode AI cue is preserved");
+ assert.equal(original.entries.find(e=>e.id==="p28-0")?.action,null,
+  "Scene mode remains separate");
+});
+
+test("an independent dim step follows Go ahead before Christopher's manager confession",()=>{
+ const entries=subtitles.entries;
+ const go=entries.findIndex(e=>e.id==="p179-0");
+ const dim=entries[go+1],manager=entries[go+2];
+ assert.ok(go>=0);
+ assert.equal(dim?.id,"memory-dim-before-manager");
+ assert.equal(dim?.paragraph,185);
+ assert.equal(dim?.kind,"cue");
+ assert.equal(dim?.speaker,"");
+ assert.equal(dim?.text,"");
+ assert.equal(dim?.action,null);
+ assert.equal(dim?.group,null);
+ assert.equal(dim?.note,"燈暗（無字幕）");
+ assert.deepEqual(dim?.parts,[]);
+ assert.equal(dim?.look.scene,.35);
+ assert.equal(dim?.look.blackout,0);
+ assert.equal(dim?.look.background,"memory");
+ assert.equal(manager?.id,"p186-0");
+ assert.equal(manager?.text,"It was when I was still working as a manager.");
+ assert.equal(manager?.look.scene,.35);
+});
+
+test("office [full] and Megan's joined retort obey separate subtitle boundaries",()=>{
+ const entries=subtitles.entries;
+ assert.equal(entries.some(e=>e.id==="p199-0"),false,
+  "The ACT II SCENE II [full] operator step is deleted");
+ assert.equal(original.entries.find(e=>e.id==="p199-0")?.action,"office-full",
+  "Scene-mode office lighting is untouched");
+ const office=entries.findIndex(e=>e.id==="p198-0");
+ assert.equal(entries[office+1]?.id,"p200-0");
+ assert.equal(entries[office+1]?.look.background,"office");
+ assert.equal(entries[office+1]?.look.scene,0,
+  "Office stays bright on the next spoken cue");
+ const first=entries.findIndex(e=>e.id==="p342-0");
+ assert.equal(entries[first]?.text,"Blah blah blah, can you just shut up?");
+ assert.equal(entries[first+1]?.id,"p344-0");
+ assert.equal(entries[first+1]?.text,"Oh frick. Ya please continue.");
+ assert.deepEqual(entries[first+1]?.parts?.map(p=>p.id),["p344-0","p344-1"]);
+ assert.equal(entries[first].speaker,"MEGAN");
+ assert.equal(entries[first+1].speaker,"MEGAN");
+});
+
 test("remove only Christopher's isolated Act II Scene II 'I…' cue",()=>{
  const entries=subtitles.entries;
  assert.equal(entries.some(e=>e.id==="p212-0"||e.parts?.some(p=>p.id==="p212-0")),false);

@@ -209,6 +209,20 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(await voiceRehearsal.locator('#subtitleText').textContent(),data.entries[truthIndex].text);
   assert.equal(await voiceRehearsal.locator('#selectionPromptAudio').evaluate(a=>a.paused),true);
   await voiceRehearsal.close();
+  // Regression checks for the operator's revised lighting and script steps.
+  const welcomeCue=data.entries.find(e=>e.id==='p28-0');
+  assert.equal(welcomeCue?.action,'ai');
+  assert.equal(welcomeCue?.group,'opening');
+  assert.equal(data.entries.some(e=>e.id==='p27-0'),false);
+  const permissionIndex=data.entries.findIndex(e=>e.id==='p179-0');
+  assert.equal(data.entries[permissionIndex+1]?.id,'memory-dim-before-manager');
+  assert.equal(data.entries[permissionIndex+1]?.text,'');
+  assert.equal(data.entries[permissionIndex+1]?.look.scene,.35);
+  assert.equal(data.entries[permissionIndex+2]?.id,'p186-0');
+  assert.equal(data.entries.some(e=>e.id==='p199-0'),false);
+  const meganQuip=data.entries.findIndex(e=>e.id==='p342-0');
+  assert.equal(data.entries[meganQuip+1]?.id,'p344-0');
+  assert.equal(data.entries[meganQuip+1]?.text,'Oh frick. Ya please continue.');
   // Fourth-act indexes change when dialogue lines are joined: use real cues.
    const after366=await browser.newPage({viewport:{width:1280,height:720}});
    await after366.goto(url);

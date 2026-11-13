@@ -71,6 +71,19 @@
   cardCue.parts=[...cardLine.parts];
   entries.splice(entries.indexOf(cardLine),1);
  }
+ // Operator cue 6 lights the AI screen, and cue 7 begins its greeting.
+ // They are one operator step: retain p28's stable dialogue identity and
+ // media group, while transferring the original 'ai' action to that greeting.
+ // Keep script-data.js unchanged so the independent scene mode is untouched.
+ const revealCue=entries.find(e=>e.id==="p27-0");
+ const welcomeLine=entries.find(e=>e.id==="p28-0");
+ if(!revealCue||!welcomeLine||revealCue.action!=="ai"||
+    welcomeLine.group!=="opening"||
+    entries.indexOf(welcomeLine)!==entries.indexOf(revealCue)+1)
+  throw Error("AI screen and first announcement cue boundary missing");
+ welcomeLine.action="ai";
+ welcomeLine.note=revealCue.note;
+ entries.splice(entries.indexOf(revealCue),1);
  // The last AI announcement retains its original clock/voice action.
  // One new silent manual cue returns the projector to the bright room with
  // the in-room countdown visible; no audio, narration or subtitle is added.
@@ -86,6 +99,31 @@
   speaker:"",text:"",action:null,group:null,kind:"cue",
   note:"回到房間（無字幕）",look:roomLook,parts:[]
  });
+ // An independent unspoken dimming cue lies between Ethan's permission and
+ // Christopher's recollection. This dims the Memory Room to the same level
+ // as the next line, without inserting speech, effects, or a second click.
+ const goAhead=entries.find(e=>e.id==="p179-0");
+ const recollection=entries.find(e=>e.id==="p186-0");
+ if(!goAhead||!recollection||
+    entries.indexOf(recollection)!==entries.indexOf(goAhead)+1||
+    entries.some(e=>e.id==="memory-dim-before-manager"))
+  throw Error("Memory-room dimming boundary missing");
+ entries.splice(entries.indexOf(recollection),0,{
+  ...recollection,id:"memory-dim-before-manager",paragraph:185,
+  speaker:"",text:"",kind:"cue",action:null,group:null,
+  note:"燈暗（無字幕）",
+  look:{...recollection.look,background:"memory",room:true,
+   scene:0.35,blackout:0,ai:0,clock:0},
+  parts:[]
+ });
+ // Delete ONLY the subtitle-mode office [full] operator step (former 128).
+ // The next dialogue already has the full-brightness office look, and the
+ // scene-mode original office light cue stays available.
+ const officeFull=entries.find(e=>e.id==="p199-0");
+ if(!officeFull||officeFull.action!=="office-full"||
+    officeFull.note!=="[full]")
+  throw Error("Office [full] cue unavailable");
+ entries.splice(entries.indexOf(officeFull),1);
  // The latest Google Doc explicitly says "among the four of you".
  const finalFirst=entries.find(e=>e.id==="p414-0");
  if(finalFirst){
@@ -146,6 +184,7 @@
   "p174-1", // Keep Megan ex-lover remark separate from the preceding sentence
   "p320-0", // Rachel's "What?" follows her lost-and-found remark on its own cue
   "p329-0", // Split Rachel's correction from "I should shut up and let her talk shouldn’t I."
+  "p344-0", // Separate Megan's "Blah blah blah" from "Oh frick. Ya please continue."
   "p207-1","p207-2","p207-3", // Liam's four separate sentences
   "p209-2","p209-3", // Liam's denial and accusation: three screens
   "p222-2","p222-3","p222-4", // CEO's four separate subtitle screens
