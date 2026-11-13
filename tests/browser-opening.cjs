@@ -92,6 +92,7 @@ async function verifyMonitorFlicker(browser,url){
   const stats=await page.evaluate(()=>monitorFlickerStatus());
   assert.ok(stats.opening.changedPixels>50&&stats.memory.changedPixels>50,
    "Both user-supplied -light variants must contain changed upper-left monitor pixels");
+  await page.locator('#stepsViewButton').click();
   await page.locator('[data-preview="memory-room"]').click();
   await page.locator('#startButton').click();
   await cue(page,"memory-room");
