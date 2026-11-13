@@ -384,7 +384,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
     assert.equal(to.group,'prompt');
     assert.equal(await page.evaluate(()=>scriptShow.active?.group),'prompt');
     assert.ok(await page.evaluate(()=>scriptProjectionFrame().flash>0),'Flash must start with the slam and AI voice');
-    assert.equal(data.entries[i-1].paragraph,384);
+    assert.equal(data.entries[i-1].id,'p383-1','Earlier What? was intentionally removed; this is the last surviving preceding subtitle');
     assert.equal(data.entries[i+1].text,'One by one, state the name of the person you believe to be the robot.');
     assert.equal(data.entries[i+2].text,'1 minute remaining.');
     assert.equal(data.entries[i+1].group,'prompt');
