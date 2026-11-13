@@ -656,7 +656,8 @@ async function fastVoting(page){
     await flag(page,'selectionTwoState','missing');
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await page.setViewportSize(viewport);await page.waitForTimeout(100);await noControls(page);
-      const room=await expectedDifference(page,'assets/backgrounds/memory-room.png',[.43,0,.57,.2],15,.2);
+      // The enlarged holographic voting panel covers the left 60%; sample only the clear upper-right room.
+      const room=await expectedDifference(page,'assets/backgrounds/memory-room.png',[.67,0,.33,.2],15,.2);
       assert.ok(room.mean<1,'Voting retains the correct background and cover crop');
       assert.equal(await page.evaluate(()=>transitions.clock.target),0,'No third-act clock at any viewport');
       await noLegacyVoteText();
