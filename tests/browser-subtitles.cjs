@@ -337,7 +337,9 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   // automatically once Ending.mp3 reaches 1.6 seconds, without bonus cues.
   const endBlackoutIndex=data.entries.findIndex(entry=>entry.action==='end-blackout');
   assert.ok(endBlackoutIndex>clock);
-  for(let i=clock+1;i<=endBlackoutIndex;i++){
+  // The silent return-to-room cue immediately after the opening voice
+  // was already advanced to and asserted above.
+  for(let i=clock+2;i<=endBlackoutIndex;i++){
    const from=data.entries[i-1],to=data.entries[i];
    if(from.group!==to.group&&from.group){await page.waitForFunction(()=>!['starting','playing'].includes(scriptShow.active?.state),null,{timeout:60000});}
    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>scriptShow.index),i,'entry '+i);
