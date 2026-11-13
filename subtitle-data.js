@@ -144,6 +144,7 @@
   "p139-0",// keep the photo inscription separate from its introduction
   "p173-0", // Keep Christopher confession after "You want the whole story?" separate
   "p174-1", // Keep Megan ex-lover remark separate from the preceding sentence
+  "p320-0", // Rachel's "What?" follows her lost-and-found remark on its own cue
   "p329-0", // Split Rachel's correction from "I should shut up and let her talk shouldn’t I."
   "p207-1","p207-2","p207-3", // Liam's four separate sentences
   "p209-2","p209-3", // Liam's denial and accusation: three screens

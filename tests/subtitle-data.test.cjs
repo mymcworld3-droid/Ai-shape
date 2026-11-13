@@ -104,6 +104,23 @@ test("remove only Christopher's isolated Act II Scene II 'I…' cue",()=>{
   "Unrelated Ethan speech must not be removed");
 });
 
+test("Rachel's lost-and-found line and earlier What? occupy separate manual steps",()=>{
+ const entries=subtitles.entries;
+ const lostIndex=entries.findIndex(e=>e.id==="p318-0");
+ const whatIndex=entries.findIndex(e=>e.id==="p320-0");
+ assert.ok(lostIndex>=0);
+ assert.equal(whatIndex,lostIndex+1);
+ assert.equal(entries[lostIndex].speaker,"RACHEL");
+ assert.equal(entries[lostIndex].text,
+  "You should check the lost and found, you’ll also see Ethan there.");
+ assert.deepEqual(entries[lostIndex].parts.map(p=>p.id),["p318-0"]);
+ assert.equal(entries[whatIndex].speaker,"RACHEL");
+ assert.equal(entries[whatIndex].text,"What?");
+ assert.deepEqual(entries[whatIndex].parts.map(p=>p.id),["p320-0"]);
+ assert.equal(entries.some(e=>e.id==="p394-0"),false,
+  "The previously deleted voting reaction stays deleted");
+});
+
 test("delete only Rachel's What? at former step 277, not her earlier What?",()=>{
  const entries=subtitles.entries;
  assert.equal(entries.some(e=>e.id==="p394-0"||
@@ -121,16 +138,16 @@ test("delete only Rachel's What? at former step 277, not her earlier What?",()=>
 test("delete former step 271; the next step starts voting AI and voice together",()=>{
  const entries=subtitles.entries;
  assert.equal(entries.some(e=>e.id==="p384-0"||e.parts?.some(p=>p.id==="p384-0")),false);
- assert.equal(entries[269].id,"p383-1");
- assert.equal(entries[270].id,"p388-0");
- assert.equal(entries[270].action,"selection-button");
- assert.equal(entries[270].group,"prompt");
- assert.equal(entries[270].text,"Please make your selection.");
- assert.equal(entries[271].id,"p388-1");
- assert.equal(entries[272].id,"p388-2");
- assert.equal(entries[272].text,"1 minute remaining.");
- assert.equal(entries[273].id,"p389-0");
- assert.equal(entries[273].text,"Ethan.");
+ assert.equal(entries[270].id,"p383-1");
+ assert.equal(entries[271].id,"p388-0");
+ assert.equal(entries[271].action,"selection-button");
+ assert.equal(entries[271].group,"prompt");
+ assert.equal(entries[271].text,"Please make your selection.");
+ assert.equal(entries[272].id,"p388-1");
+ assert.equal(entries[273].id,"p388-2");
+ assert.equal(entries[273].text,"1 minute remaining.");
+ assert.equal(entries[274].id,"p389-0");
+ assert.equal(entries[274].text,"Ethan.");
  assert.equal(original.entries.find(e=>e.id==="p384-0")?.text,"What?");
 });
 
@@ -250,8 +267,8 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.deepEqual(card?.parts.map(part=>part.id),["p83-1"]);
  assert.equal(entries.filter(e=>e.paragraph===83).length,1,
   "flip-card cue and reading are one navigable step");
- assert.equal(entries.length,298,
-  "The former step 277 Rachel reaction is removed without affecting prior cues");
+ assert.equal(entries.length,299,
+  "Rachel's earlier What? is split off, and the voting reaction remains removed");
  for(const [id,partIds,names] of [
   ["p78-0",["p78-0","p79-0"],["MEGAN","ETHAN"]],
   ["p121-0",["p121-0","p122-0","p122-1"],["MEGAN","ETHAN"]],
@@ -288,7 +305,7 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.equal(entries.some(e=>e.id==="p122-0"),false);
  assert.ok(entries.some(e=>e.id==="p122-2"),"The following photo reveal must stay independent");
  assert.equal(entries.find(e=>e.id==="p388-0").action,"selection-button");
- assert.equal(entries[263].id,"p376-0",
+ assert.equal(entries[264].id,"p376-0",
   "The p376 actor dialogue retains its own operator step");
  const finalSongCue=entries.findIndex(e=>e.action==="end-blackout");
  assert.equal(entries[finalSongCue].paragraph,416,

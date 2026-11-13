@@ -300,6 +300,12 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(data.entries[correctionIndex]?.text,'Correction, I found it.');
   assert.equal(data.entries[correctionIndex+1]?.id,'p329-0');
   assert.equal(data.entries[correctionIndex+1]?.text,'I should shut up and let her talk shouldn’t I.');
+  const lostIndex=data.entries.findIndex(e=>e.id==='p318-0');
+  assert.ok(lostIndex>=0);
+  assert.equal(data.entries[lostIndex]?.text,
+    'You should check the lost and found, you’ll also see Ethan there.');
+  assert.equal(data.entries[lostIndex+1]?.id,'p320-0');
+  assert.equal(data.entries[lostIndex+1]?.text,'What?');
   assert.equal(data.entries.some(e=>e.id==='p394-0'),false,
     "The former 277 Rachel What? operator step must be absent");
   assert.ok(data.entries.some(e=>e.id==='p320-0'),
@@ -311,8 +317,8 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   const votingCountdown=data.entries.findIndex(e=>e.id==='p389-0');
   const fourthActStart=data.entries.findIndex(e=>e.id==='p408-0');
   assert.equal(backgroundCut+1,votingCountdown,'The background cuts on step 273; AI move and voting begin on 274');
-  assert.equal(data.entries[272]?.id,'p388-2');
-  assert.equal(data.entries[273]?.id,'p389-0');
+  assert.equal(data.entries[273]?.id,'p388-2');
+  assert.equal(data.entries[274]?.id,'p389-0');
   assert.ok(votingCountdown>0,'Voting entries are present');
   assert.ok(fourthActStart>votingCountdown,'Fourth act follows voting');
   // Verify the original screenplay through final blackout. Credits follow
