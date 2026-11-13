@@ -178,7 +178,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.ok(await rapid.evaluate(()=>endingVoiceAudio.currentTime)>.4,
    'The source recording must actually progress while Directed by is shown');
   await rapid.close();
-  checks.push(''Final p416 blackout plays a non-looping AI voice on 1/Q, advances at audible 1.6s and keeps the same voice through credits');
+  checks.push('Final p416 blackout plays a non-looping AI voice on 1/Q, advances at audible 1.6s and keeps the same voice through credits');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
