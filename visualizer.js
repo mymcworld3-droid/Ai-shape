@@ -56,6 +56,7 @@ const audioSources=new Map();
 const meterChannels=["voice","effect","music"];
 const meterAnalysers=Object.create(null),meterBuffers=Object.create(null);
 const outputGains=Object.create(null);
+let endingVoiceGain=null; // Dedicated, Safari-safe voice output gate.
 let dpr=1,w=0,h=0,cx=0,cy=0,scale=1,graphicGlowScale=1;
 let energy=0,bassEnergy=0,midEnergy=0,highEnergy=0,pulse=0,rotation=0;
 let rotationTarget=0,rotationMoving=false,rotationMoveStart=0,rotationStart=0;
@@ -82,6 +83,11 @@ function updateTransitions(now){
  // 1/Q controls its volume and the timeline shows it in the voice lane.
 const endingVoice=new EndingVoice.Controller({
  audio:endingVoiceAudio,src:config.closingTheme.src,
+ setOutputGain(level){
+  if(!endingVoiceGain)return false;
+  endingVoiceGain.gain.value=level;
+  return true;
+ },
  startDelayMs:config.closingTheme.startDelayMs,leadMs:EndCredits.SONG_LEAD_MS,
  onAdvance(){
   if(!startGate.started)return;
@@ -142,8 +148,8 @@ const stage=new StageOpening.StageCueController({
   if(!scriptMode&&startGate.started){
    document.body.dataset.musicError="false";
    sceneBackgroundMusic.setStep(config.sceneMusicSteps[cue]??20);
-   endingVoice.cue(cue);
    if(cue===config.closingTheme.sceneStartCue)prepareAudio(endingVoiceAudio);
+   endingVoice.cue(cue);
   }
   if(cue==="bright")roomReadyAt=performance.now();
   if(cue==="ai"){animate("ai",0,0);animate("ai",1,config.aiFadeMs);}
@@ -468,7 +474,12 @@ function prepareAudio(media=audioElement){
   if(media&&!audioSources.has(media)){
    source=audioCtx.createMediaElementSource(media);
    const channel=meterChannelFor(media);
-   source.connect(channel==="voice"?analyser:meterAnalysers[channel]);
+   if(media===endingVoiceAudio){
+    endingVoiceGain=audioCtx.createGain();
+    endingVoiceGain.gain.value=endingVoice.audible?endingVoice.masterVolume:0;
+    source.connect(endingVoiceGain);
+    endingVoiceGain.connect(analyser);
+   }else source.connect(channel==="voice"?analyser:meterAnalysers[channel]);
    audioSources.set(media,source);
   }
   if(audioCtx.state==="suspended")audioCtx.resume().catch(error=>console.warn("[Opening] Audio analysis:",error));

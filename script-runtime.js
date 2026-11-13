@@ -116,8 +116,8 @@ if(scriptMode){
   onEntry(entry,{direction,index,starting}){
    document.body.dataset.musicError='false';
    actOneMusic.setStep(entry.paragraph);
-   endingVoice.cue(entry.action);
    if(entry.action==='end-blackout')prepareAudio(endingVoiceAudio);
+   endingVoice.cue(entry.action);
    // The AI reveal itself is an animated cue even when rehearsal begins here.
    // Other direct rehearsal jumps continue to render without a transition.
    if(starting&&entry.action==='ai')animate('ai',0,0);
