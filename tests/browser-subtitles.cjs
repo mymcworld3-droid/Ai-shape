@@ -596,17 +596,22 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
       const block=card.querySelector('.end-credit-block');
       const role=card.querySelector('.end-credit-role');
       const names=card.querySelector('.end-credit-names');
-      const fog=getComputedStyle(block,'::before');
+      const mist=card.querySelector('.end-credit-mist');
       return {
-       fogZ:fog.zIndex,roleZ:getComputedStyle(role).zIndex,
+       fogZ:mist&&getComputedStyle(mist).zIndex,
+       blockZ:getComputedStyle(block).zIndex,
+       roleZ:getComputedStyle(role).zIndex,
        namesZ:getComputedStyle(names).zIndex,
-       fogBackground:fog.backgroundImage,
+       fogPosition:mist&&getComputedStyle(mist).position,
+       fogBackground:mist&&getComputedStyle(mist,'::before').backgroundImage,
        layerBackground:getComputedStyle(card.parentElement).backgroundColor
       };
      });
-    assert.equal(layers.fogZ,'0','Backgrounds fog must sit above the AI canvas');
-    assert.equal(layers.roleZ,'1','Backgrounds title must sit above fog');
-    assert.equal(layers.namesZ,'1','Backgrounds names must sit above fog');
+    assert.equal(layers.fogZ,'1','Backgrounds fog must be above the AI canvas');
+    assert.equal(layers.blockZ,'2','The Backgrounds block must be above the dark fog');
+    assert.equal(layers.roleZ,'3','Backgrounds title must be above fog');
+    assert.equal(layers.namesZ,'3','Backgrounds names must be above fog');
+    assert.equal(layers.fogPosition,'absolute');
     assert.match(layers.fogBackground,/radial-gradient/);
     assert.equal(layers.layerBackground,'rgba(0, 0, 0, 0)',
      'Backgrounds credit layer must stay transparent over the AI waveform');
