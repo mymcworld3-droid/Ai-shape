@@ -295,12 +295,17 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening>0),true);
   checks.push('F resets preview to opening; Space advances each AI sentence while real 22.36s audio continues; clock starts only at genuine end, held key never spills to actor line');
   // Subsequent media still run naturally; AI subtitles are manual, never elapsed-time driven.
+  const correctionIndex=data.entries.findIndex(e=>e.id==='p327-0');
+  assert.ok(correctionIndex>0);
+  assert.equal(data.entries[correctionIndex]?.text,'Correction, I found it.');
+  assert.equal(data.entries[correctionIndex+1]?.id,'p329-0');
+  assert.equal(data.entries[correctionIndex+1]?.text,'I should shut up and let her talk shouldn’t I.');
   const backgroundCut=data.entries.findIndex(e=>e.id==='p388-2');
   const votingCountdown=data.entries.findIndex(e=>e.id==='p389-0');
   const fourthActStart=data.entries.findIndex(e=>e.id==='p408-0');
   assert.equal(backgroundCut+1,votingCountdown,'The background cuts on step 273; AI move and voting begin on 274');
-  assert.equal(data.entries[271]?.id,'p388-2');
-  assert.equal(data.entries[272]?.id,'p389-0');
+  assert.equal(data.entries[272]?.id,'p388-2');
+  assert.equal(data.entries[273]?.id,'p389-0');
   assert.ok(votingCountdown>0,'Voting entries are present');
   assert.ok(fourthActStart>votingCountdown,'Fourth act follows voting');
   // Verify the original screenplay through final blackout. Credits follow

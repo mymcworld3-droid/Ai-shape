@@ -107,16 +107,16 @@ test("remove only Christopher's isolated Act II Scene II 'I…' cue",()=>{
 test("delete former step 271; the next step starts voting AI and voice together",()=>{
  const entries=subtitles.entries;
  assert.equal(entries.some(e=>e.id==="p384-0"||e.parts?.some(p=>p.id==="p384-0")),false);
- assert.equal(entries[268].id,"p383-1");
- assert.equal(entries[269].id,"p388-0");
- assert.equal(entries[269].action,"selection-button");
- assert.equal(entries[269].group,"prompt");
- assert.equal(entries[269].text,"Please make your selection.");
- assert.equal(entries[270].id,"p388-1");
- assert.equal(entries[271].id,"p388-2");
- assert.equal(entries[271].text,"1 minute remaining.");
- assert.equal(entries[272].id,"p389-0");
- assert.equal(entries[272].text,"Ethan.");
+ assert.equal(entries[269].id,"p383-1");
+ assert.equal(entries[270].id,"p388-0");
+ assert.equal(entries[270].action,"selection-button");
+ assert.equal(entries[270].group,"prompt");
+ assert.equal(entries[270].text,"Please make your selection.");
+ assert.equal(entries[271].id,"p388-1");
+ assert.equal(entries[272].id,"p388-2");
+ assert.equal(entries[272].text,"1 minute remaining.");
+ assert.equal(entries[273].id,"p389-0");
+ assert.equal(entries[273].text,"Ethan.");
  assert.equal(original.entries.find(e=>e.id==="p384-0")?.text,"What?");
 });
 
@@ -236,8 +236,8 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.deepEqual(card?.parts.map(part=>part.id),["p83-1"]);
  assert.equal(entries.filter(e=>e.paragraph===83).length,1,
   "flip-card cue and reading are one navigable step");
- assert.equal(entries.length,298,
-  "The silent return-to-room cue replaces the removed Christopher utterance");
+ assert.equal(entries.length,299,
+  "Rachel's correction and self-reproach now occupy separate subtitle steps");
  for(const [id,partIds,names] of [
   ["p78-0",["p78-0","p79-0"],["MEGAN","ETHAN"]],
   ["p121-0",["p121-0","p122-0","p122-1"],["MEGAN","ETHAN"]],
@@ -253,6 +253,16 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.equal(entries.some(e=>e.id==="p134-0"||e.parts?.some(p=>p.id==="p134-0")),false,
   "Deleted Who's this? must be absent from subtitle steps");
  assert.equal(original.entries.find(e=>e.id==="p134-0")?.text,"Who’s this?");
+ const correction=entries.find(e=>e.id==="p327-0");
+ const selfReproach=entries.find(e=>e.id==="p329-0");
+ assert.equal(correction?.text,"Correction, I found it.");
+ assert.equal(selfReproach?.text,"I should shut up and let her talk shouldn’t I.");
+ assert.equal(correction?.speaker,"RACHEL");
+ assert.equal(selfReproach?.speaker,"RACHEL");
+ assert.deepEqual(correction?.parts?.map(p=>p.id),["p327-0"]);
+ assert.deepEqual(selfReproach?.parts?.map(p=>p.id),["p329-0"]);
+ assert.equal(entries.indexOf(selfReproach),entries.indexOf(correction)+1,
+  "Exactly two consecutive manually advanced subtitles");
  const comic=entries.find(e=>e.id==="p160-1");
  assert.equal(comic?.text,"CHRISTOPHER: Hilarious.\nRACHEL: We're all gonna die at this point.");
  assert.equal(entries.some(e=>e.id==="p161-0"),false);
@@ -264,7 +274,7 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.equal(entries.some(e=>e.id==="p122-0"),false);
  assert.ok(entries.some(e=>e.id==="p122-2"),"The following photo reveal must stay independent");
  assert.equal(entries.find(e=>e.id==="p388-0").action,"selection-button");
- assert.equal(entries[262].id,"p376-0",
+ assert.equal(entries[263].id,"p376-0",
   "The p376 actor dialogue retains its own operator step");
  const finalSongCue=entries.findIndex(e=>e.action==="end-blackout");
  assert.equal(entries[finalSongCue].paragraph,416,
