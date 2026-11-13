@@ -107,8 +107,11 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   await timedMusic.waitForFunction(()=>!document.getElementById('startButton').disabled);
   await timedMusic.locator('#stepsViewButton').click();
   await timedMusic.locator('#timelineTrack').selectOption('配樂');
-  const endingClip=timedMusic.getByRole('button',{name:/配樂 Ending\.mp3/});
-  assert.equal(await endingClip.count(),1,'Final song is a single timeline segment');
+  assert.equal(await timedMusic.getByRole('button',{name:/配樂 Ending\.mp3/}).count(),0,
+   'Ending.mp3 must not be placed on the soundtrack lane');
+  await timedMusic.locator('#timelineTrack').selectOption('語音');
+  const endingClip=timedMusic.getByRole('button',{name:/語音 Ending\.mp3/});
+  assert.equal(await endingClip.count(),1,'Final voice is one continuous timeline segment');
   assert.match(await endingClip.getAttribute('title'),/Ending.mp3/);
   await timedMusic.locator('[data-script="'+musicCueIndex+'"]').click();
   assert.equal(await timedMusic.locator('#startLabel').textContent(),'從第 '+musicCueIndex+' 步開始');
@@ -116,34 +119,37 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
    media.every(element=>element.paused)), 'Preview remains silent');
   await timedMusic.locator('#startButton').click();
   assert.equal(await timedMusic.evaluate(()=>scriptShow.index),musicCueIndex);
-  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current?.src),
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.getAttribute('src')),
    'assets/audio/background/Ending.mp3');
-  await timedMusic.waitForFunction(()=>actOneBackgroundMusic.activeAudio?.paused===false);
-  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.volume),0,
-   'First second of final-blackout song must be inaudible');
-  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.loop),false,
-   'Last Ending.mp3 must not repeat automatically');
+  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current),null,
+   'The old background music must stop at the final blackout');
+  await timedMusic.waitForFunction(()=>endingVoiceAudio.paused===false);
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.volume),0,
+   'The first second of the AI voice is intentionally silent');
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.loop),false);
   await timedMusic.waitForTimeout(350);
-  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.volume),0,
-   'Ending.mp3 must not become audible before its one-second delay');
-  await timedMusic.waitForFunction(()=>actOneBackgroundMusic.activeAudio?.volume>.03,
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.volume),0,
+   'Voice cannot sound before the one-second lead-in');
+  await timedMusic.waitForFunction(()=>endingVoiceAudio.volume>.03,
    null,{timeout:3500});
-  const audioId=await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.id);
+  const audioId=await timedMusic.evaluate(()=>endingVoiceAudio.id);
   await timedMusic.waitForFunction(index=>scriptShow.index===index,musicCueIndex+1,
    {timeout:6000});
-  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.id),audioId,
-   'First end-credit must continue the SAME Ending.mp3 player');
-  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.activeAudio.loop),false);
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.id),audioId,
+   'The first credit must continue the same AI voice player');
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.paused),false);
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.loop),false);
   await timedMusic.evaluate(index=>scriptShow.jumpTo(index),priorDialogueIndex);
-  assert.notEqual(await timedMusic.evaluate(()=>actOneBackgroundMusic.current?.src),
-   'assets/audio/background/Ending.mp3',
-   'Rewinding to p376 must restore Act III music, not replay the ending theme');
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.paused),true,
+   'Rewinding must stop Ending.mp3 independently of Act III music');
+  assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current?.src),
+   'assets/audio/background/act-3/after-chris-transition.mp3');
   const earlierBlackout=data.entries.findIndex(entry=>entry.paragraph===403);
   await timedMusic.evaluate(index=>scriptShow.jumpTo(index),earlierBlackout);
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current),null,
    'Rewinding to the earlier blackout must stop the final song');
   await timedMusic.close();
-  checks.push('Final p416 blackout begins non-looping Ending.mp3 after 1s, advances at 1.6s and shares audio with end credits');
+  checks.push('Final p416 blackout plays a non-looping AI voice on 1/Q, advances at audible 1.6s and keeps the same voice through credits');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
@@ -339,7 +345,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
     290:'assets/audio/background/act-3/after-chris-transition.mp3',
     403:null,
     407:'assets/audio/background/act-4/Act4.m4a',
-    416:'assets/audio/background/Ending.mp3'
+    416:null
    };
    if(Object.prototype.hasOwnProperty.call(soundtrackByParagraph,to.paragraph)){
     const expected=soundtrackByParagraph[to.paragraph];

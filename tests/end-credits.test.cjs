@@ -75,3 +75,11 @@ test("Ending.mp3 cue sheet has the exact requested cumulative music timestamps",
  for(const card of EndCredits.cards.slice(0,5))timeline.push(timeline.at(-1)+card.durationMs);
  assert.deepEqual(timeline,[1600,4600,7400,10200,12900,19900]);
 });
+
+test("closing credits are large and legible in the full 16:9 projector",()=>{
+ const fs=require("node:fs"),path=require("node:path");
+ const css=fs.readFileSync(path.join(__dirname,"..","stage.css"),"utf8");
+ assert.match(css,/\.end-credit-role\{[^}]*font-size:3\.8cqh/);
+ assert.match(css,/\.end-credit-names\{[^}]*font-size:5cqh/);
+ assert.match(css,/\.end-credit-unfold \.end-credit-names\{font-size:4\.4cqh/);
+});

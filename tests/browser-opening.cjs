@@ -701,15 +701,18 @@ async function fastVoting(page){
       stage.onCue=cue=>{
         if(cue==='ending-blackout'||EndCredits.get(cue)){
           window.creditCueTimeline.push({cue,at:performance.now(),
-            songTime:window.actOneBackgroundMusic.activeAudio?.currentTime});
+            songTime:window.endingVoiceAudio.currentTime});
         }
         oldOnCue(cue);
       };
     });
     await page.keyboard.press('Space');await cue(page,'ending-blackout');
     const creditsOpeningDeadline=await page.evaluate(()=>opening.deadline);
-    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current?.src),
+    assert.equal(await page.evaluate(()=>endingVoiceAudio.getAttribute('src')),
       'assets/audio/background/Ending.mp3');
+    assert.equal(await page.evaluate(()=>actOneBackgroundMusic.current),null,
+      'Scene background music ends before the final AI voice');
+    assert.equal(await page.evaluate(()=>endingVoiceAudio.loop),false);
     assert.equal(await page.locator('#behindScenesVideo').count(),0,
       'The optional bonus video element is removed');
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));

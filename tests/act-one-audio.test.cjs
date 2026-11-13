@@ -59,7 +59,7 @@ test("all 41 scene cues cover Act IV, photo turnover and six closing credit card
   if(['dark','vote-blackout'].includes(cue))
    assert.equal(track,null,'Pre-show and vote blackout must remain silent');
   else if(cue==='ending-blackout'||cue.startsWith('credit-'))
-   assert.equal(track?.src,config.closingTheme.src,'Final blackout and credits share Ending.mp3');
+   assert.equal(track,null,'Ending.mp3 is an AI voice; credits cannot select background music');
   else assert.ok(track,'no music for '+cue);
  }
  assert.equal(trackForStep(cueSteps.card,config.actOneMusic).src,
@@ -97,12 +97,12 @@ test("all 41 scene cues cover Act IV, photo turnover and six closing credit card
  assert.equal(trackForStep(subtitles[earlierDialogueIndex].paragraph,config.actOneMusic).src,
   'assets/audio/background/act-3/after-chris-transition.mp3');
  assert.equal(config.closingTheme.subtitleEndParagraph,425);
- assert.equal(trackForStep(417,config.actOneMusic).src,
-  'assets/audio/background/Ending.mp3');
- assert.equal(trackForStep(416,config.actOneMusic).loop,false,
-  'Final Ending.mp3 must play only once rather than automatically repeat');
- assert.equal(trackForStep(424,config.actOneMusic).loop,false,
-  'The Button title must still use the same non-looping closing track');
+ assert.equal(config.closingTheme.src,'assets/audio/background/Ending.mp3');
+ assert.equal(trackForStep(416,config.actOneMusic),null);
+ assert.equal(trackForStep(417,config.actOneMusic),null);
+ assert.equal(trackForStep(424,config.actOneMusic),null);
+ assert.ok(config.actOneMusic.every(t=>t.src!==config.closingTheme.src),
+  'Ending.mp3 must not exist on the background music playlist');
 });
  
 test("closing soundtrack never loops or restarts between black screen and final title",async()=>{
