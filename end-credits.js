@@ -127,6 +127,14 @@
     const role=document.createElement("div");role.className="end-credit-role";role.textContent=card.role;
     const names=document.createElement("div");names.className="end-credit-names";
     for(const line of card.lines){const name=document.createElement("div");name.textContent=line;names.append(name);}
+    // Backgrounds gets its own real fog layer between the canvas and lettering.
+    // Unlike the former block pseudo-element, this covers the bright hexagon.
+    if(card.id==="credit-backgrounds"){
+     const mist=document.createElement("div");
+     mist.className="end-credit-mist";
+     mist.setAttribute("aria-hidden","true");
+     element.append(mist);
+    }
     block.append(role,names);element.append(block);
    }
    return element;
