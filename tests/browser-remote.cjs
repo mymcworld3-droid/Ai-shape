@@ -69,9 +69,14 @@ const doorIndex=subtitle.entries.findIndex(e=>e.action==="doorOpen");
     opening:{state:document.getElementById("openingAudio").readyState,
      error:document.getElementById("openingAudio").error?.code},
     endingVoice:{state:document.getElementById("endingVoiceAudio").readyState,
-     error:document.getElementById("endingVoiceAudio").error?.code}
+     error:document.getElementById("endingVoiceAudio").error?.code},
+    globals:{config:typeof OPENING_CONFIG,
+     endingVoice:typeof EndingVoice,sceneMusic:typeof sceneBackgroundMusic,
+     stage:typeof stage,assets:typeof showAssetsReady,scriptMode:typeof scriptMode},
+    documentReady:document.readyState
    }));
-   throw new Error("Remote test projector assets blocked Start: "+JSON.stringify(status)+"; "+error.message);
+   throw new Error("Remote test projector assets blocked Start: "+JSON.stringify(status)+
+    "; script errors="+JSON.stringify(errors)+"; "+error.message);
   }
   await stage.locator("#startButton").click();
   await guestA.waitForFunction(()=>!document.querySelector('[data-action="next"]').disabled);
