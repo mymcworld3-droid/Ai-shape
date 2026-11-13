@@ -131,3 +131,26 @@ test("manual credit entry retries a browser-paused Ending.mp3 without restarting
  assert.equal(audio.volume,1);
  assert.equal(audio.currentTime,0,"An interrupted muted intro restarts audibly");
 });
+
+test("Safari-safe WebAudio gate makes Ending.mp3 audible without muting HTML audio",async()=>{
+ const audio=new Audio(),levels=[];
+ const voice=new Controller({
+  audio,src:"assets/audio/background/Ending.mp3",
+  setOutputGain(level){levels.push(level);return true;},
+  startDelayMs:1000,leadMs:1600
+ });
+ voice.setMasterVolume(.4);
+ voice.cue("end-blackout");
+ assert.equal(audio.volume,1,
+  "Safari must see HTMLMediaElement audio at a nonzero volume from the start");
+ assert.equal(levels.at(-1),0,"WebAudio gain silences the one-second lead");
+ voice.cue("credit-directed");
+ assert.equal(audio.volume,1);
+ assert.equal(levels.at(-1),.4,"Manual Next immediately opens the sound gate");
+ voice.setMasterVolume(.7);
+ assert.equal(levels.at(-1),.7,"1/Q controls the dedicated gain");
+ voice.cue("credit-conversation");
+ assert.equal(levels.at(-1),.7,"Other credits do not reset the audio");
+ voice.cue("discussion");
+ assert.equal(levels.at(-1),0,"Rewinding stops the ending audio");
+});

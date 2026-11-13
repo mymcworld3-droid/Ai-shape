@@ -124,20 +124,22 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current),null,
    'The old background music must stop at the final blackout');
   await timedMusic.waitForFunction(()=>endingVoiceAudio.paused===false);
-  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.volume),0,
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceGain?.gain.value),0,
    'The first second of the AI voice is intentionally silent');
   assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.loop),false);
   await timedMusic.waitForTimeout(350);
-  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.volume),0,
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceGain?.gain.value),0,
    'Voice cannot sound before the one-second lead-in');
-  await timedMusic.waitForFunction(()=>endingVoiceAudio.volume>.03,
+  await timedMusic.waitForFunction(()=>endingVoiceGain?.gain.value>.03,
    null,{timeout:3500});
   await timedMusic.evaluate(()=>stageActions.setVolume("music",0));
   assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.volume),1,
    "Silencing the background-music channel must not affect Ending.mp3");
   await timedMusic.evaluate(()=>stageActions.setVolume("voice",35));
-  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.volume),.35,
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceGain.gain.value),.35,
    "Ending.mp3 follows 1/Q voice gain, not 3/E music gain");
+  assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.volume),1,
+   "The HTML media must stay unmuted on Safari");
   const audioId=await timedMusic.evaluate(()=>endingVoiceAudio.id);
   await timedMusic.waitForFunction(index=>scriptShow.index===index,musicCueIndex+1,
    {timeout:6000});
