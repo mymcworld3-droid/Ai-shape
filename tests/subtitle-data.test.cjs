@@ -29,7 +29,7 @@ test("restore all meaningful omitted lines from screenplay and latest Ben farewe
   "p325-1","p326-0","p327-0","p360-0","p362-0","p257-ben-song","p257-ben-exit"])
   assert.ok(ids.has(id),"missing restored line "+id);
  for(const e of original.entries.filter(e=>e.text)){
-  const changed=["p414-0","p384-0","p134-0","p212-0"].includes(e.id);
+  const changed=["p414-0","p384-0","p134-0","p212-0","p394-0"].includes(e.id);
   if(changed)continue;
   if(soundOnly.test(e.text.trim()))continue;
   assert.ok(allParts.some(p=>p.id===e.id&&p.text===e.text),
@@ -102,6 +102,20 @@ test("remove only Christopher's isolated Act II Scene II 'I…' cue",()=>{
   "The immediately following office bang stays in the original sequence");
  assert.ok(entries.some(e=>e.id==="p61-0"),
   "Unrelated Ethan speech must not be removed");
+});
+
+test("delete only Rachel's What? at former step 277, not her earlier What?",()=>{
+ const entries=subtitles.entries;
+ assert.equal(entries.some(e=>e.id==="p394-0"||
+  e.parts?.some(p=>p.id==="p394-0")),false);
+ assert.equal(original.entries.find(e=>e.id==="p394-0")?.speaker,"RACHEL");
+ assert.equal(original.entries.find(e=>e.id==="p394-0")?.text,"What?");
+ assert.ok(entries.some(e=>e.id==="p320-0"),"Earlier Rachel What? must remain");
+ const meganIndex=entries.findIndex(e=>e.id==="p393-0");
+ const secondVoteIndex=entries.findIndex(e=>e.id==="p395-0");
+ assert.equal(secondVoteIndex,meganIndex+1,
+  "Megan's vote is now followed immediately by the AI's second confirmation");
+ assert.equal(entries[secondVoteIndex].group,"two");
 });
 
 test("delete former step 271; the next step starts voting AI and voice together",()=>{
@@ -236,8 +250,8 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.deepEqual(card?.parts.map(part=>part.id),["p83-1"]);
  assert.equal(entries.filter(e=>e.paragraph===83).length,1,
   "flip-card cue and reading are one navigable step");
- assert.equal(entries.length,299,
-  "Rachel's correction and self-reproach now occupy separate subtitle steps");
+ assert.equal(entries.length,298,
+  "The former step 277 Rachel reaction is removed without affecting prior cues");
  for(const [id,partIds,names] of [
   ["p78-0",["p78-0","p79-0"],["MEGAN","ETHAN"]],
   ["p121-0",["p121-0","p122-0","p122-1"],["MEGAN","ETHAN"]],

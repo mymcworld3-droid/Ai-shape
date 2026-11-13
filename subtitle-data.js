@@ -124,7 +124,9 @@
  // The following AI selection prompt becomes the next operator-controlled step.
  // Also remove Megan's "Who's this?" (former step 90) from subtitle mode.
  // Archived manuscript/scene cues remain untouched.
- const removedDialogueIds=new Set(["p384-0","p134-0","p212-0"]);
+ // Former visible step 277: Rachel's "What?" during the second vote.
+ // The earlier Rachel "What?" (p320-0) must remain untouched.
+ const removedDialogueIds=new Set(["p384-0","p134-0","p212-0","p394-0"]);
  const kept=entries.filter(e=>!removedDialogueIds.has(e.id)&&
   (e.kind!=="dialogue"||!soundOnly.test(e.text.trim())));
  const visualBoundaryIds=new Set([
