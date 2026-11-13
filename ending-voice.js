@@ -43,7 +43,7 @@
     // play() is called during the operator gesture at zero gain. Starting
     // it later inside a timer would fail Safari's autoplay restriction.
     Promise.resolve(this.audio.play()).then(()=>{
-     if(run!==this.run||!delayed)return;
+     if(run!==this.run||!delayed||this.audible)return;
      const remaining=Math.max(0,this.startDelayMs-(this.now()-began));
      this.introTimer=this.setTimer(()=>{
       this.introTimer=null;
@@ -66,10 +66,26 @@
     this.start({delayed:true});return;
    }
    if(action?.startsWith("credit-")){
+    // The operator may manually advance from the preceding blackout
+    // BEFORE its one-second muted intro finishes. Cancelling that timer
+    // without unmuting left Ending.mp3 playing silently for the whole ending.
     this.cancelTimers();
-    // Direct rehearsal jumps to a credit start this same voice without
-    // a second delayed intro; normal progression never restarts it.
-    if(!this.active)this.start();
+    if(!this.active||this.audio.ended){
+     this.start({delayed:false});
+    }else{
+     if(!this.audible){
+      this.audio.currentTime=0;
+      this.audible=true;
+      this.applyVolume();
+     }
+     // A browser may pause a previously muted autoplay when it gains
+     // volume; retry here when the operator enters the first credit.
+     if(this.audio.paused){
+      try{
+       Promise.resolve(this.audio.play()).catch(error=>this.onError(error));
+      }catch(error){this.onError(error);}
+     }
+    }
     return;
    }
    this.stop();
