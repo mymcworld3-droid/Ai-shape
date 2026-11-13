@@ -20,7 +20,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   await trackSelect.selectOption('語音');
   assert.equal(await track.getByRole('button',{name:/^語音 411-415ai\.m4a/}).count(),1);
   await trackSelect.selectOption('配樂');
-  assert.equal(await track.getByRole('button',{name:/^配樂 Ending\.m4a/}).count(),1);
+  assert.equal(await track.getByRole('button',{name:/^配樂 Act4\.m4a/}).count(),1);
   await trackSelect.selectOption('音效');
   await track.getByRole('button',{name:/^音效 heavy-auto-door\.mp3/}).click();
   assert.equal(await page.locator('#startLabel').textContent(),`從第 ${indexOf(87)} 步開始`);
