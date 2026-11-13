@@ -81,6 +81,52 @@ async function advanceRemainingSceneCaptions(page,group) {
     'Changing AI captions must not skip its scene');
   }
 }
+async function verifyMonitorFlicker(browser,url){
+ const page=await browser.newPage({viewport:{width:1280,height:720}});
+ try{
+  await ready(page,url);
+  await page.waitForFunction(()=>{
+   const flags=monitorFlickerStatus();
+   return flags.opening.ready&&flags.memory.ready;
+  },null,{timeout:15000});
+  const stats=await page.evaluate(()=>monitorFlickerStatus());
+  assert.ok(stats.opening.changedPixels>50&&stats.memory.changedPixels>50,
+   "Both user-supplied -light variants must contain changed upper-left monitor pixels");
+  await page.locator('[data-preview="memory-room"]').click();
+  await page.locator('#startButton').click();
+  await cue(page,"memory-room");
+  const pixels=await page.evaluate(async()=>{
+   const canvas=document.getElementById("visualizer"),ctx=canvas.getContext("2d");
+   const sample=async(value)=>{
+    StageLayout.monitorFlickerLevel=()=>value;
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+    return ctx.getImageData(0,0,canvas.width,canvas.height).data.slice();
+   };
+   const dark=await sample(0),lit=await sample(.85);
+   const b=StageLayout.coverLayout(canvas.width,canvas.height,
+    memoryBackgroundImage.naturalWidth,memoryBackgroundImage.naturalHeight);
+   const crop=OPENING_CONFIG.monitorFlicker.region;
+   let on=0,off=0;
+   for(let y=0;y<canvas.height;y+=2)for(let x=0;x<canvas.width;x+=2){
+    const index=(y*canvas.width+x)*4;
+    const d=Math.max(Math.abs(dark[index]-lit[index]),
+     Math.abs(dark[index+1]-lit[index+1]),
+     Math.abs(dark[index+2]-lit[index+2]));
+    if(d<4)continue;
+    const imageX=(x-b.x)/b.width,imageY=(y-b.y)/b.height;
+    if(imageX>=crop.x&&imageX<crop.x+crop.width&&
+       imageY>=crop.y&&imageY<crop.y+crop.height)on++;
+    else off++;
+   }
+   return {on,off};
+  });
+  assert.ok(pixels.on>25,
+   "The memory-room upper-left security monitor must visibly flash: "+JSON.stringify(pixels));
+  assert.equal(pixels.off,0,
+   "Monitor flicker must not modify the rest of the stage: "+JSON.stringify(pixels));
+ }finally{await page.close();}
+}
 async function fadePixels(page) {
   return page.evaluate(async()=>{
     const c=document.getElementById('visualizer'),context=c.getContext('2d');
@@ -114,6 +160,9 @@ async function ready(page, url) {
   try {
     await page.waitForSelector('body[data-background-ready="true"][data-dark-background-ready="true"][data-video-ready="true"][data-audio-ready="true"][data-card-ready="true"]', {timeout:15000});
     await page.waitForFunction(()=>!document.getElementById('startButton').disabled);
+    // Historical background pixel oracles compare against the unlit painting.
+    // A separate test below verifies the monitor overlay at controlled levels.
+    await page.evaluate(()=>{StageLayout.monitorFlickerLevel=()=>0;});
   } catch (error) {
     console.error("Media readiness",await page.evaluate(()=>({
       flags:{...document.body.dataset},
@@ -354,7 +403,8 @@ async function fastVoting(page){
     const errors=[],requests=[];
     page.on("pageerror",error=>errors.push(String(error)));
     page.on("request",request=>requests.push(request.url()));
-    await ready(page,url); await fixedFrame(page); await page.waitForTimeout(150);
+    await ready(page,url);
+    await verifyMonitorFlicker(browser,url); await fixedFrame(page); await page.waitForTimeout(150);
     assert.equal(await page.locator('#startButton').isVisible(),true);
     assert.equal(await page.locator('#stepsPanel').isVisible(),false);
     assert.equal(await page.locator('#startDock').evaluate(e=>getComputedStyle(e).position),"fixed");
