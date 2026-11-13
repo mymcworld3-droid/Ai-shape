@@ -181,6 +181,8 @@
  // The second Ethan sentence at p122-1 is already joined to p122-0.
  groupSimultaneous(["p78-0","p79-0"]);
  groupSimultaneous(["p121-0","p122-0"]);
+ // Christopher's "Hilarious." and Rachel's fatalistic reply share a screen.
+ groupSimultaneous(["p160-1","p161-0"]);
  groupSimultaneous(["p89-0","p90-0","p91-0"]);
  groupSimultaneous(["p378-0","p379-0","p380-0"]);
  // Preserve the final post-show media action and the inserted blackout hold.

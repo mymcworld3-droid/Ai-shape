@@ -44,12 +44,12 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(await page.locator('#subtitles').count(),1);
   assert.equal(await page.locator('#subtitleStack, #subtitlePrevious, #subtitleNext').count(),0);
   assert.equal(await page.locator('#subtitleText').textContent(),'“Access to one\'s memory.”');
-  for(const id of ["p78-0","p121-0","p89-0","p378-0"]){
+  for(const id of ["p78-0","p121-0","p160-1","p89-0","p378-0"]){
    const entry=data.entries.find(e=>e.id===id);
    await page.locator('[data-script="'+data.entries.indexOf(entry)+'"]').click();
    assert.equal(await page.locator('#subtitleText').textContent(),entry.text);
    assert.equal(await page.locator('#subtitleText').evaluate(e=>getComputedStyle(e).whiteSpace),'pre-line');
-   assert.equal(entry.lines.length,["p78-0","p121-0"].includes(id)?2:3);
+   assert.equal(entry.lines.length,["p78-0","p121-0","p160-1"].includes(id)?2:3);
   }
   assert.ok(await page.locator('audio,video').evaluateAll(xs=>xs.every(x=>x.paused&&x.currentTime===0)));
   assert.equal(await page.evaluate(()=>scriptShow.deadlines.opening),null);
@@ -272,8 +272,8 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   const votingCountdown=data.entries.findIndex(e=>e.id==='p389-0');
   const fourthActStart=data.entries.findIndex(e=>e.id==='p408-0');
   assert.equal(backgroundCut+1,votingCountdown,'The background cuts on step 273; AI move and voting begin on 274');
-  assert.equal(data.entries[270]?.id,'p388-2');
-  assert.equal(data.entries[271]?.id,'p389-0');
+  assert.equal(data.entries[269]?.id,'p388-2');
+  assert.equal(data.entries[270]?.id,'p389-0');
   assert.ok(votingCountdown>0,'Voting entries are present');
   assert.ok(fourthActStart>votingCountdown,'Fourth act follows voting');
   // Verify the original screenplay through final blackout. Credits follow
