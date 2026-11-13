@@ -105,7 +105,10 @@
  // Pure nonlexical sounds have no readable subtitle. Keep meaningful
  // interjections and lines that contain other spoken words.
  const soundOnly=/^(?:(?:huh|ugh|ah|aah|haha+|ha(?:[\s-]*ha)+|hehe+|he(?:[\s-]*he)+|hm+|hmm+|uh+|um+|ohh+|gasp|groan|chuckle)[\s.!?…]*)+$/i;
- const kept=entries.filter(e=>e.kind!=="dialogue"||!soundOnly.test(e.text.trim()));
+ // Remove operator step 271 ("What?" / Ethan), leaving the original source manuscript intact.
+ // The following AI selection prompt becomes the next operator-controlled step.
+ const kept=entries.filter(e=>e.id!=="p384-0"&&
+  (e.kind!=="dialogue"||!soundOnly.test(e.text.trim())));
  const visualBoundaryIds=new Set([
   "p122-2","p137-0","p143-0","p149-0",
   "p389-0","p407-0","p408-0","p409-0"

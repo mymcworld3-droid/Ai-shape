@@ -29,7 +29,7 @@ test("restore all meaningful omitted lines from screenplay and latest Ben farewe
   "p325-1","p326-0","p327-0","p360-0","p362-0","p257-ben-song","p257-ben-exit"])
   assert.ok(ids.has(id),"missing restored line "+id);
  for(const e of original.entries.filter(e=>e.text)){
-  const changed=e.id==="p414-0";
+  const changed=e.id==="p414-0"||e.id==="p384-0";
   if(changed)continue;
   if(soundOnly.test(e.text.trim()))continue;
   assert.ok(allParts.some(p=>p.id===e.id&&p.text===e.text),
@@ -67,6 +67,17 @@ test("uninterrupted same-speaker words are grouped, but stage/photo/voice bounda
  assert.ok(entries.every((e,i)=>i===0||e.paragraph>=entries[i-1].paragraph));
  assert.equal(source.paragraphs[414].includes("There is no robot in the room"),true,
   "archived Word source stays intact; new subtitle text follows Google Doc");
+});
+
+test("delete former step 271; the next step starts voting AI and voice together",()=>{
+ const entries=subtitles.entries;
+ assert.equal(entries.some(e=>e.id==="p384-0"||e.parts?.some(p=>p.id==="p384-0")),false);
+ assert.equal(entries[270].id,"p383-1");
+ assert.equal(entries[271].id,"p388-0");
+ assert.equal(entries[271].action,"selection-button");
+ assert.equal(entries[271].group,"prompt");
+ assert.equal(entries[271].text,"Please make your selection.");
+ assert.equal(original.entries.find(e=>e.id==="p384-0")?.text,"What?");
 });
 
 test("requested subtitle breaks remain separate navigable steps",()=>{

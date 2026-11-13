@@ -108,7 +108,7 @@ if(scriptMode){
   }
   // Act III is untimed. Preserve the script's AI and voting stage directions,
   // but never render the clock, even during speech completion or rewinding.
-  if(['p384-0','p388-0'].includes(entry.id)){
+  if(entry.id==='p388-0'){
    values.ai=1;values.aiExpansion=1;
   }
   values.voteCorner=voteState.corner?1:0;
@@ -130,7 +130,9 @@ if(scriptMode){
   }
   const duration=direction<=0||!startGate.started||transcript?.index===0||
    (entry.act==='I'&&entry.paragraph<=22&&values.blackout===1)||
-   ['opening-dark','end-blackout'].includes(entry.action)?0:entry.action==='ending-light'?2200:entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
+   ['opening-dark','end-blackout'].includes(entry.action)?0:
+   entry.id==='p388-0'?160:entry.action==='ending-light'?2200:
+   entry.action?.includes('blackout')?1200:entry.action==='ai'?1500:600;
   for(const name of Object.keys(transitions))animate(name,values[name]||0,duration);
   subtitleRenderer.render(entry);
   // The flash is triggered only on operator input; AI callbacks do not replay it.
