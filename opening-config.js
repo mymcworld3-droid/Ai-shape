@@ -3,13 +3,6 @@
 window.OPENING_CONFIG = Object.freeze({
   background: "assets/backgrounds/IMG_0165.png",
   darkBackground: "assets/backgrounds/Start_dark.PNG",
-  // Alternate room paintings with the upper-left security monitor illuminated.
-  // Only actual differences in this corner are composited over the originals.
-  monitorFlicker: Object.freeze({
-    opening: "assets/backgrounds/IMG_0165-light.png",
-    memory: "assets/backgrounds/memory-room-light.png",
-    region: Object.freeze({ x: 0, y: 0, width: 0.55, height: 0.47 })
-  }),
   roomReveal: "assets/videos/Start_animation.mp4",
   // Optional: upload this after the rest of the show has been deployed.
   cueZeroDim: 0.95, // Leave just 5% of the original blue room while stagehands move props.
