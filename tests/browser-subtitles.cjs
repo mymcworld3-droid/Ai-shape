@@ -266,8 +266,12 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   await page.waitForTimeout(1100);await page.screenshot({path:path.join(out,'script-clock.png')});
   checks.push('F resets preview to opening; Space advances each AI sentence while real 22.36s audio continues; clock starts only at genuine end, held key never spills to actor line');
   // Subsequent media still run naturally; AI subtitles are manual, never elapsed-time driven.
+  const backgroundCut=data.entries.findIndex(e=>e.id==='p388-2');
   const votingCountdown=data.entries.findIndex(e=>e.id==='p389-0');
   const fourthActStart=data.entries.findIndex(e=>e.id==='p408-0');
+  assert.equal(backgroundCut+1,votingCountdown,'The background cuts on step 273; AI move and voting begin on 274');
+  assert.equal(data.entries[273]?.id,'p388-2');
+  assert.equal(data.entries[274]?.id,'p389-0');
   assert.ok(votingCountdown>0,'Voting entries are present');
   assert.ok(fourthActStart>votingCountdown,'Fourth act follows voting');
   // Verify the original screenplay through final blackout. Credits follow
@@ -345,9 +349,21 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
     // Validate successful complete playback without assuming its duration.
    }
    const memoryOnly=i===fourthActStart-1||i===fourthActStart;
-   if(i>=votingCountdown){
+   if(i===backgroundCut-1){
+    assert.equal(await page.evaluate(()=>scriptProjectionFrame().hideBackground),false,
+      'The backdrop remains until the end of step 272');
+   }
+   if(i>=backgroundCut){
     assert.equal(await page.evaluate(()=>scriptProjectionFrame().hideBackground),!memoryOnly,
-      'Only steps 380 and 381 restore the memory room background');
+      'Step 273 cuts the background; only steps 380 and 381 restore it');
+   }
+   if(i===backgroundCut){
+    const cut=await page.evaluate(()=>{
+      const f=scriptProjectionFrame();
+      return {corner:f.voteCorner,hide:f.hideBackground,hud:VoteOverlay.cueForFrame(f)};
+    });
+    assert.ok(cut.hide&&cut.corner<.01&&cut.hud===null,
+      'Step 273 is pure black behind centered AI; do not move it or show voting before step 274');
    }
    if(memoryOnly){
     assert.equal(await page.evaluate(()=>scriptProjectionFrame().backgroundOnly),true);

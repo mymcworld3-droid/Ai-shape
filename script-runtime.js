@@ -58,19 +58,22 @@ if(scriptMode){
  applyVolumes(); // Include ending voices and newly constructed scripted effects.
  let previewEntry=null,scriptPreviewAiStartedAt=null,flashUntil=0;
  // Immutable script IDs avoid coupling the visual effect to mutable step counts.
+ // Step 273 ("1 minute remaining.") cuts the room backdrop to pure black.
+ // Step 274 ("Ethan.") still owns the separate AI move and voting-board start.
+ const backgroundCutStart=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p388-2');
  const cornerStart=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p389-0');
  const backgroundStart=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p407-0');
  const backgroundEnd=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p408-0');
  const finalShapeStart=SUBTITLE_SCRIPT.entries.findIndex(e=>e.id==='p409-0');
  const finalShapeEnd=SUBTITLE_SCRIPT.entries.findLastIndex(e=>e.group==='revealTruth');
- if([cornerStart,backgroundStart,backgroundEnd,finalShapeStart,finalShapeEnd].some(i=>i<0))
+ if([backgroundCutStart,cornerStart,backgroundStart,backgroundEnd,finalShapeStart,finalShapeEnd].some(i=>i<0)||backgroundCutStart+1!==cornerStart)
   throw Error('Voting cue boundaries unavailable');
  const votingState=entry=>{
   const index=SUBTITLE_SCRIPT.entries.indexOf(entry);
   // Stages 380–381 are the background-only reveal; after 381, return to black.
   const backgroundOnly=index>=backgroundStart&&index<=backgroundEnd;
   const finalShape=index>=finalShapeStart&&index<=finalShapeEnd;
-  return {hideBackground:index>=cornerStart&&!backgroundOnly,
+  return {hideBackground:index>=backgroundCutStart&&!backgroundOnly,
    backgroundOnly,finalShape,
    corner:index>=cornerStart&&index<backgroundStart&&entry.action!=='blackout'};
  };

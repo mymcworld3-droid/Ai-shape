@@ -77,6 +77,11 @@ test("delete former step 271; the next step starts voting AI and voice together"
  assert.equal(entries[271].action,"selection-button");
  assert.equal(entries[271].group,"prompt");
  assert.equal(entries[271].text,"Please make your selection.");
+ assert.equal(entries[272].id,"p388-1");
+ assert.equal(entries[273].id,"p388-2");
+ assert.equal(entries[273].text,"1 minute remaining.");
+ assert.equal(entries[274].id,"p389-0");
+ assert.equal(entries[274].text,"Ethan.");
  assert.equal(original.entries.find(e=>e.id==="p384-0")?.text,"What?");
 });
 
