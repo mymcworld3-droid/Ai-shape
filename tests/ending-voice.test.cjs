@@ -56,7 +56,7 @@ test("Ending.mp3 is a voice played once, with a 1s silent lead and 1.6s audible 
 });
 test("1/Q updates ending voice, 3/E is irrelevant and rewinds stop the recording",async()=>{
  const {voice,audio,wait,advances}=harness();
- voice.cue("end-blackout");await wait(1000);
+ voice.cue("end-blackout");await wait(0);await wait(1000);
  voice.setMasterVolume(.3);assert.equal(audio.volume,.3);
  voice.setMasterVolume(1);assert.equal(audio.volume,1);
  voice.cue("discussion");
