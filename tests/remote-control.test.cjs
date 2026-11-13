@@ -86,6 +86,10 @@ test("the public server supports media ranges and rejects foreign origins and fi
  const health=await fetch(origin+"/remote/health");
  assert.equal(health.headers.get("x-ai-shape-remote"),"1");
  assert.equal((await fetch(origin+"/remote.html")).status,200);
+ const endingVoice=await fetch(origin+"/ending-voice.js");
+ assert.equal(endingVoice.status,200,
+  "The final AI voice module must load or both projector modes fail to start");
+ assert.match(await endingVoice.text(),/EndingVoice/);
  const credits=await fetch(origin+"/end-credits.js");
  assert.equal(credits.status,200,"Both projection and remote controller need the credit manifest");
  assert.match(await credits.text(),/credit-title/);
