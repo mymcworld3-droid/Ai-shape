@@ -15,8 +15,10 @@
   final:Object.freeze({id:"final",heading:"FINAL SELECTION",detail:"AWAITING RESPONSE",status:"INPUT REQUIRED",votes:2,accent:"red"})
  });
  function forScript(paragraph){
-  if(!Number.isInteger(paragraph)||paragraph<388||paragraph>402)return null;
-  if(paragraph===388)return cues.request;
+  // Keep all three sentences of the AI prompt, including "1 minute
+  // remaining.", free of the voting panel. The panel begins on p389-0,
+  // exactly when the AI graphic moves to the lower-right corner.
+  if(!Number.isInteger(paragraph)||paragraph<389||paragraph>402)return null;
   if(paragraph===389)return cues.nominationOne;
   if(paragraph<393)return cues.voteOne;
   if(paragraph<395)return cues.nominationTwo;
