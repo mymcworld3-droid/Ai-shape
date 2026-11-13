@@ -1,10 +1,26 @@
 "use strict";
 const {test}=require("node:test");
 const assert=require("node:assert/strict");
-const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,fitRectGraphic,expandGraphicPose,fadeInProgress,previewFrame}=require("../stage-layout.js");
+const {fitStage,coverLayout,projectImageRegion,fitRadialGraphic,fitRectGraphic,expandGraphicPose,fadeInProgress,monitorFlickerLevel,previewFrame}=require("../stage-layout.js");
 const {StartGate,bindAdvanceKey}=require("../opening-controller.js");
 function close(actual,expected){assert.ok(Math.abs(actual-expected)<1e-8,`${actual} != ${expected}`);}
 
+test("surveillance-monitor flicker has subtle idle brightness and gentle irregular pulses",()=>{
+ const idle=[1400,2000,4200,5900].map(t=>monitorFlickerLevel(t));
+ const bright=[450,620,850,3400,5270].map(t=>monitorFlickerLevel(t));
+ assert.ok(idle.every(value=>value>=0&&value<.15),"Idle monitor glow stays unobtrusive");
+ assert.ok(bright.every(value=>value>.35&&value<=.9),"Short active bursts are visibly brighter");
+ assert.ok(new Set(bright.map(value=>value.toFixed(3))).size>2,
+  "Flicker uses different brightness pulses rather than a uniform flash");
+ for(const time of [0,12,85,220,880,1000,3500,6300,100000]){
+  assert.equal(monitorFlickerLevel(time,790),monitorFlickerLevel(time,790));
+  assert.ok(monitorFlickerLevel(time,790)>=0&&monitorFlickerLevel(time,790)<=1);
+ }
+ for(const invalid of [NaN,Infinity,-Infinity])
+  assert.throws(()=>monitorFlickerLevel(invalid),RangeError);
+ assert.notEqual(monitorFlickerLevel(850,0),monitorFlickerLevel(850,790),
+  "Memory and opening security monitors do not blink in lockstep");
+});
 test("a 16:9 stage fits wide, tall, portrait and review panes without changing ratio",()=>{
  for(const [width,height] of [[1920,1080],[1440,900],[390,844],[844,390],[900,600]]){
   const stage=fitStage(width,height);
