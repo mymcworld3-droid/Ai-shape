@@ -136,7 +136,7 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.volume),1,
    "Silencing the background-music channel must not affect Ending.mp3");
   await timedMusic.evaluate(()=>stageActions.setVolume("voice",35));
-  assert.equal(await timedMusic.evaluate(()=>endingVoiceGain.gain.value),.35,
+  assert.ok(Math.abs(await timedMusic.evaluate(()=>endingVoiceGain.gain.value)-.35)<1e-5,
    "Ending.mp3 follows 1/Q voice gain, not 3/E music gain");
   assert.equal(await timedMusic.evaluate(()=>endingVoiceAudio.volume),1,
    "The HTML media must stay unmuted on Safari");
