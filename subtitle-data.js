@@ -107,7 +107,10 @@
  const soundOnly=/^(?:(?:huh|ugh|ah|aah|haha+|ha(?:[\s-]*ha)+|hehe+|he(?:[\s-]*he)+|hm+|hmm+|uh+|um+|ohh+|gasp|groan|chuckle)[\s.!?…]*)+$/i;
  // Remove operator step 271 ("What?" / Ethan), leaving the original source manuscript intact.
  // The following AI selection prompt becomes the next operator-controlled step.
- const kept=entries.filter(e=>e.id!=="p384-0"&&
+ // Also remove Megan's "Who's this?" (former step 90) from subtitle mode.
+ // Archived manuscript/scene cues remain untouched.
+ const removedDialogueIds=new Set(["p384-0","p134-0"]);
+ const kept=entries.filter(e=>!removedDialogueIds.has(e.id)&&
   (e.kind!=="dialogue"||!soundOnly.test(e.text.trim())));
  const visualBoundaryIds=new Set([
   "p122-2","p137-0","p143-0","p149-0",
@@ -174,6 +177,10 @@
   first.text=first.lines.map(line=>line.speaker+": "+line.text).join("\n");
   result.splice(start,group.length,first);
  }
+ // Cross-speaker lines in each exchange appear together in one manual cue.
+ // The second Ethan sentence at p122-1 is already joined to p122-0.
+ groupSimultaneous(["p78-0","p79-0"]);
+ groupSimultaneous(["p121-0","p122-0"]);
  groupSimultaneous(["p89-0","p90-0","p91-0"]);
  groupSimultaneous(["p378-0","p379-0","p380-0"]);
  // Preserve the final post-show media action and the inserted blackout hold.
