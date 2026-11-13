@@ -191,7 +191,7 @@ test("requested subtitle breaks remain separate navigable steps",()=>{
  assert.deepEqual(card?.parts.map(part=>part.id),["p83-1"]);
  assert.equal(entries.filter(e=>e.paragraph===83).length,1,
   "flip-card cue and reading are one navigable step");
- assert.equal(entries.length,301,"two simultaneous exchanges and all requested speech breaks");
+ assert.equal(entries.length,300,"the former step 271 is removed, while simultaneous exchanges and requested speech breaks remain");
  for(const [id,partIds,names] of [
   ["p89-0",["p89-0","p90-0","p91-0"],["RACHEL","ETHAN","CHRISTOPHER"]],
   ["p378-0",["p378-0","p379-0","p380-0"],["RACHEL","CHRISTOPHER","ETHAN"]]
