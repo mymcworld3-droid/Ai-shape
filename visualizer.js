@@ -21,6 +21,8 @@ const narrationMedia=[audioElement,memoryAudio,...Object.values(selectionAudio),
 const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
+const voteOverlay=new VoteOverlay.Controller();
+const voteReduceMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)")||null;
 const visualizerWrap=document.getElementById("visualizerWrap");
 const endCredits=EndCredits.mount(visualizerWrap,{
  onAdvance(){
@@ -1216,6 +1218,9 @@ function draw(){
   ctx.save();ctx.globalAlpha=frame.card;ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=24;
   ctx.drawImage(cardImage,(w-width)/2,h*(frame.script ? .68 : .72)-height/2,width,height);ctx.restore();
  }
+ // Visual-only voting HUD: it never starts a timer, changes narration,
+ // or advances any subtitle/scene cue. Existing 16:9 canvas owns its layout.
+ voteOverlay.draw(ctx,frame,now,w,h,Boolean(voteReduceMotion?.matches));
  if(frame.flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(.3,frame.flash*.3)})`;ctx.fillRect(0,0,w,h);}
  if(frame.blackout>0){
   ctx.fillStyle=`rgba(0,0,0,${frame.blackout})`;ctx.fillRect(0,0,w,h);

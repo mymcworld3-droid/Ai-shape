@@ -12,7 +12,7 @@ WEB_FILES = [
     "opening-config.js", "opening-controller.js", "act-one-audio.js",
     "stage-layout.js", "stage-review.js", "audio-timeline.js",
     "script-data.js", "script-controller.js", "script-runtime.js",
-    "scene-ai-subtitles.js", "subtitle-motion.js", "visualizer.js",
+    "scene-ai-subtitles.js", "subtitle-motion.js", "vote-overlay.js", "visualizer.js",
     "remote-link.js", "remote-stage.js", "remote-control.js", "server.cjs",
 ]
 
