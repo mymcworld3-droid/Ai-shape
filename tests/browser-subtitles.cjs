@@ -157,7 +157,28 @@ const indexOf=(p,text='')=>data.entries.findIndex(x=>(x.paragraph===p||x.parts?.
   assert.equal(await timedMusic.evaluate(()=>actOneBackgroundMusic.current),null,
    'Rewinding to the earlier blackout must stop the final song');
   await timedMusic.close();
-  checks.push('Final p416 blackout plays a non-looping AI voice on 1/Q, advances at audible 1.6s and keeps the same voice through credits');
+  // Regression: an operator who enters 293 Directed by immediately after
+  // the final blackout must hear the actual Ending.mp3, not a stale mute.
+  const rapid=await browser.newPage({viewport:{width:1280,height:720}});
+  await rapid.goto(url);
+  await rapid.waitForFunction(()=>!document.getElementById('startButton').disabled);
+  await rapid.locator('#stepsViewButton').click();
+  await rapid.locator('[data-script="'+musicCueIndex+'"]').click();
+  await rapid.locator('#startButton').click();
+  assert.equal(await rapid.evaluate(()=>scriptShow.entry.action),'end-blackout');
+  await rapid.keyboard.press('ArrowRight');
+  assert.equal(await rapid.evaluate(()=>scriptShow.entry.action),'credit-directed');
+  assert.equal(await rapid.evaluate(()=>endingVoiceAudio.paused),false);
+  assert.equal(await rapid.evaluate(()=>endingVoiceAudio.volume),1);
+  assert.equal(await rapid.evaluate(()=>endingVoiceGain.gain.value),1,
+   'Step 293 must open the Ending.mp3 output even if the one-second intro was skipped');
+  await rapid.waitForTimeout(1200);
+  assert.equal(await rapid.evaluate(()=>endingVoiceGain.gain.value),1,
+   'A late intro timer must never mute the first credit again');
+  assert.ok(await rapid.evaluate(()=>endingVoiceAudio.currentTime)>.4,
+   'The source recording must actually progress while Directed by is shown');
+  await rapid.close();
+  checks.push(''Final p416 blackout plays a non-looping AI voice on 1/Q, advances at audible 1.6s and keeps the same voice through credits');
   // Validate a real rehearsal jump, including on-demand media and a fresh clock.
   const rehearsal=await browser.newPage({viewport:{width:1280,height:720}});
   await rehearsal.goto(url);
