@@ -482,13 +482,14 @@ function prepareAudio(media=audioElement){
 function primeRemoteNarrations(){
  const selected=scriptMode?SUBTITLE_SCRIPT.entries[window.selectedScriptStartIndex??0]:
   null;
- const directCue=scriptMode?selected?.group:window.selectedSceneStartCue;
+ const directCue=scriptMode?(selected?.group||selected?.action):window.selectedSceneStartCue;
  const immediate=new Set(["opening","memory","prompt","one","two","final",
   "complete","revealTruth","welcome","memory-welcome","vote-prompt",
-  "vote-one","vote-two","vote-final","ending-complete","ending-reveal"]);
+  "vote-one","vote-two","vote-final","ending-complete","ending-reveal",
+  "end-blackout","ending-blackout"]);
  // At a direct speech rehearsal start the target's own play is already
  // invoked in the trusted gesture. Never mute that real first sentence.
- if(immediate.has(directCue))return;
+ if(immediate.has(directCue)||directCue?.startsWith("credit-"))return;
  const gain=outputGains.voice;
  if(!gain)return;
  const entries=[...new Set([...narrationMedia,
@@ -719,7 +720,7 @@ function applyVolumes(){
   media.volume=(isVoice?voiceVolume:effectVolume)/100;
  }
  // The final voice follows 1/Q, never background music volume 3/E.
- endingVoice.setMasterVolume(voiceVolume/100);
+ if(typeof endingVoice!=="undefined")endingVoice.setMasterVolume(voiceVolume/100);
  const soundtrackLevel=otherVolume/100*.4;
  if(window.actOneBackgroundMusic)window.actOneBackgroundMusic.setMasterVolume(soundtrackLevel);
  else{
