@@ -146,21 +146,39 @@ body[data-started=true] #reviewControls,body[data-started=true] #startDock,body[
  gap:1.8cqh;color:#f1f1f1;font-size:5cqh;font-weight:700;
  letter-spacing:.10em;line-height:1.18;text-transform:uppercase}
 .end-credit-unfold .end-credit-names{font-size:4.4cqh}
-/* The Backgrounds credit mist lives inside its animated lettering: both vanish
-   on the same frame and the bright real AI waveform stays BEHIND the text. */
-.end-credit-unfold .end-credit-block{position:relative;isolation:isolate;z-index:0}
-/* Backgrounds: real Ending.mp3 AI (canvas) < fog (0) < foreground text (1).
-   Keep the fog inside the animated credit card so both fade together. */
-.end-credit-unfold .end-credit-block::before{
- content:"";position:absolute;z-index:0;pointer-events:none;
- left:5%;right:5%;top:48%;height:68%;
- background:radial-gradient(ellipse at center,
-  rgba(211,226,243,.24) 0%,rgba(134,158,186,.15) 34%,
-  rgba(79,104,137,.05) 58%,transparent 78%);
- filter:blur(2.3cqh);transform:translateY(10%)
+/* Backgrounds (step 297): canvas AI < dark mist < credit text.
+   The previous pale 24%-opacity pseudo-element barely obscured the white
+   hexagon. A separate full-card overlay now masks the hexagon under the
+   lettering while leaving the outer waveform visible. All layers belong
+   to the same animated card and fade simultaneously on Safari. */
+.end-credit-card[data-credit="credit-backgrounds"]{isolation:isolate}
+.end-credit-unfold .end-credit-mist{
+ position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden
 }
+.end-credit-unfold .end-credit-mist::before{
+ content:"";position:absolute;left:9%;right:9%;top:18%;bottom:19%;
+ border-radius:50%;
+ background:radial-gradient(ellipse at 50% 50%,
+  rgba(3,5,10,.96) 0%,rgba(5,8,14,.93) 22%,
+  rgba(7,11,20,.79) 40%,rgba(7,11,20,.46) 59%,
+  rgba(7,11,20,.13) 73%,transparent 85%);
+ filter:blur(2.1cqh)
+}
+.end-credit-unfold .end-credit-mist::after{
+ content:"";position:absolute;left:15%;right:15%;top:27%;bottom:24%;
+ border-radius:50%;
+ background:
+  radial-gradient(ellipse 38% 17% at 36% 68%,
+   rgba(181,198,218,.19),transparent 95%),
+  radial-gradient(ellipse 40% 19% at 67% 72%,
+   rgba(156,176,199,.15),transparent 95%),
+  radial-gradient(ellipse 28% 16% at 56% 33%,
+   rgba(166,184,210,.10),transparent 96%);
+ filter:blur(2.4cqh)
+}
+.end-credit-unfold .end-credit-block{position:relative;z-index:2}
 .end-credit-unfold .end-credit-role,
-.end-credit-unfold .end-credit-names{position:relative;z-index:1}
+.end-credit-unfold .end-credit-names{position:relative;z-index:3}
 .end-credit-film-title{display:flex;flex-direction:column;align-items:center;
  justify-content:center;line-height:.94;transform-origin:center center}
 .end-credit-the{font-family:Georgia,serif;font-size:3.0cqh;font-weight:500;
