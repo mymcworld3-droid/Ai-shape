@@ -608,8 +608,9 @@ async function fastVoting(page){
     await page.waitForFunction(()=>['playing','finished'].includes(document.body.dataset.selectionButtonState));
     assert.ok(await page.locator('#selectionButtonAudio').evaluate(m=>m.currentTime>0||m.ended),'actor button sound must actually play');
     await flag(page,'selectionPromptState','missing');assert.equal(await page.evaluate(()=>stage.voting.deadline),null);
-    // The legacy canvas vote banner must stay absent; stage dialogue is handled
-    // by the independently controlled subtitle renderer instead.
+    // The new vote HUD is deliberately confined to the upper-left, with the
+    // actual dialogue still handled by the independent lower-third renderer.
+    // Reject legacy vote banners or unexpected canvas text.
     const noLegacyVoteText=async()=>{
       const drawn=await page.locator('#visualizer').evaluate(async canvas=>{
         const ctx=canvas.getContext('2d'),original=ctx.fillText,labels=[];
@@ -618,7 +619,24 @@ async function fastVoting(page){
         finally{ctx.fillText=original;}
         return labels;
       });
-      assert.deepEqual(drawn,[],'Act III must not draw legacy vote text over subtitles');
+      const allowed=new Set([
+        'HUMAN VERIFICATION  /  TEST 67','SELECTION REQUESTED',
+        'NOMINATION RECEIVED','VOTE REGISTERED','FINAL SELECTION',
+        'AWAITING NOMINATIONS','CHRISTOPHER  /  ETHAN',
+        'MEGAN  /  ETHAN','SUBJECT  /  ETHAN','AWAITING RESPONSE',
+        'INPUT OPEN','VERIFYING INPUT','ONE VOTE','TWO VOTES',
+        'INPUT REQUIRED','01','02'
+      ]);
+      const phase=await page.evaluate(()=>stage.state);
+      const required=phase==='vote-prompt'?'SELECTION REQUESTED':
+        phase==='vote-final'?'FINAL SELECTION':'VOTE REGISTERED';
+      assert.ok(drawn.includes(required),'The cue must show its own cinematic vote overlay');
+      assert.ok(drawn.every(text=>allowed.has(text)),'Unexpected legacy vote text appeared');
+      assert.ok(await page.locator('#subtitles').evaluate(el=>{
+        const top=el.getBoundingClientRect().top;
+        const canvas=document.getElementById('visualizer').getBoundingClientRect();
+        return el.hidden||top>=canvas.top+canvas.height*(334/720);
+      }),'The vote overlay must not overlap the lower-third dialogue');
     };
     await noLegacyVoteText();
     for(const id of ['selectionPromptAudio','selectionOneAudio','selectionTwoAudio','selectionFinalAudio']){
@@ -634,7 +652,7 @@ async function fastVoting(page){
     await flag(page,'selectionTwoState','missing');
     for(const viewport of [{width:1920,height:1080},{width:1440,height:900},{width:390,height:844}]){
       await page.setViewportSize(viewport);await page.waitForTimeout(100);await noControls(page);
-      const room=await expectedDifference(page,'assets/backgrounds/memory-room.png',[0,0,1,.2],15,.2);
+      const room=await expectedDifference(page,'assets/backgrounds/memory-room.png',[.43,0,.57,.2],15,.2);
       assert.ok(room.mean<1,'Voting retains the correct background and cover crop');
       assert.equal(await page.evaluate(()=>transitions.clock.target),0,'No third-act clock at any viewport');
       await noLegacyVoteText();
