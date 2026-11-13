@@ -1138,6 +1138,51 @@ function drawFramePhoto(frame,now){
  return true;
 }
 
+// Finale: render the original AI coil from the already-connected Ending.mp3
+// narration analyser; never start a second soundtrack or AudioContext.
+let endWaveCue=null,endWavePose=null,endWaveFrom=null,endWaveStart=0;
+function paintEndingWave(cue,now,preview){
+ const target=EndCredits.endingAiPose(cue);
+ if(!target)return;
+ if(preview){endWaveCue=null;endWavePose=null;}
+ if(cue!==endWaveCue){
+  endWaveFrom=endWavePose||target;endWaveStart=now;endWaveCue=cue;
+ }
+ const p=preview?1:Math.min(1,Math.max(0,(now-endWaveStart)/660));
+ const t=1-Math.pow(1-p,3),from=endWaveFrom||target;
+ const pose={x:from.x+(target.x-from.x)*t,
+  y:from.y+(target.y-from.y)*t,scale:from.scale+(target.scale-from.scale)*t};
+ endWavePose=pose;
+ const a=analyze(),targetEnergy=Math.min(1,a.avg/68);
+ energy+=(targetEnergy-energy)*.15;
+ bassEnergy+=(a.low-bassEnergy)*.20;
+ midEnergy+=(a.mid-midEnergy)*.16;
+ highEnergy+=(a.high-highEnergy)*.25;
+ updateHexRotation(now);
+ const fade=target.fadeWithText&&!preview?endCredits.visualOpacity:1;
+ if(fade<=.001)return;
+ const waveBase=Math.min(w,h)*.2;
+ const ringR=waveBase+Math.min(w,h)*.075;
+ const hexR=Math.min(w,h)*.105+energy*10*scale;
+ const radius=Math.max(ringR+10*scale,waveBase+16*scale,
+  Math.min(w,h)*.105*1.52+3*scale)+2*scale;
+ ctx.save();
+ ctx.translate(w*pose.x,h*pose.y);
+ ctx.scale(pose.scale,pose.scale);
+ ctx.translate(-cx,-cy);
+ ctx.globalAlpha=.83*fade;
+ graphicGlowScale=pose.scale*dpr;
+ const coils=createCoils(waveBase,now*.00045);
+ drawParticles(a,radius);
+ for(const coil of coils)drawCoil(coil);
+ ctx.beginPath();ctx.arc(cx,cy,radius,0,Math.PI*2);ctx.clip();
+ drawSymmetricRing(ringR,1+energy*1.8,.08+energy*.15,energy*9*scale);
+ drawSymmetricRing(ringR+8*scale,1,.025+energy*.065,energy*5*scale);
+ drawBassArcs(ringR+3*scale,a,now*.00065);
+ drawOuterHex(hexR,rotation,a);
+ drawHex(hexR,rotation,a);
+ ctx.restore();graphicGlowScale=1;
+}
 function draw(){
  requestAnimationFrame(draw);
  const now=performance.now();opening.getRemainingMs();updateTransitions(now);
