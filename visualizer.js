@@ -17,7 +17,9 @@ const selectionAudio={prompt:document.getElementById("selectionPromptAudio"),
  final:document.getElementById("selectionFinalAudio")};
 const endingCompleteAudio=document.getElementById("endingCompleteAudio");
 const endingRevealAudio=document.getElementById("endingRevealAudio");
-const narrationMedia=[audioElement,memoryAudio,...Object.values(selectionAudio),endingCompleteAudio,endingRevealAudio];
+const endingVoiceAudio=document.getElementById("endingVoiceAudio");
+const narrationMedia=[audioElement,memoryAudio,...Object.values(selectionAudio),
+ endingCompleteAudio,endingRevealAudio,endingVoiceAudio];
 const revealVideo=document.getElementById("roomRevealVideo");
 const canvas=document.getElementById("visualizer");
 const ctx=canvas.getContext("2d");
@@ -76,35 +78,28 @@ function updateTransitions(now){
  }
 }
 
-// Scene mode shares the script's real soundtrack files and crossfade player.
-// After deleting the bonus cue, final blackout 34 goes directly into
-// credit 35 when Ending.mp3 reaches 1.6 seconds of audible playback.
-let sceneMusicLeadTimer=null;
-function cancelSceneMusicLead(){
- if(sceneMusicLeadTimer!==null)clearInterval(sceneMusicLeadTimer);
- sceneMusicLeadTimer=null;
-}
+// Ending.mp3 is narration, never BGM. Both modes share this voice player;
+ // 1/Q controls its volume and the timeline shows it in the voice lane.
+const endingVoice=new EndingVoice.Controller({
+ audio:endingVoiceAudio,src:config.closingTheme.src,
+ startDelayMs:config.closingTheme.startDelayMs,leadMs:EndCredits.SONG_LEAD_MS,
+ onAdvance(){
+  if(!startGate.started)return;
+  if(scriptMode){
+   if(transcript?.entry?.action==="end-blackout")transcript.next();
+  }else if(stage.state==="ending-blackout")void stage.advance();
+ },
+ onError(error){
+  document.body.dataset.endingVoiceError="true";
+  console.error("[Ending AI Voice]",error);
+ }
+});
+window.endingVoice=endingVoice;
 const sceneBackgroundMusic=scriptMode?null:new ActOneMusic.Controller({
  audio:document.getElementById("actOneBgm"),
  alternateAudio:document.getElementById("actOneBgmAlt"),
  tracks:config.actOneMusic,fadeMs:1400,fadeOutMs:1100,
- onError(error){document.body.dataset.musicError="true";console.error("[Scene BGM]",error);},
- onAudibleStart(track,player){
-  if(track?.src!==config.closingTheme.src||!startGate.started||
-     stage.state!==config.closingTheme.sceneStartCue)return;
-  cancelSceneMusicLead();
-  const check=()=>{
-   if(!startGate.started||stage.state!==config.closingTheme.sceneStartCue||
-      sceneBackgroundMusic.current!==track||sceneBackgroundMusic.activeAudio!==player){
-    cancelSceneMusicLead();return;
-   }
-   if(!player.paused&&player.currentTime>=EndCredits.SONG_LEAD_MS/1000){
-    cancelSceneMusicLead();
-    void stage.advance();
-   }
-  };
-  sceneMusicLeadTimer=setInterval(check,25);
- }
+ onError(error){document.body.dataset.musicError="true";console.error("[Scene BGM]",error);}
 });
 if(sceneBackgroundMusic)window.actOneBackgroundMusic=sceneBackgroundMusic;
 
@@ -139,7 +134,6 @@ const stage=new StageOpening.StageCueController({
   for(const key of Object.keys(document.body.dataset))if(key.endsWith("Error"))document.body.dataset[key]="false";
  },
  onCue(cue){
-  cancelSceneMusicLead();
   document.body.dataset.cue=cue;
   if(!scriptMode)endCredits.show(cue);
   window.sceneVoiceSubtitles?.clearCompleted();
@@ -147,14 +141,9 @@ const stage=new StageOpening.StageCueController({
   // update BGM. Stage previews never emit onCue and remain fully silent.
   if(!scriptMode&&startGate.started){
    document.body.dataset.musicError="false";
-   // Re-entering final blackout restarts the song so a manual rewind
-   // cannot inherit the old countdown or a partially played track.
-   if(cue===config.closingTheme.sceneStartCue&&
-      sceneBackgroundMusic.current?.src===config.closingTheme.src)
-    sceneBackgroundMusic.stop({immediate:true});
-   sceneBackgroundMusic.setStep(config.sceneMusicSteps[cue]??20,{
-    delayMs:cue===config.closingTheme.sceneStartCue?config.closingTheme.startDelayMs:0
-   });
+   sceneBackgroundMusic.setStep(config.sceneMusicSteps[cue]??20);
+   endingVoice.cue(cue);
+   if(cue===config.closingTheme.sceneStartCue)prepareAudio(endingVoiceAudio);
   }
   if(cue==="bright")roomReadyAt=performance.now();
   if(cue==="ai"){animate("ai",0,0);animate("ai",1,config.aiFadeMs);}
@@ -724,12 +713,13 @@ let voiceVolume=100,effectVolume=100,otherVolume=100;
 const volumeDisplay=document.getElementById("volumeDisplay");
 function applyVolumes(){
  for(const media of document.querySelectorAll("audio,video")){
-  // Music crossfades own the gain of both soundtrack players.
-  if(media.id==="actOneBgm"||media.id==="actOneBgmAlt")continue;
+  // Music and the dedicated Ending voice own their respective gain.
+  if(media.id==="actOneBgm"||media.id==="actOneBgmAlt"||media.id==="endingVoiceAudio")continue;
   const isVoice=narrationMedia.includes(media);
   media.volume=(isVoice?voiceVolume:effectVolume)/100;
  }
- // 3/E changes the common master without interrupting either fade.
+ // The final voice follows 1/Q, never background music volume 3/E.
+ endingVoice.setMasterVolume(voiceVolume/100);
  const soundtrackLevel=otherVolume/100*.4;
  if(window.actOneBackgroundMusic)window.actOneBackgroundMusic.setMasterVolume(soundtrackLevel);
  else{

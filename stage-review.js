@@ -33,11 +33,11 @@ const sceneEffects={
  "memory-light":config.memory.lightClick,"office-bang":config.office.bang,
  "vote-prompt":config.scriptEffects.selectionButton
 };
-function stepAudioFiles({paragraph,voice=null,effect=null,video=null,musicTrack=null,musicDelayMs=0}){
+function stepAudioFiles({paragraph,voice=null,effect=null,video=null,voiceDelayMs=0}){
  const media=[];
- const track=musicTrack||ActOneMusic.trackForStep(paragraph,config.actOneMusic);
- if(track?.src)media.push({kind:"配樂",src:track.src,delayMs:musicDelayMs});
- if(voice)media.push({kind:"語音",src:voice});
+ const track=ActOneMusic.trackForStep(paragraph,config.actOneMusic);
+ if(track?.src)media.push({kind:"配樂",src:track.src});
+ if(voice)media.push({kind:"語音",src:voice,delayMs:voiceDelayMs});
  if(effect)media.push({kind:"音效",src:effect});
  if(video)media.push({kind:"影片",src:video});
  return media;
@@ -46,15 +46,17 @@ function stepAudioFiles({paragraph,voice=null,effect=null,video=null,musicTrack=
 const timelineSteps=[];
 function sceneStepAudio(cue){
  const paragraph=config.sceneMusicSteps[cue];
- return stepAudioFiles({paragraph,voice:sceneVoices[cue],
+ const closing=cue===config.closingTheme.sceneStartCue||Boolean(EndCredits.get(cue));
+ return stepAudioFiles({paragraph,
+  voice:closing?config.closingTheme.src:sceneVoices[cue],
   effect:sceneEffects[cue],video:cue==="bright"?config.roomReveal:null,
-  musicDelayMs:cue===config.closingTheme.sceneStartCue?config.closingTheme.startDelayMs:0});
+  voiceDelayMs:cue===config.closingTheme.sceneStartCue?config.closingTheme.startDelayMs:0});
 }
 if(scriptMode){
  const closingThemeStartIndex=SUBTITLE_SCRIPT.entries.findIndex(entry=>
   entry.action===config.closingTheme.subtitleStartAction&&
   entry.paragraph===config.closingTheme.subtitleStartParagraph);
- if(closingThemeStartIndex<0)throw Error("Cannot locate ending background music's final-blackout cue");
+ if(closingThemeStartIndex<0)throw Error("Cannot locate Ending AI voice's final-blackout cue");
  stepList.replaceChildren();
  document.querySelector('#stepsPanel h1').firstChild.textContent='劇本字幕';
  document.querySelector('#stepsPanel h1 span').textContent=SUBTITLE_SCRIPT.entries.length;
@@ -66,10 +68,9 @@ if(scriptMode){
   const themeActive=index>=closingThemeStartIndex&&
    e.paragraph<config.closingTheme.subtitleEndParagraph;
   timelineSteps.push({label:index,media:stepAudioFiles({paragraph:e.paragraph,
-   voice:stepVoiceFiles[e.group],effect:stepEffectFiles[e.action],
-   video:e.action==="reveal"?config.roomReveal:null,
-   musicTrack:themeActive?config.actOneMusic.at(-1):null,
-   musicDelayMs:index===closingThemeStartIndex?config.closingTheme.startDelayMs:0})});
+   voice:themeActive?config.closingTheme.src:stepVoiceFiles[e.group],
+   effect:stepEffectFiles[e.action],video:e.action==="reveal"?config.roomReveal:null,
+   voiceDelayMs:index===closingThemeStartIndex?config.closingTheme.startDelayMs:0})});
   li.append(button);stepList.append(li);
  });
 }

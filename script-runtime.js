@@ -17,41 +17,13 @@ if(scriptMode){
  }
  // The Act I soundtrack follows fixed manuscript paragraphs, not mutable cue numbers. Two hidden elements
  // overlap for 1.4s only while crossfading; the second is not an extra song.
- const closingThemeTrack=config.actOneMusic.find(track=>track.src===config.closingTheme.src);
- if(!closingThemeTrack)throw Error('Ending.mp3 is absent from the soundtrack timeline');
- // Stable p416 blackout, not a numeric subtitle index: edits routinely split
- // or merge earlier dialogue and shift the live final-blackout index.
- const closingThemeStartIndex=SUBTITLE_SCRIPT.entries.findIndex(entry=>
-  entry.action===config.closingTheme.subtitleStartAction&&
-  entry.paragraph===config.closingTheme.subtitleStartParagraph);
- if(closingThemeStartIndex<0)throw Error('Final Ending.mp3 cue p416 is missing');
- let scriptMusicLeadTimer=null;
- const cancelScriptMusicLead=()=>{
-  if(scriptMusicLeadTimer!==null)clearInterval(scriptMusicLeadTimer);
-  scriptMusicLeadTimer=null;
- };
+ // Final p416 cue is now routed through the Ending voice channel.
  const actOneMusic=new ActOneMusic.Controller({
   audio:document.getElementById('actOneBgm'),
   alternateAudio:document.getElementById('actOneBgmAlt'),
   tracks:config.actOneMusic,
   fadeMs:1400,
   fadeOutMs:1100,
-  onAudibleStart(track,player){
-   if(track!==closingThemeTrack||!startGate.started||
-      transcript?.index!==closingThemeStartIndex)return;
-   cancelScriptMusicLead();
-   const check=()=>{
-    if(!startGate.started||transcript.index!==closingThemeStartIndex||
-       actOneMusic.current!==track||actOneMusic.activeAudio!==player){
-      cancelScriptMusicLead();return;
-    }
-    if(!player.paused&&player.currentTime>=EndCredits.SONG_LEAD_MS/1000){
-     cancelScriptMusicLead();
-     transcript.next();
-    }
-   };
-   scriptMusicLeadTimer=setInterval(check,25);
-  },
   onError(error){document.body.dataset.musicError='true';console.error('[Act I BGM]',error);}
  });
  window.actOneBackgroundMusic=actOneMusic;
@@ -142,21 +114,10 @@ if(scriptMode){
  };
  transcript=new ScriptShow.Controller({entries:SUBTITLE_SCRIPT.entries,voices,effects,video:revealVideo,
   onEntry(entry,{direction,index,starting}){
-   cancelScriptMusicLead();
    document.body.dataset.musicError='false';
-   // Returning from the credits to the final-blackout cue restarts the
-   // music from the beginning, so the 1.6-second transition stays aligned.
-   if(index===closingThemeStartIndex &&
-       actOneMusic.current?.src===closingThemeTrack.src)
-    actOneMusic.stop({immediate:true});
-   // p416 final blackout cues the closing song once after one second.
-   // Keep the same non-looping player through all six credit cards.
-   const closingThemeActive=index>=closingThemeStartIndex &&
-    entry.paragraph<config.closingTheme.subtitleEndParagraph;
-   actOneMusic.setStep(entry.paragraph,closingThemeActive?{
-    track:closingThemeTrack,
-    delayMs:index===closingThemeStartIndex?config.closingTheme.startDelayMs:0
-   }:undefined);
+   actOneMusic.setStep(entry.paragraph);
+   endingVoice.cue(entry.action);
+   if(entry.action==='end-blackout')prepareAudio(endingVoiceAudio);
    // The AI reveal itself is an animated cue even when rehearsal begins here.
    // Other direct rehearsal jumps continue to render without a transition.
    if(starting&&entry.action==='ai')animate('ai',0,0);
